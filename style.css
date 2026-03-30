@@ -45,3 +45,93 @@ ul {
     padding-left: 20px;
     line-height: 1.8;
 }
+
+details {
+    background-color: #f8fbff;
+    border: 1px solid #d6e2ee;
+    border-radius: 10px;
+    padding: 16px 20px;
+}
+
+details+details {
+    margin-top: 16px;
+}
+
+summary {
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1.05rem;
+}
+
+details p {
+    margin-top: 12px;
+}
+
+details {
+    background: linear-gradient(135deg, #f7fbff, #eaf4ff);
+    border: 1px solid #c7dcef;
+    border-left: 6px solid #2e5b88;
+    border-radius: 14px;
+    padding: 18px 22px;
+    box-shadow: 0 8px 18px rgba(46, 91, 136, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+details:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(46, 91, 136, 0.12);
+}
+
+details+details {
+    margin-top: 18px;
+}
+
+summary {
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: #1f3f5b;
+    list-style: none;
+}
+
+summary::-webkit-details-marker {
+    display: none;
+}
+
+summary::before {
+    content: "+ ";
+    color: #2e5b88;
+    font-weight: 800;
+}
+
+details[open] summary::before {
+    content: "- ";
+}
+
+details p {
+    margin-top: 14px;
+    line-height: 1.7;
+}
+
+details ul {
+    margin-top: 14px;
+    padding-left: 20px;
+}
+
+footer {
+    background-color: #1f3f5b;
+    color: white;
+    text-align: center;
+    padding: 18px;
+    margin-top: 40px;
+}
+
+footer p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+nav a.active {
+    border-bottom: 2px solid white;
+    padding-bottom: 4px;
+}
