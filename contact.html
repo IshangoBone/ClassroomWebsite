@@ -1,15 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Contact | CodeTheCurrent</title>
-    <meta
-        name="description"
-        content="Contact CodeTheCurrent for course questions, collaboration, and educator inquiries."
-    />
+    <meta name="description"
+        content="Contact CodeTheCurrent for course questions, lesson support, and student feedback." />
     <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
     <header class="site-header">
         <div class="container header-inner">
@@ -35,35 +35,63 @@
         <section class="page-hero">
             <div class="container narrow">
                 <p class="eyebrow">Contact</p>
-                <h1>Reach out about courses, lessons, or collaboration.</h1>
+                <h1>Reach out about courses, lessons, or class support.</h1>
                 <p>
-                    This page keeps contact simple for version one. You can later swap in a real form,
-                    newsletter signup, or educator inquiry workflow.
+                    Use this page if you have questions about course materials, lesson directions,
+                    or need help staying on track with class content.
                 </p>
             </div>
         </section>
 
         <section class="section">
-            <div class="container info-grid">
+            <div class="container contact-grid">
                 <article class="contact-card">
                     <h3>General questions</h3>
-                    <p>Use this for course access questions, student support, or lesson navigation help.</p>
-                    <p><a href="mailto:hello@codethecurrent.com">hello@codethecurrent.com</a></p>
-                </article>
-
-                <article class="contact-card">
-                    <h3>Teaching and collaboration</h3>
-                    <p>Use this for educator partnerships, curriculum ideas, and content collaboration.</p>
-                    <p><a href="mailto:collab@codethecurrent.com">collab@codethecurrent.com</a></p>
-                </article>
-
-                <article class="contact-card">
-                    <h3>Next phase</h3>
                     <p>
-                        Later, this page can connect to submission systems, educator forms, or WIN-linked
-                        data capture.
+                        Use this for course access questions, lesson help, or general support related to class content.
                     </p>
-                    <p><a href="courses.html">Browse the current course catalog</a></p>
+                    <form class="contact-form" data-email="jakeb.rooswilliams@evsck12.com"
+                        data-subject="CodeTheCurrent General Question">
+                        <label>
+                            Name
+                            <input type="text" name="name" placeholder="Your name" required />
+                        </label>
+                        <label>
+                            Email
+                            <input type="email" name="email" placeholder="Your email" required />
+                        </label>
+                        <label>
+                            Question
+                            <textarea name="message" rows="6" placeholder="Type your question here..."
+                                required></textarea>
+                        </label>
+                        <button class="button button-primary button-small" type="submit">Send general question</button>
+                    </form>
+                </article>
+
+                <article class="contact-card">
+                    <h3>Feedback</h3>
+                    <p>
+                        Use this to share feedback, report bugs, or let me know if something on the site is not working
+                        correctly.
+                    </p>
+                    <form class="contact-form" data-email="jakeb.rooswilliams@evsck12.com"
+                        data-subject="CodeTheCurrent Feedback">
+                        <label>
+                            Name
+                            <input type="text" name="name" placeholder="Your name" required />
+                        </label>
+                        <label>
+                            Email
+                            <input type="email" name="email" placeholder="Your email" required />
+                        </label>
+                        <label>
+                            Feedback
+                            <textarea name="message" rows="6" placeholder="Share your feedback here..."
+                                required></textarea>
+                        </label>
+                        <button class="button button-primary button-small" type="submit">Send feedback</button>
+                    </form>
                 </article>
             </div>
         </section>
@@ -71,11 +99,12 @@
 
     <footer class="site-footer">
         <div class="container footer-inner">
-            <p>CodeTheCurrent is a course platform for modern technical education.</p>
+            <p>CodeTheCurrent — Course lessons and materials for students.</p>
             <p>&copy; <span data-year></span> CodeTheCurrent</p>
         </div>
     </footer>
 
     <script src="script.js"></script>
 </body>
+
 </html>

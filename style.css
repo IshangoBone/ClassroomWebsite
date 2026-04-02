@@ -246,6 +246,48 @@ h3 {
     padding: 1.6rem;
 }
 
+.contact-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.contact-form {
+    display: grid;
+    gap: 0.95rem;
+    margin-top: 1rem;
+}
+
+.contact-form label {
+    display: grid;
+    gap: 0.45rem;
+    font-weight: 600;
+    color: var(--brand-dark);
+}
+
+.contact-form input,
+.contact-form textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 0.9rem 1rem;
+    font: inherit;
+    color: var(--text);
+    background: rgba(248, 251, 255, 0.95);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.contact-form input:focus,
+.contact-form textarea:focus {
+    outline: none;
+    border-color: rgba(14, 91, 216, 0.55);
+    box-shadow: 0 0 0 4px rgba(14, 91, 216, 0.12);
+    background: #ffffff;
+}
+
+.contact-form textarea {
+    resize: vertical;
+}
+
 .panel-label {
     margin: 0 0 0.8rem;
     color: var(--brand);
@@ -290,6 +332,13 @@ h3 {
 .feature-grid,
 .info-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.contact-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    align-items: stretch;
 }
 
 .course-card {
@@ -471,7 +520,8 @@ h3 {
     .lesson-layout,
     .card-grid-three,
     .feature-grid,
-    .info-grid {
+    .info-grid,
+    .contact-grid {
         grid-template-columns: 1fr;
     }
 }
