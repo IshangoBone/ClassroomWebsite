@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Courses | CodeTheCurrent</title>
+    <meta
+        name="description"
+        content="Browse CodeTheCurrent courses in engineering design, introductory computer science, and AP Computer Science A."
+    />
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <header class="site-header">
+        <div class="container header-inner">
+            <a class="brand" href="index.html">
+                <span class="brand-mark">CTC</span>
+                <span>CodeTheCurrent</span>
+            </a>
+
+            <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+                Menu
+            </button>
+
+            <nav class="site-nav" id="site-nav">
+                <a href="index.html">Home</a>
+                <a href="courses.html" class="active">Courses</a>
+                <a href="about.html">About</a>
+                <a href="contact.html">Contact</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page-shell">
+        <section class="page-hero">
+            <div class="container narrow">
+                <p class="eyebrow">Course catalog</p>
+                <h1>Choose a course and move into the lesson path.</h1>
+                <p>
+                    The courses page acts like a clean catalog. Each card opens a course overview, and
+                    each course overview leads students into structured lesson pages.
+                </p>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <div class="card-grid card-grid-three">
+                    <a class="course-card" href="course-engineering-design.html">
+                        <span class="course-tag">Engineering</span>
+                        <h3>Intro to Engineering Design</h3>
+                        <p>
+                            Learn the design process, prototyping, and engineering thinking through
+                            project-based lessons.
+                        </p>
+                        <span class="card-link">Open course</span>
+                    </a>
+
+                    <a class="course-card" href="course-intro-computer-science.html">
+                        <span class="course-tag">Computer science</span>
+                        <h3>Intro to Computer Science</h3>
+                        <p>
+                            Build a strong foundation in algorithms, logic, variables, and the big ideas
+                            behind computing.
+                        </p>
+                        <span class="card-link">Open course</span>
+                    </a>
+
+                    <a class="course-card" href="course-ap-computer-science-a.html">
+                        <span class="course-tag">AP pathway</span>
+                        <h3>AP Computer Science A</h3>
+                        <p>
+                            Focus on Java programming, AP-style problem solving, and the habits needed for
+                            success in AP CSA.
+                        </p>
+                        <span class="card-link">Open course</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <p>CodeTheCurrent is a course platform for modern technical education.</p>
+            <p>&copy; <span data-year></span> CodeTheCurrent</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

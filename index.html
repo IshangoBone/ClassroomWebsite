@@ -1,46 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Classroom Website</title>
+    <title>CodeTheCurrent | Modern Technical Courses</title>
+    <meta
+        name="description"
+        content="CodeTheCurrent delivers modern engineering and computer science courses through structured video lessons, guided questions, and clear course roadmaps."
+    />
     <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
-    <header>
-        <h1>Welcome to Our Classroom</h1>
-        <nav>
-            <a href="index.html" class="active">Home</a>
-            <a href="about.html">About</a>
-            <a href="classes.html">Classes</a>
-        </nav>
+    <header class="site-header">
+        <div class="container header-inner">
+            <a class="brand" href="index.html">
+                <span class="brand-mark">CTC</span>
+                <span>CodeTheCurrent</span>
+            </a>
+
+            <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+                Menu
+            </button>
+
+            <nav class="site-nav" id="site-nav">
+                <a href="index.html" class="active">Home</a>
+                <a href="courses.html">Courses</a>
+                <a href="about.html">About</a>
+                <a href="contact.html">Contact</a>
+            </nav>
+        </div>
     </header>
 
     <main>
-        <section>
-            <h2>Hello!</h2>
-            <p>This website will share classroom updates, class information, and more.</p>
-            <p>Students and families can use this space to stay connected, find resources, and keep up with what we are
-                learning.</p>
+        <section class="hero">
+            <div class="container hero-grid">
+                <div>
+                    <p class="eyebrow">Structured technical education</p>
+                    <h1>Learn coding and engineering through modern, lesson-based courses.</h1>
+                    <p class="hero-copy">
+                        CodeTheCurrent is a simple content-delivery platform for students who want clear
+                        prerecorded lessons, guided practice, and a clean path from course overview to
+                        lesson completion.
+                    </p>
+
+                    <div class="hero-actions">
+                        <a class="button button-primary" href="courses.html">Explore Courses</a>
+                        <a class="button button-secondary" href="about.html">About the Platform</a>
+                    </div>
+                </div>
+
+                <aside class="hero-panel">
+                    <p class="panel-label">How it works</p>
+                    <ol class="steps-list">
+                        <li>Choose a course from the course catalog.</li>
+                        <li>Open a course overview to see the lesson roadmap.</li>
+                        <li>Watch each lesson, review key ideas, and answer questions.</li>
+                    </ol>
+                </aside>
+            </div>
         </section>
 
-        <section>
-            <h2>What You’ll Find Here</h2>
-            <ul>
-                <li>Class announcements and updates</li>
-                <li>Information about subjects and courses</li>
-                <li>Helpful resources for students and families</li>
-            </ul>
+        <section class="section">
+            <div class="container">
+                <div class="section-heading">
+                    <p class="eyebrow">Course catalog</p>
+                    <h2>Start with one focused learning path.</h2>
+                    <p>
+                        Each course is designed as a clean progression from overview to lesson pages so
+                        students can move through content with less friction and more clarity.
+                    </p>
+                </div>
+
+                <div class="card-grid card-grid-three">
+                    <a class="course-card" href="course-intro-computer-science.html">
+                        <span class="course-tag">Foundations</span>
+                        <h3>Intro to Computer Science</h3>
+                        <p>Algorithms, logic, variables, and the fundamentals of computational thinking.</p>
+                        <span class="card-link">View course</span>
+                    </a>
+
+                    <a class="course-card" href="course-engineering-design.html">
+                        <span class="course-tag">Design thinking</span>
+                        <h3>Intro to Engineering Design</h3>
+                        <p>Problem solving, prototyping, iteration, and the engineering design process.</p>
+                        <span class="card-link">View course</span>
+                    </a>
+
+                    <a class="course-card" href="course-ap-computer-science-a.html">
+                        <span class="course-tag">Advanced</span>
+                        <h3>AP Computer Science A</h3>
+                        <p>Java programming, problem solving, and structured preparation for AP CSA.</p>
+                        <span class="card-link">View course</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section section-muted">
+            <div class="container">
+                <div class="section-heading">
+                    <p class="eyebrow">What this site delivers</p>
+                    <h2>A simple course and lesson system you can keep growing.</h2>
+                </div>
+
+                <div class="feature-grid">
+                    <article class="feature-card">
+                        <h3>Course overviews</h3>
+                        <p>
+                            Each course page introduces what the course is about, who it is for, and the
+                            lesson pathway students can follow.
+                        </p>
+                    </article>
+
+                    <article class="feature-card">
+                        <h3>Lesson pages</h3>
+                        <p>
+                            Every lesson page uses the same structure: title, objective, video space,
+                            summary, and reflection questions.
+                        </p>
+                    </article>
+
+                    <article class="feature-card">
+                        <h3>Future-ready</h3>
+                        <p>
+                            The layout is ready for YouTube embeds now and can later connect to forms,
+                            submissions, and WIN-driven data capture.
+                        </p>
+                    </article>
+                </div>
+            </div>
         </section>
     </main>
-    <footer>
-        <p>&copy; 2026 Classroom Website. All rights reserved.</p>
+
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <p>CodeTheCurrent is a course platform for modern technical education.</p>
+            <p>&copy; <span data-year></span> CodeTheCurrent</p>
+        </div>
     </footer>
 
     <script src="script.js"></script>
-
 </body>
-
 </html>
