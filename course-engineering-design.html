@@ -6,7 +6,7 @@
     <title>Intro to Engineering Design | CodeTheCurrent</title>
     <meta
         name="description"
-        content="Overview page for Intro to Engineering Design on CodeTheCurrent, including a lesson roadmap and core skills."
+        content="Intro to Engineering Design on CodeTheCurrent includes 30 modules, 180 lessons, and a searchable lesson browser focused on design thinking, prototyping, systems, and engineering communication."
     />
     <link rel="stylesheet" href="style.css" />
 </head>
@@ -37,8 +37,9 @@
                 <p class="eyebrow">Course overview</p>
                 <h1>Intro to Engineering Design</h1>
                 <p>
-                    Learn how engineers solve problems through research, ideation, prototyping, testing,
-                    and revision. This course is built to help students think like designers and makers.
+                    This course is organized into 30 modules and 180 total lessons. Students move through
+                    a full engineering pathway that builds design thinking, sketching, prototyping,
+                    testing, systems understanding, and communication.
                 </p>
             </div>
         </section>
@@ -48,9 +49,9 @@
                 <article class="course-summary">
                     <h2>What students will learn</h2>
                     <ul class="clean-list">
-                        <li>How to move through the engineering design process with intention.</li>
-                        <li>How constraints, criteria, and iteration shape a strong solution.</li>
-                        <li>How prototypes and testing improve design decisions.</li>
+                        <li>How to define problems, research needs, and move through a structured design process.</li>
+                        <li>How to generate ideas, build prototypes, test solutions, and iterate with evidence.</li>
+                        <li>How to communicate engineering thinking through sketches, models, documentation, and presentations.</li>
                     </ul>
                 </article>
 
@@ -59,49 +60,59 @@
                     <div class="meta-list">
                         <div>
                             <strong>Audience</strong>
-                            <span>Students beginning engineering design and project-based problem solving.</span>
+                            <span>Students beginning engineering design, modeling, and project-based problem solving.</span>
                         </div>
                         <div>
-                            <strong>Format</strong>
-                            <span>Prerecorded lessons, notes, and reflection questions.</span>
+                            <strong>Structure</strong>
+                            <span>30 modules organized around the engineering workflow and core technical skills.</span>
                         </div>
                         <div>
-                            <strong>Current lesson count</strong>
-                            <span>2 starter lessons</span>
+                            <strong>Lesson count</strong>
+                            <span>180 lessons total</span>
+                        </div>
+                        <div>
+                            <strong>Lesson format</strong>
+                            <span>Objective, video, summary, and guided before/during/reflection questions.</span>
                         </div>
                     </div>
                 </aside>
             </div>
+        </section>
 
-            <div class="container lesson-list">
-                <article class="lesson-card">
-                    <p class="lesson-label">Lesson 01</p>
-                    <h3>The Engineering Design Process</h3>
-                    <p>Understand the core steps from problem identification through testing and revision.</p>
-                    <div class="lesson-actions">
-                        <a class="button button-primary button-small" href="lesson-ied-design-process.html">Start lesson</a>
-                    </div>
-                </article>
+        <section class="section section-muted">
+            <div class="container">
+                <div class="section-heading">
+                    <p class="eyebrow">Lesson browser</p>
+                    <h2>Search engineering lessons and move through the course without endless scrolling.</h2>
+                    <p>
+                        Use the search bar to jump to a concept quickly, or open a module to explore its six
+                        lessons. The module browser stays inside a contained scroll area so the course page
+                        remains clean even with all 180 lessons available.
+                    </p>
+                </div>
 
-                <article class="lesson-card">
-                    <p class="lesson-label">Lesson 02</p>
-                    <h3>Prototyping and Iteration</h3>
-                    <p>Explore how prototype decisions, feedback, and iteration improve a design solution.</p>
-                    <div class="lesson-actions">
-                        <a class="button button-primary button-small" href="lesson-ied-prototyping.html">Start lesson</a>
-                    </div>
-                </article>
+                <div class="browser-toolbar">
+                    <label class="search-field" for="course-lesson-search">
+                        <span>Search lessons</span>
+                        <input id="course-lesson-search" type="search"
+                            placeholder="Search by lesson title, topic, or module..." />
+                    </label>
+                    <p class="results-note" id="course-results-note">Showing all 180 lessons.</p>
+                </div>
+
+                <div class="module-browser" id="course-browser"></div>
             </div>
         </section>
     </main>
 
     <footer class="site-footer">
         <div class="container footer-inner">
-            <p>CodeTheCurrent is a course platform for modern technical education.</p>
+            <p>CodeTheCurrent — Course lessons and materials for students.</p>
             <p>&copy; <span data-year></span> CodeTheCurrent</p>
         </div>
     </footer>
 
+    <script src="engineering-data.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

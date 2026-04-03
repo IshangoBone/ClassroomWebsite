@@ -6,7 +6,7 @@
     <title>AP Computer Science A | CodeTheCurrent</title>
     <meta
         name="description"
-        content="Overview page for AP Computer Science A on CodeTheCurrent, including Java-focused lesson pathways."
+        content="AP Computer Science A on CodeTheCurrent includes 30 modules, 180 lessons, and a searchable lesson browser focused on Java programming, AP problem solving, and exam readiness."
     />
     <link rel="stylesheet" href="style.css" />
 </head>
@@ -37,8 +37,9 @@
                 <p class="eyebrow">Course overview</p>
                 <h1>AP Computer Science A</h1>
                 <p>
-                    Move into more rigorous Java programming with lessons focused on core syntax,
-                    problem-solving, and the habits students need for AP Computer Science A success.
+                    This course is organized into 30 modules and 180 total lessons. Students build Java
+                    fluency, problem-solving accuracy, and AP exam readiness through a structured progression
+                    of concepts, code analysis, labs, and review.
                 </p>
             </div>
         </section>
@@ -48,9 +49,9 @@
                 <article class="course-summary">
                     <h2>What students will learn</h2>
                     <ul class="clean-list">
-                        <li>How to write and reason through Java code with accuracy.</li>
-                        <li>How loops, conditionals, and methods work together inside programs.</li>
-                        <li>How AP-style problem solving expects students to explain code behavior clearly.</li>
+                        <li>How to read, write, test, and explain Java code using AP-aligned concepts and structures.</li>
+                        <li>How variables, conditionals, loops, methods, arrays, and objects work together in programs.</li>
+                        <li>How to approach AP-style free response and multiple-choice tasks with stronger reasoning and precision.</li>
                     </ul>
                 </article>
 
@@ -59,49 +60,59 @@
                     <div class="meta-list">
                         <div>
                             <strong>Audience</strong>
-                            <span>Students preparing for AP Computer Science A and deeper Java work.</span>
+                            <span>Students preparing for AP Computer Science A and rigorous Java-based problem solving.</span>
                         </div>
                         <div>
-                            <strong>Format</strong>
-                            <span>Prerecorded instruction, recap notes, and review questions.</span>
+                            <strong>Structure</strong>
+                            <span>30 modules organized around Java foundations, AP topics, and exam review.</span>
                         </div>
                         <div>
-                            <strong>Current lesson count</strong>
-                            <span>2 starter lessons</span>
+                            <strong>Lesson count</strong>
+                            <span>180 lessons total</span>
+                        </div>
+                        <div>
+                            <strong>Lesson format</strong>
+                            <span>Objective, video, summary, and guided before/during/reflection questions.</span>
                         </div>
                     </div>
                 </aside>
             </div>
+        </section>
 
-            <div class="container lesson-list">
-                <article class="lesson-card">
-                    <p class="lesson-label">Lesson 01</p>
-                    <h3>Java Basics and Program Structure</h3>
-                    <p>Review the building blocks of Java syntax, structure, and reading simple code.</p>
-                    <div class="lesson-actions">
-                        <a class="button button-primary button-small" href="lesson-apcsa-java-basics.html">Start lesson</a>
-                    </div>
-                </article>
+        <section class="section section-muted">
+            <div class="container">
+                <div class="section-heading">
+                    <p class="eyebrow">Lesson browser</p>
+                    <h2>Search AP CSA lessons and move through the course without endless scrolling.</h2>
+                    <p>
+                        Use the search bar to jump to a Java topic quickly, or open a module to explore its six
+                        lessons. The module browser stays inside a contained scroll area so the course page
+                        remains clean even with all 180 lessons available.
+                    </p>
+                </div>
 
-                <article class="lesson-card">
-                    <p class="lesson-label">Lesson 02</p>
-                    <h3>Conditionals and Loops</h3>
-                    <p>Strengthen your understanding of decision-making and repetition in Java programs.</p>
-                    <div class="lesson-actions">
-                        <a class="button button-primary button-small" href="lesson-apcsa-conditionals-loops.html">Start lesson</a>
-                    </div>
-                </article>
+                <div class="browser-toolbar">
+                    <label class="search-field" for="course-lesson-search">
+                        <span>Search lessons</span>
+                        <input id="course-lesson-search" type="search"
+                            placeholder="Search by lesson title, topic, or module..." />
+                    </label>
+                    <p class="results-note" id="course-results-note">Showing all 180 lessons.</p>
+                </div>
+
+                <div class="module-browser" id="course-browser"></div>
             </div>
         </section>
     </main>
 
     <footer class="site-footer">
         <div class="container footer-inner">
-            <p>CodeTheCurrent is a course platform for modern technical education.</p>
+            <p>CodeTheCurrent — Course lessons and materials for students.</p>
             <p>&copy; <span data-year></span> CodeTheCurrent</p>
         </div>
     </footer>
 
+    <script src="apcsa-data.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

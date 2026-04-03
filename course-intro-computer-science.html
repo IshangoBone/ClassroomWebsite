@@ -6,7 +6,7 @@
     <title>Intro to Computer Science | CodeTheCurrent</title>
     <meta
         name="description"
-        content="Overview page for Intro to Computer Science on CodeTheCurrent, including lesson links and key skills."
+        content="Intro to Computer Science on CodeTheCurrent includes 15 modules, 90 lessons, and a searchable lesson browser aligned to a Programming Logic and Design course flow."
     />
     <link rel="stylesheet" href="style.css" />
 </head>
@@ -37,8 +37,9 @@
                 <p class="eyebrow">Course overview</p>
                 <h1>Intro to Computer Science</h1>
                 <p>
-                    Build a foundation in computer science through clear lessons on algorithms, logic,
-                    problem solving, and beginner-friendly programming ideas.
+                    This course is organized into 15 modules and 90 total lessons. It is built around a
+                    programming logic and design progression so students can move from foundational
+                    computer science thinking into structured problem solving and program development.
                 </p>
             </div>
         </section>
@@ -48,9 +49,9 @@
                 <article class="course-summary">
                     <h2>What students will learn</h2>
                     <ul class="clean-list">
-                        <li>How algorithms and logical processes drive computing systems.</li>
-                        <li>How to break larger problems into simpler steps and patterns.</li>
-                        <li>How foundational programming ideas connect to real-world technology.</li>
+                        <li>How to analyze problems and plan logical, step-by-step solutions.</li>
+                        <li>How variables, operators, decisions, and loops work together in a program.</li>
+                        <li>How to test, debug, document, and communicate program ideas clearly.</li>
                     </ul>
                 </article>
 
@@ -59,49 +60,59 @@
                     <div class="meta-list">
                         <div>
                             <strong>Audience</strong>
-                            <span>Students beginning coding and computational thinking.</span>
+                            <span>Students beginning programming, logic, and computational thinking.</span>
                         </div>
                         <div>
-                            <strong>Format</strong>
-                            <span>Prerecorded lessons, summaries, and reflective questions.</span>
+                            <strong>Structure</strong>
+                            <span>15 modules aligned to a chapter-based programming logic course flow.</span>
                         </div>
                         <div>
-                            <strong>Current lesson count</strong>
-                            <span>2 starter lessons</span>
+                            <strong>Lesson count</strong>
+                            <span>90 lessons total</span>
+                        </div>
+                        <div>
+                            <strong>Lesson format</strong>
+                            <span>Objective, video, summary, and reflection questions.</span>
                         </div>
                     </div>
                 </aside>
             </div>
+        </section>
 
-            <div class="container lesson-list">
-                <article class="lesson-card">
-                    <p class="lesson-label">Lesson 01</p>
-                    <h3>Algorithms and Problem Solving</h3>
-                    <p>Learn what an algorithm is and how computer scientists use step-by-step logic.</p>
-                    <div class="lesson-actions">
-                        <a class="button button-primary button-small" href="lesson-ics-algorithms.html">Start lesson</a>
-                    </div>
-                </article>
+        <section class="section section-muted">
+            <div class="container">
+                <div class="section-heading">
+                    <p class="eyebrow">Lesson browser</p>
+                    <h2>Search lessons and browse modules without endless page scrolling.</h2>
+                    <p>
+                        Use the search bar to jump to a topic quickly, or open a module to explore its six
+                        lessons. The module browser stays inside a contained scroll area so the page feels
+                        organized even with all 90 lessons available.
+                    </p>
+                </div>
 
-                <article class="lesson-card">
-                    <p class="lesson-label">Lesson 02</p>
-                    <h3>Intro to HTML and CSS Thinking</h3>
-                    <p>Connect structure, style, and web thinking to the larger world of computer science.</p>
-                    <div class="lesson-actions">
-                        <a class="button button-primary button-small" href="lesson-ics-html-css.html">Start lesson</a>
-                    </div>
-                </article>
+                <div class="browser-toolbar">
+                    <label class="search-field" for="course-lesson-search">
+                        <span>Search lessons</span>
+                        <input id="course-lesson-search" type="search"
+                            placeholder="Search by lesson title, topic, or module..." />
+                    </label>
+                    <p class="results-note" id="course-results-note">Showing all 90 lessons.</p>
+                </div>
+
+                <div class="module-browser" id="course-browser"></div>
             </div>
         </section>
     </main>
 
     <footer class="site-footer">
         <div class="container footer-inner">
-            <p>CodeTheCurrent is a course platform for modern technical education.</p>
+            <p>CodeTheCurrent — Course lessons and materials for students.</p>
             <p>&copy; <span data-year></span> CodeTheCurrent</p>
         </div>
     </footer>
 
+    <script src="ics-data.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
