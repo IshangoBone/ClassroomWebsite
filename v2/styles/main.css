@@ -63,3 +63,27 @@ h2 {
 .status-description {
     color: #49617f;
 }
+
+.status-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.status-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: #183153;
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.status-link:hover,
+.status-link:focus-visible {
+    background: #274a7f;
+}

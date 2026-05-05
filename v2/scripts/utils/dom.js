@@ -22,5 +22,18 @@ export function appendModuleStatus(container, moduleInfo) {
     const description = createElement("span", "status-description", moduleInfo.status);
 
     item.append(title, description);
+
+    if (moduleInfo.links?.length) {
+        const actions = createElement("div", "status-actions");
+
+        moduleInfo.links.forEach((linkInfo) => {
+            const link = createElement("a", "status-link", linkInfo.label);
+            link.href = linkInfo.href;
+            actions.append(link);
+        });
+
+        item.append(actions);
+    }
+
     container.append(item);
 }
