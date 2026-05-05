@@ -4,6 +4,7 @@ body {
     padding: 40px;
     background: #f4f7fb;
     color: #183153;
+    line-height: 1.5;
 }
 
 main {
@@ -13,4 +14,52 @@ main {
     padding: 32px;
     border-radius: 16px;
     box-shadow: 0 10px 30px rgba(24, 49, 83, 0.08);
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    color: #4568a8;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+h1 {
+    margin: 0 0 12px;
+}
+
+.intro {
+    margin: 0 0 32px;
+    max-width: 56ch;
+}
+
+h2 {
+    margin: 0 0 16px;
+    font-size: 1.1rem;
+}
+
+.status-list {
+    display: grid;
+    gap: 12px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.status-item {
+    display: grid;
+    gap: 4px;
+    padding: 16px;
+    border: 1px solid #dbe4f1;
+    border-radius: 12px;
+    background: #f9fbff;
+}
+
+.status-title {
+    font-size: 1rem;
+}
+
+.status-description {
+    color: #49617f;
 }
