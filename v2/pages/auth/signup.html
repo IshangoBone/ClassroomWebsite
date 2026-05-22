@@ -8,36 +8,78 @@
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 
-<body>
-    <main>
-        <p class="eyebrow">Authentication</p>
-        <h1>Create Your Account</h1>
-        <p class="intro">
-            This page will become the main signup entry point for students, teachers, and admins.
-        </p>
+<body data-auth-mode="signup">
+    <main class="auth-layout auth-layout--single">
+        <section class="auth-card auth-card--single" aria-labelledby="auth-card-heading">
+            <div class="auth-card-header">
+                <p class="eyebrow">CodeTheCurrent V2</p>
+                <h2 id="auth-card-heading" class="auth-card-title">Create your account</h2>
+                <p class="auth-card-copy">Set up your account from the same simple front door, then we’ll carry you
+                    into onboarding next.</p>
+            </div>
 
-        <section aria-labelledby="signup-form-heading">
-            <h2 id="signup-form-heading">New Account</h2>
-            <form class="auth-form">
-                <label class="form-field">
-                    <span>Full name</span>
-                    <input type="text" name="full-name" placeholder="Jake Roos-Williams" />
-                </label>
+            <div class="auth-toggle" role="tablist" aria-label="Authentication mode">
+                <button type="button" class="auth-toggle-button" data-auth-switch="login" aria-selected="false">Log
+                    In</button>
+                <button type="button" class="auth-toggle-button" data-auth-switch="signup" aria-selected="true">Sign
+                    Up</button>
+            </div>
 
-                <label class="form-field">
-                    <span>Email</span>
-                    <input type="email" name="email" placeholder="name@example.com" />
-                </label>
+            <button type="button" class="social-button" data-google-button>
+                Continue with Google
+            </button>
+            <p class="social-note">Google sign-in will turn on once the Google OAuth credentials are connected.</p>
 
-                <label class="form-field">
-                    <span>Password</span>
-                    <input type="password" name="password" placeholder="Create a password" />
-                </label>
+            <div class="auth-divider" aria-hidden="true">
+                <span>or use email</span>
+            </div>
 
-                <button type="button" class="primary-button">Create Account</button>
-            </form>
+            <section data-auth-panel="login" aria-labelledby="login-form-heading" hidden>
+                <h3 id="login-form-heading" class="auth-section-title">Account Access</h3>
+                <form class="auth-form" data-login-form>
+                    <label class="form-field">
+                        <span>Email</span>
+                        <input type="email" name="email" placeholder="teacher@school.org" required />
+                    </label>
+
+                    <label class="form-field">
+                        <span>Password</span>
+                        <input type="password" name="password" placeholder="Enter your password" required />
+                    </label>
+
+                    <button type="submit" class="primary-button">Log In</button>
+                </form>
+
+                <p class="auth-status" data-auth-status="login" aria-live="polite"></p>
+            </section>
+
+            <section data-auth-panel="signup" aria-labelledby="signup-form-heading">
+                <h3 id="signup-form-heading" class="auth-section-title">New account</h3>
+                <form class="auth-form" data-signup-form>
+                    <label class="form-field">
+                        <span>Full name</span>
+                        <input type="text" name="full-name" placeholder="John Doe" required />
+                    </label>
+
+                    <label class="form-field">
+                        <span>Email</span>
+                        <input type="email" name="email" placeholder="name@example.com" required />
+                    </label>
+
+                    <label class="form-field">
+                        <span>Password</span>
+                        <input type="password" name="password" placeholder="Create a password" required />
+                    </label>
+
+                    <button type="submit" class="primary-button primary-button--signup">Create Account</button>
+                </form>
+
+                <p class="auth-status" data-auth-status="signup" aria-live="polite"></p>
+            </section>
         </section>
     </main>
+
+    <script type="module" src="../../scripts/auth/auth-shell.js"></script>
 </body>
 
 </html>
