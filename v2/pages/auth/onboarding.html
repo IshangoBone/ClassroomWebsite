@@ -9,31 +9,57 @@
 </head>
 
 <body>
-    <main>
-        <p class="eyebrow">Onboarding</p>
-        <h1>Finish Setup</h1>
-        <p class="intro">
-            After signup, this page will help users choose their role context and complete their starter profile.
-        </p>
+    <main class="auth-layout auth-layout--single">
+        <section class="auth-card auth-card--single" aria-labelledby="onboarding-heading">
+            <div class="auth-card-header">
+                <p class="eyebrow">Onboarding</p>
+                <h1 id="onboarding-heading" class="auth-card-title">Finish setup</h1>
+                <p class="auth-card-copy">
+                    Choose your public username and complete the private profile information needed for your account.
+                </p>
+            </div>
 
-        <section aria-labelledby="onboarding-heading">
-            <h2 id="onboarding-heading">Starter Checklist</h2>
-            <ul class="status-list">
-                <li class="status-item">
-                    <strong class="status-title">Choose account role</strong>
-                    <span class="status-description">Teacher, student, admin, or a mix of teacher and student contexts.</span>
-                </li>
-                <li class="status-item">
-                    <strong class="status-title">Add profile details</strong>
-                    <span class="status-description">Display name, school, and any classroom-facing identity info.</span>
-                </li>
-                <li class="status-item">
-                    <strong class="status-title">Continue to dashboard</strong>
-                    <span class="status-description">After setup, users land on the shared dashboard shell.</span>
-                </li>
-            </ul>
+            <form class="auth-form" data-onboarding-form>
+                <label class="form-field">
+                    <span>Legal first name</span>
+                    <input type="text" name="legal-first-name" autocomplete="given-name" required />
+                </label>
+
+                <label class="form-field">
+                    <span>Legal last name</span>
+                    <input type="text" name="legal-last-name" autocomplete="family-name" required />
+                </label>
+
+                <label class="form-field">
+                    <span>Username / screen name</span>
+                    <input type="text" name="username" autocomplete="username" minlength="3" maxlength="40" required />
+                    <small class="form-hint">This is the name other users may see later.</small>
+                </label>
+
+                <label class="form-field">
+                    <span>Date of birth</span>
+                    <input type="date" name="date-of-birth" autocomplete="bday" required />
+                    <small class="form-hint">Your birth date stays private by default.</small>
+                </label>
+
+                <label class="form-field">
+                    <span>Starter avatar</span>
+                    <select name="avatar-key" required>
+                        <option value="bolt">Bolt</option>
+                        <option value="compass">Compass</option>
+                        <option value="pixel">Pixel</option>
+                    </select>
+                    <small class="form-hint">Uploading a custom photo will be available after storage is connected.</small>
+                </label>
+
+                <button type="submit" class="primary-button primary-button--signup">Continue to Dashboard</button>
+            </form>
+
+            <p class="auth-status" data-onboarding-status aria-live="polite"></p>
         </section>
     </main>
+
+    <script type="module" src="../../scripts/auth/onboarding.js"></script>
 </body>
 
 </html>

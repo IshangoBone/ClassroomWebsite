@@ -21,6 +21,28 @@ const copyElement = qs(".auth-card-copy");
 const loginForm = qs("[data-login-form]");
 const signupForm = qs("[data-signup-form]");
 
+async function continueFromAuth(user, mode) {
+    const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("profile_completed")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+
+    if (error) {
+        setStatus(mode, "Your account is ready, but profile setup could not be loaded yet.", "error");
+        return;
+    }
+
+    if (!profile) {
+        setStatus(mode, "Your account is ready, but its profile record has not been created yet.", "error");
+        return;
+    }
+
+    window.location.href = profile.profile_completed
+        ? "../dashboard/index.html"
+        : "./onboarding.html";
+}
+
 function setStatus(mode, message, tone = "info") {
     const statusElement = qs(`[data-auth-status="${mode}"]`);
 
@@ -97,7 +119,7 @@ if (loginForm) {
 
         setStatus("login", "Checking your account...", "info");
 
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password,
         });
@@ -107,8 +129,8 @@ if (loginForm) {
             return;
         }
 
-        setStatus("login", "Login worked. Next we’ll route this into the V2 dashboard.", "success");
-        loginForm.reset();
+        setStatus("login", "Login worked. Loading your profile...", "success");
+        await continueFromAuth(data.user, "login");
     });
 }
 
@@ -117,24 +139,21 @@ if (signupForm) {
         event.preventDefault();
 
         const formData = new FormData(signupForm);
-        const fullName = String(formData.get("full-name") || "").trim();
         const email = String(formData.get("email") || "").trim();
         const password = String(formData.get("password") || "");
 
-        if (!fullName || !email || !password) {
-            setStatus("signup", "Fill out your full name, email, and password to create the account.", "error");
+        if (!email || !password) {
+            setStatus("signup", "Fill out your email and password to create the account.", "error");
             return;
         }
 
         setStatus("signup", "Creating your account...", "info");
 
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
-                data: {
-                    full_name: fullName,
-                },
+                emailRedirectTo: new URL("./onboarding.html", window.location.href).href,
             },
         });
 
@@ -143,12 +162,19 @@ if (signupForm) {
             return;
         }
 
-        setStatus(
-            "signup",
-            "Account created. Next we’ll connect this into onboarding and confirmation messaging.",
-            "success"
-        );
         signupForm.reset();
+
+        if (!data.session) {
+            setStatus(
+                "signup",
+                "Account created. Check your email to confirm your account, then log in to finish setup.",
+                "success"
+            );
+            return;
+        }
+
+        setStatus("signup", "Account created. Loading profile setup...", "success");
+        await continueFromAuth(data.user, "signup");
     });
 }
 

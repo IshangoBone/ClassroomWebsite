@@ -233,7 +233,8 @@ h2 {
     font-weight: 700;
 }
 
-.form-field input {
+.form-field input,
+.form-field select {
     min-height: 44px;
     padding: 0 14px;
     border: 1px solid #c9d6e8;
@@ -243,9 +244,15 @@ h2 {
     background: #ffffff;
 }
 
-.form-field input:focus {
+.form-field input:focus,
+.form-field select:focus {
     outline: 2px solid #9cb5df;
     outline-offset: 2px;
+}
+
+.form-hint {
+    color: #5e7290;
+    font-size: 0.9rem;
 }
 
 .primary-button {
