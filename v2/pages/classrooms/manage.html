@@ -29,8 +29,35 @@
                     <h2 id="managed-classrooms-heading">Managed classrooms</h2>
                     <p class="section-copy">Only classrooms you are authorized to manage are displayed.</p>
                 </div>
-                <button type="button" class="primary-button management-action" disabled>Create classroom</button>
+                <button type="button" class="primary-button management-action" data-toggle-classroom-form>Create classroom</button>
             </div>
+
+            <form class="management-create-form" data-classroom-form hidden>
+                <h3>Create classroom</h3>
+                <p class="section-copy">Create one classroom for this course. Join access and roster tools come later.</p>
+
+                <div class="management-form-grid">
+                    <label class="form-field">
+                        <span>Classroom name</span>
+                        <input type="text" name="name" placeholder="Period 1 Earth Science" required />
+                    </label>
+
+                    <label class="form-field">
+                        <span>Period / block</span>
+                        <input type="text" name="period_block" placeholder="Period 1" />
+                    </label>
+
+                    <label class="form-field">
+                        <span>School year</span>
+                        <input type="text" name="school_year" placeholder="2026-2027" />
+                    </label>
+                </div>
+
+                <div class="course-form-actions">
+                    <button type="submit" class="primary-button">Create classroom</button>
+                    <button type="button" class="secondary-button" data-cancel-classroom-form>Cancel</button>
+                </div>
+            </form>
 
             <div data-classroom-list>
                 <p class="empty-state">Loading classrooms...</p>
@@ -40,7 +67,7 @@
         <section class="management-section management-section--pending" data-classrooms-content hidden>
             <h2>Coming in the classroom manager</h2>
             <ul class="feature-list">
-                <li>Create classrooms and generate join access</li>
+                <li>Generate join access for classrooms</li>
                 <li>View rosters, progress, and submissions</li>
                 <li>Archive a classroom while preserving history</li>
             </ul>
