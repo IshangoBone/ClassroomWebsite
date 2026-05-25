@@ -16,8 +16,8 @@
             <p class="eyebrow">Course Management</p>
             <h1 data-course-heading>Loading course...</h1>
             <p class="intro">
-                Update your course basics here. Modules, lessons, content blocks, questions, preview, and publishing
-                will be added in the course builder work.
+                Update your course basics and begin structuring modules here. Lessons, content blocks, questions,
+                preview, and publishing will be added in the course builder work.
             </p>
         </header>
 
@@ -56,10 +56,13 @@
             </form>
         </section>
 
-        <section class="management-section" data-course-content hidden aria-labelledby="builder-roadmap-heading">
-            <div class="section-header">
-                <h2 id="builder-roadmap-heading">Course builder sections</h2>
-                <p class="section-copy">This entry point is ready; deeper editing remains controlled follow-up work.</p>
+        <section class="management-section" data-course-content hidden aria-labelledby="course-modules-heading">
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2 id="course-modules-heading">Course modules</h2>
+                    <p class="section-copy">Modules provide the first structure for lessons that will be added later.</p>
+                </div>
+                <button type="button" class="primary-button management-action" data-toggle-module-form>Add module</button>
             </div>
 
             <div class="dashboard-summary dashboard-summary--compact">
@@ -73,8 +76,35 @@
                 </article>
             </div>
 
+            <form class="management-create-form" data-module-form hidden>
+                <h3>Add module</h3>
+                <p class="section-copy">Start a new unit of study within this course.</p>
+
+                <div class="module-form-grid">
+                    <label class="form-field">
+                        <span>Module title</span>
+                        <input type="text" name="title" placeholder="Earth systems" maxlength="120" required />
+                    </label>
+
+                    <label class="form-field">
+                        <span>Description</span>
+                        <textarea name="description" rows="3" maxlength="500" placeholder="Learning focus for this module"></textarea>
+                    </label>
+                </div>
+
+                <div class="course-form-actions">
+                    <button type="submit" class="primary-button">Create module</button>
+                    <button type="button" class="secondary-button" data-cancel-module-form>Cancel</button>
+                </div>
+            </form>
+
+            <div data-module-list>
+                <p class="empty-state">Loading modules...</p>
+            </div>
+
+            <h3 class="section-subheading">Coming in the course builder</h3>
             <ul class="feature-list">
-                <li>Build modules and lessons</li>
+                <li>Add lessons inside each module</li>
                 <li>Add lesson content and assessment questions</li>
                 <li>Preview as a student before publishing</li>
             </ul>
