@@ -212,14 +212,11 @@ function renderCourses(courses, classrooms) {
             course.description || "No course description has been added yet."
         );
         const actions = createElement("div", "course-actions");
-        const builderAction = createElement("button", "secondary-button", "Open course builder");
-        const classroomAction = createElement("button", "secondary-button", "Manage classrooms");
-        builderAction.type = "button";
-        builderAction.disabled = true;
-        builderAction.title = "Course builder work begins in the next issue.";
-        classroomAction.type = "button";
-        classroomAction.disabled = true;
-        classroomAction.title = "Classroom management work begins in a later issue.";
+        const builderAction = createElement("a", "secondary-button", "Manage course");
+        const classroomAction = createElement("a", "secondary-button", "Manage classrooms");
+        const courseParam = encodeURIComponent(course.id);
+        builderAction.href = `../courses/editor.html?course=${courseParam}`;
+        classroomAction.href = `../classrooms/manage.html?course=${courseParam}`;
         actions.append(builderAction, classroomAction);
 
         card.append(heading, details, description, renderClassrooms(course, classrooms), actions);

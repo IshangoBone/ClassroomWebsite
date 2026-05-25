@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Manage Classrooms</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout">
+        <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Classroom Management</p>
+            <h1 data-classrooms-heading>Loading classrooms...</h1>
+            <p class="intro">
+                Classrooms created from this course will appear here. Classroom setup and roster actions will be
+                added in the classroom manager work.
+            </p>
+        </header>
+
+        <p class="auth-status management-status" data-classrooms-status aria-live="polite"></p>
+
+        <section class="management-section" data-classrooms-content hidden aria-labelledby="managed-classrooms-heading">
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2 id="managed-classrooms-heading">Managed classrooms</h2>
+                    <p class="section-copy">Only classrooms you are authorized to manage are displayed.</p>
+                </div>
+                <button type="button" class="primary-button management-action" disabled>Create classroom</button>
+            </div>
+
+            <div data-classroom-list>
+                <p class="empty-state">Loading classrooms...</p>
+            </div>
+        </section>
+
+        <section class="management-section management-section--pending" data-classrooms-content hidden>
+            <h2>Coming in the classroom manager</h2>
+            <ul class="feature-list">
+                <li>Create classrooms and generate join access</li>
+                <li>View rosters, progress, and submissions</li>
+                <li>Archive a classroom while preserving history</li>
+            </ul>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/classrooms/manage.js"></script>
+</body>
+
+</html>

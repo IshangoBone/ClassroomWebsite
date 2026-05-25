@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Manage Course</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout">
+        <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Course Management</p>
+            <h1 data-course-heading>Loading course...</h1>
+            <p class="intro">
+                Update your course basics here. Modules, lessons, content blocks, questions, preview, and publishing
+                will be added in the course builder work.
+            </p>
+        </header>
+
+        <p class="auth-status management-status" data-course-status aria-live="polite"></p>
+
+        <section class="management-section" data-course-content hidden aria-labelledby="course-basics-heading">
+            <div class="section-header">
+                <h2 id="course-basics-heading">Course basics</h2>
+                <p class="section-copy">These fields define the starting information for your draft course.</p>
+            </div>
+
+            <form class="course-form" data-course-editor-form>
+                <label class="form-field">
+                    <span>Course title</span>
+                    <input type="text" name="title" maxlength="120" required />
+                </label>
+
+                <label class="form-field">
+                    <span>Subject area</span>
+                    <input type="text" name="subject-area" maxlength="80" required />
+                </label>
+
+                <label class="form-field">
+                    <span>Estimated length</span>
+                    <input type="text" name="estimated-length" maxlength="80" required />
+                </label>
+
+                <label class="form-field form-field--wide">
+                    <span>Description</span>
+                    <textarea name="description" rows="4" maxlength="600"></textarea>
+                </label>
+
+                <div class="course-form-actions form-field--wide">
+                    <button type="submit" class="primary-button">Save course basics</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="management-section" data-course-content hidden aria-labelledby="builder-roadmap-heading">
+            <div class="section-header">
+                <h2 id="builder-roadmap-heading">Course builder sections</h2>
+                <p class="section-copy">This entry point is ready; deeper editing remains controlled follow-up work.</p>
+            </div>
+
+            <div class="dashboard-summary dashboard-summary--compact">
+                <article class="summary-card">
+                    <span class="summary-label">Modules</span>
+                    <strong class="summary-value" data-module-count>-</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Lessons</span>
+                    <strong class="summary-value" data-lesson-count>-</strong>
+                </article>
+            </div>
+
+            <ul class="feature-list">
+                <li>Build modules and lessons</li>
+                <li>Add lesson content and assessment questions</li>
+                <li>Preview as a student before publishing</li>
+            </ul>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/courses/editor.js"></script>
+</body>
+
+</html>

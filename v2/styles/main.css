@@ -462,6 +462,9 @@ h2 {
 }
 
 .secondary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-height: 44px;
     padding: 0 16px;
     border: 1px solid #c9d6e8;
@@ -471,6 +474,13 @@ h2 {
     font: inherit;
     font-weight: 700;
     cursor: pointer;
+    text-decoration: none;
+}
+
+.secondary-button:hover,
+.secondary-button:focus-visible {
+    border-color: #9cb5df;
+    background: #f7faff;
 }
 
 .secondary-button:disabled {
@@ -605,6 +615,106 @@ h2 {
     background: #f9fbff;
 }
 
+.management-layout {
+    display: grid;
+    gap: 26px;
+    max-width: 960px;
+}
+
+.back-link {
+    color: #4568a8;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+    text-decoration: underline;
+}
+
+.management-header .intro {
+    margin-bottom: 0;
+}
+
+.management-status {
+    min-height: 0;
+    margin: -10px 0 0;
+}
+
+.management-status:empty {
+    display: none;
+}
+
+.management-section {
+    display: grid;
+    gap: 18px;
+    padding: 22px;
+    border: 1px solid #dbe4f1;
+    border-radius: 20px;
+    background: #ffffff;
+}
+
+.management-section--pending {
+    background: #f7faff;
+}
+
+.section-header--actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: start;
+}
+
+.management-action {
+    width: auto;
+    white-space: nowrap;
+}
+
+.primary-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
+.dashboard-summary--compact {
+    max-width: 420px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.feature-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding-left: 20px;
+    color: #49617f;
+}
+
+.managed-classroom-list {
+    display: grid;
+    gap: 12px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.managed-classroom-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 16px;
+    padding: 18px;
+    border: 1px solid #dbe4f1;
+    border-radius: 16px;
+    background: #f7faff;
+}
+
+.managed-classroom-card .course-muted {
+    grid-column: 1;
+}
+
+.managed-classroom-card .badge {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+}
+
 @media (min-width: 900px) {
     .auth-card {
         padding: 34px;
@@ -635,5 +745,13 @@ h2 {
 
     .badge-row {
         justify-content: flex-start;
+    }
+
+    .section-header--actions {
+        display: grid;
+    }
+
+    .management-action {
+        width: 100%;
     }
 }
