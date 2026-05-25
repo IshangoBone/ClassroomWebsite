@@ -1,60 +1,79 @@
 # Codex Handoff
 
 ## Project
-CodeTheCurrent V2 teacher website repo.
+
+CodeTheCurrent V2 teacher and student platform repository.
 
 ## Current Status
-The project has been pushed to GitHub as v2. The next onboarding/database work is present locally but has not been committed yet.
+
+The `v2` branch is pushed through the initial database foundation and minimum
+profile onboarding flow. The Supabase CLI is initialized and linked to the
+hosted CodeTheCurrent V2 project; migration history is synchronized locally
+and remotely through `20260525000700`.
 
 ## Current Commit
-84ff3c5 — Connect V2 auth flow to Supabase
 
-## Completed So Far
-- Shared login/signup shell
-- Supabase client wiring
-- Working login error handling
-- Working signup account creation
-- Basic V2 auth flow connected to Supabase
-- Supabase `profiles` migration created and applied manually to the V2 Supabase project
-- Minimum self-only profile RLS policies applied manually in Supabase
-- Profile-aware login/signup routing into onboarding or dashboard
-- Minimum onboarding form for private names, username, date of birth, and default avatar choice
-- Email confirmation redirect requested to the local onboarding route for future signups
-- Full tested flow: confirmed account login -> onboarding -> saved profile with `compass` avatar -> dashboard
+`501b973` - Create file metadata and reference schema
 
-## Current Development Goal
-Checkpoint the minimum onboarding flow, establish a repeatable Supabase migration/config workflow, then begin the next data-backed feature.
+## Completed Checkpoints
+
+- Working Supabase email signup/login and profile-aware routing.
+- Tested onboarding flow: confirmed account -> onboarding -> saved profile -> dashboard.
+- Supabase CLI configuration and linked migration workflow.
+- Issue #3: profiles schema and minimum self-only profile RLS.
+- Issue #4: courses and course collaborators schema.
+- Issue #5: classrooms, enrollments, and classroom teachers schema.
+- Issues #6-#8: modules, lessons, lesson blocks, questions, and options schema.
+- Issue #9: submissions and progress schema with private draft boundaries.
+- Issue #10: file metadata and references schema, without storage buckets or uploads.
+
+## Permission Model
+
+Issue #2 is documented in `v2/ROLE_PERMISSIONS.md`. In brief:
+
+- Platform roles remain `user` and reserved `admin`.
+- Teacher and student status is contextual, not a permanent account role.
+- Owners/collaborators manage courses; classroom teachers manage classrooms;
+  enrollments represent student access.
+- Admin behavior is not enabled until admin authorization and protected routes
+  are implemented.
+
+## Migration Status
+
+Applied locally and in the linked Supabase project:
+
+- `20260524000100_create_profiles.sql`
+- `20260525000100_create_courses_and_collaborators.sql`
+- `20260525000200_create_classrooms_and_enrollments.sql`
+- `20260525000300_create_modules_and_lessons.sql`
+- `20260525000400_create_lesson_content_blocks.sql`
+- `20260525000500_create_questions_and_options.sql`
+- `20260525000600_create_submissions_and_progress.sql`
+- `20260525000700_create_files_and_references.sql`
+
+## Next Work
+
+- Commit the issue #2 permission-model documentation checkpoint.
+- Do not implement issue #11 activity/audit visibility until an explicit admin
+  authorization path exists; the issue requires admin-only viewing.
+- Defer issue #12 monetization schema because it is marked non-MVP planning.
+- Proceed into teacher-facing functionality with issue #13 only after keeping
+  the contextual role model and route-security dependency visible.
 
 ## Development Rules
-- Inspect the repo before editing.
-- Keep changes small and controlled.
-- Do not redesign the entire app.
-- Do not change auth unless it is required for onboarding.
-- Do not add unnecessary packages.
-- Do not make large architectural changes without explaining the reason first.
-- After every change, list every file changed and explain what changed.
-- Before moving to the next major feature, confirm the app builds or runs locally.
 
-## Uncommitted Files From Current Checkpoint
-- `supabase/migrations/20260524000100_create_profiles.sql`
-- `v2/pages/auth/login.html`
-- `v2/pages/auth/onboarding.html`
-- `v2/pages/auth/signup.html`
-- `v2/scripts/auth/auth-shell.js`
-- `v2/scripts/auth/onboarding.js`
-- `v2/styles/main.css`
-
-## Next Steps
-- Add the local onboarding callback URL to the Supabase Auth redirect allow list if future confirmation-link testing is needed:
-  - `http://127.0.0.1:4173/pages/auth/onboarding.html`
-- Review and commit the tested profiles/onboarding checkpoint.
-- Establish a repeatable Supabase migration workflow before adding additional database tables.
-- Continue in dependency order with the courses/collaborators schema only after the onboarding checkpoint is committed.
+- Inspect the repository before editing and keep changes small.
+- Use migrations for database changes and verify with `supabase db push --dry-run`
+  before applying them.
+- Avoid enabling admin, payment, storage upload, or Google OAuth behavior as an
+  incidental part of another issue.
+- Keep RLS additions scoped to the feature being introduced.
 
 ## Important Notes
-The old Codex thread became too large and failed during automatic context compaction. This file is now the source of truth for continuing development.
 
-- The local dev server was run from inside `v2`, so local page URLs omit the `/v2` path segment, for example:
-  - `http://127.0.0.1:4173/pages/auth/login.html`
-- Email confirmation originally returned to the local server root because no onboarding redirect was supplied; the local code now supplies `emailRedirectTo` for new signups.
-- Do not implement teacher/student/course/admin/Google OAuth functionality as part of the completed profile/onboarding checkpoint.
+- A formatting-only local change in `v2/pages/auth/login.html` is intentionally
+  unstaged and must not be included in database or documentation commits.
+- The local server was run from inside `v2`, so local page URLs omit `/v2`, for
+  example `http://127.0.0.1:4173/pages/auth/login.html`.
+- The Supabase Auth redirect allow list includes
+  `http://127.0.0.1:4173/pages/auth/onboarding.html`.
