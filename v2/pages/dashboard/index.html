@@ -4,36 +4,106 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CodeTheCurrent V2 | Dashboard</title>
+    <title>CodeTheCurrent V2 | Teacher Dashboard</title>
     <link rel="stylesheet" href="../../styles/main.css" />
 </head>
 
 <body>
-    <main>
-        <p class="eyebrow">Shared Dashboard</p>
-        <h1>Dashboard Shell</h1>
-        <p class="intro">
-            This is the shared dashboard landing page where the platform will later branch into teacher, student, and admin views.
-        </p>
+    <main class="dashboard-layout">
+        <header class="dashboard-header">
+            <div>
+                <p class="eyebrow">Teacher Dashboard</p>
+                <h1>Courses I Teach</h1>
+                <p class="intro" data-dashboard-greeting>
+                    Loading your course management workspace...
+                </p>
+            </div>
 
-        <section aria-labelledby="dashboard-shell-heading">
-            <h2 id="dashboard-shell-heading">First Dashboard Sections</h2>
-            <ul class="status-list">
-                <li class="status-item">
-                    <strong class="status-title">Welcome panel</strong>
-                    <span class="status-description">Personalized greeting, role context, and next action.</span>
-                </li>
-                <li class="status-item">
-                    <strong class="status-title">Quick links</strong>
-                    <span class="status-description">Teacher tools, student learning spaces, and admin controls.</span>
-                </li>
-                <li class="status-item">
-                    <strong class="status-title">Recent activity</strong>
-                    <span class="status-description">Submissions, course updates, invites, and alerts will appear here later.</span>
-                </li>
-            </ul>
+            <button type="button" class="primary-button dashboard-new-course-button" data-course-form-toggle disabled>
+                New course
+            </button>
+        </header>
+
+        <p class="auth-status dashboard-status" data-dashboard-status aria-live="polite"></p>
+
+        <section class="dashboard-summary" aria-label="Teaching summary">
+            <article class="summary-card">
+                <span class="summary-label">Courses I teach</span>
+                <strong class="summary-value" data-summary-courses>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Managed classrooms</span>
+                <strong class="summary-value" data-summary-classrooms>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Recent submissions</span>
+                <strong class="summary-value" data-summary-submissions>-</strong>
+            </article>
+        </section>
+
+        <section class="course-create-panel" data-course-form-panel hidden aria-labelledby="create-course-heading">
+            <div class="section-header">
+                <div>
+                    <p class="eyebrow">Quick Action</p>
+                    <h2 id="create-course-heading">Create a draft course</h2>
+                </div>
+            </div>
+
+            <form class="course-form" data-course-form>
+                <label class="form-field">
+                    <span>Course title</span>
+                    <input type="text" name="title" maxlength="120" required />
+                </label>
+
+                <label class="form-field">
+                    <span>Subject area</span>
+                    <input type="text" name="subject-area" maxlength="80" required />
+                </label>
+
+                <label class="form-field">
+                    <span>Estimated length</span>
+                    <input type="text" name="estimated-length" maxlength="80" placeholder="Example: 4 weeks" required />
+                </label>
+
+                <label class="form-field form-field--wide">
+                    <span>Description</span>
+                    <textarea name="description" rows="3" maxlength="600"></textarea>
+                </label>
+
+                <div class="course-form-actions form-field--wide">
+                    <button type="submit" class="primary-button">Create draft course</button>
+                    <button type="button" class="secondary-button" data-course-form-cancel>Cancel</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="dashboard-section" aria-labelledby="courses-heading">
+            <div class="section-header">
+                <div>
+                    <h2 id="courses-heading">Your managed courses</h2>
+                    <p class="section-copy">Courses you own or help teach appear here. New courses start as private drafts.</p>
+                </div>
+            </div>
+
+            <div class="course-grid" data-course-list>
+                <p class="empty-state">Loading courses...</p>
+            </div>
+        </section>
+
+        <section class="dashboard-section dashboard-section--muted" aria-labelledby="activity-heading">
+            <div class="section-header">
+                <div>
+                    <h2 id="activity-heading">Recent student submissions</h2>
+                    <p class="section-copy">Submission details and review actions will be expanded in the dedicated review screen.</p>
+                </div>
+            </div>
+            <div data-submission-list>
+                <p class="empty-state">Loading submissions...</p>
+            </div>
         </section>
     </main>
+
+    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js"></script>
 </body>
 
 </html>
