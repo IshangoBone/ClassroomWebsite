@@ -16,8 +16,8 @@
             <p class="eyebrow">Course Management</p>
             <h1 data-course-heading>Loading course...</h1>
             <p class="intro">
-                Update your course basics and begin structuring modules here. Lessons, content blocks, questions,
-                preview, and publishing will be added in the course builder work.
+                Update course basics, organize modules, and add lessons here. Content blocks, questions, preview,
+                and publishing will be added in later course builder work.
             </p>
         </header>
 
@@ -60,7 +60,7 @@
             <div class="section-header section-header--actions">
                 <div>
                     <h2 id="course-modules-heading">Course modules</h2>
-                    <p class="section-copy">Modules provide the first structure for lessons that will be added later.</p>
+                    <p class="section-copy">Modules organize the lessons that make up this draft course.</p>
                 </div>
                 <button type="button" class="primary-button management-action" data-toggle-module-form>Add module</button>
             </div>
@@ -77,13 +77,14 @@
             </div>
 
             <form class="management-create-form" data-module-form hidden>
-                <h3>Add module</h3>
-                <p class="section-copy">Start a new unit of study within this course.</p>
+                <h3 data-module-form-heading>Add module</h3>
+                <p class="section-copy">Create or rename a unit of study within this course.</p>
+                <input type="hidden" name="module-id" />
 
                 <div class="module-form-grid">
                     <label class="form-field">
                         <span>Module title</span>
-                        <input type="text" name="title" placeholder="Earth systems" maxlength="120" required />
+                        <input type="text" name="title" placeholder="Introduction to Computers and Programming" maxlength="120" required />
                     </label>
 
                     <label class="form-field">
@@ -93,7 +94,7 @@
                 </div>
 
                 <div class="course-form-actions">
-                    <button type="submit" class="primary-button">Create module</button>
+                    <button type="submit" class="primary-button" data-module-submit>Create module</button>
                     <button type="button" class="secondary-button" data-cancel-module-form>Cancel</button>
                 </div>
             </form>
@@ -102,9 +103,42 @@
                 <p class="empty-state">Loading modules...</p>
             </div>
 
+            <form class="management-create-form" data-lesson-form hidden>
+                <h3 data-lesson-form-heading>Add lesson</h3>
+                <p class="section-copy">Create a lesson within this module. Lesson content will be added later.</p>
+                <input type="hidden" name="module-id" />
+
+                <div class="lesson-form-grid">
+                    <label class="form-field">
+                        <span>Lesson title</span>
+                        <input type="text" name="title" placeholder="Introduction" maxlength="120" required />
+                    </label>
+
+                    <label class="form-field">
+                        <span>Objective</span>
+                        <textarea name="objective" rows="3" maxlength="500" placeholder="What students should understand after this lesson"></textarea>
+                    </label>
+
+                    <label class="form-field">
+                        <span>Estimated time</span>
+                        <input type="text" name="estimated-time" placeholder="45 minutes" maxlength="80" />
+                    </label>
+
+                    <label class="form-field form-field--wide">
+                        <span>Lesson overview</span>
+                        <textarea name="summary" rows="3" maxlength="600" placeholder="Work through introduction as part of Chapter 1: Introduction to Computers and Programming."></textarea>
+                    </label>
+                </div>
+
+                <div class="course-form-actions">
+                    <button type="submit" class="primary-button">Create lesson</button>
+                    <button type="button" class="secondary-button" data-cancel-lesson-form>Cancel</button>
+                </div>
+            </form>
+
             <h3 class="section-subheading">Coming in the course builder</h3>
             <ul class="feature-list">
-                <li>Add lessons inside each module</li>
+                <li>Edit and reorder modules and lessons</li>
                 <li>Add lesson content and assessment questions</li>
                 <li>Preview as a student before publishing</li>
             </ul>
