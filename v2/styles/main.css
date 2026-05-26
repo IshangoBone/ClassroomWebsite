@@ -706,6 +706,12 @@ h2 {
     grid-row: span 2;
 }
 
+.content-block-form-grid {
+    display: grid;
+    gap: 12px;
+    margin: 18px 0;
+}
+
 .section-subheading {
     margin: 4px 0 0;
 }
@@ -773,18 +779,71 @@ h2 {
 
 .lesson-card {
     display: grid;
-    grid-template-columns: 1fr auto;
     gap: 12px;
-    align-items: start;
     padding: 12px 14px;
     border: 1px solid #e3eaf5;
     border-radius: 12px;
     background: #ffffff;
 }
 
+.lesson-card-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: start;
+}
+
 .lesson-title {
     margin: 0 0 5px;
     font-size: 1rem;
+}
+
+.lesson-content {
+    display: grid;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid #e3eaf5;
+}
+
+.lesson-content-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+}
+
+.lesson-content-header h6 {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.content-block-list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.content-block-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+    padding: 12px;
+    border: 1px solid #edf1f7;
+    border-radius: 10px;
+    background: #f7faff;
+}
+
+.content-block-title {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.content-block-body {
+    grid-column: 1 / -1;
+    margin: 0;
+    white-space: pre-wrap;
 }
 
 .empty-state--compact {
@@ -887,12 +946,14 @@ h2 {
     }
 
     .module-card-header,
-    .lesson-card {
+    .lesson-card-header,
+    .content-block-card {
         grid-template-columns: 1fr;
     }
 
     .module-lessons-header,
-    .module-actions {
+    .module-actions,
+    .lesson-content-header {
         align-items: stretch;
         flex-direction: column;
     }

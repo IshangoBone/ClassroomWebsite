@@ -18,8 +18,12 @@ const cancelModuleButton = qs("[data-cancel-module-form]");
 const lessonForm = qs("[data-lesson-form]");
 const lessonFormHeading = qs("[data-lesson-form-heading]");
 const cancelLessonButton = qs("[data-cancel-lesson-form]");
+const contentBlockForm = qs("[data-content-block-form]");
+const contentBlockFormHeading = qs("[data-content-block-form-heading]");
+const cancelContentBlockButton = qs("[data-cancel-content-block-form]");
 let loadedModules = [];
 let loadedLessons = [];
+let loadedContentBlocks = [];
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -75,7 +79,41 @@ function toggleLessonForm(isOpen, module = null) {
     }
 }
 
-function renderLessons(lessons) {
+function toggleContentBlockForm(isOpen, lesson = null) {
+    contentBlockForm.hidden = !isOpen;
+
+    if (isOpen && lesson) {
+        contentBlockForm.elements["lesson-id"].value = lesson.id;
+        contentBlockFormHeading.textContent = `Add text content to ${lesson.title}`;
+        contentBlockForm.elements.title.focus();
+    } else {
+        contentBlockForm.reset();
+        contentBlockFormHeading.textContent = "Add text content";
+    }
+}
+
+function renderContentBlocks(contentBlocks) {
+    if (!contentBlocks.length) {
+        return createElement("p", "empty-state empty-state--compact", "No written content has been added yet.");
+    }
+
+    const list = createElement("ol", "content-block-list");
+
+    contentBlocks.forEach((contentBlock) => {
+        const item = createElement("li", "content-block-card");
+        const title = createElement("h6", "content-block-title", contentBlock.title || "Text section");
+        const body = createElement("p", "course-muted content-block-body", contentBlock.body_text || "");
+        const labelPrefix = contentBlock.is_visible ? "Text" : "Draft text";
+        const label = createElement("span", "badge badge--quiet", `${labelPrefix} ${contentBlock.order_index + 1}`);
+
+        item.append(title, label, body);
+        list.append(item);
+    });
+
+    return list;
+}
+
+function renderLessons(lessons, contentBlocks) {
     if (!lessons.length) {
         return createElement("p", "empty-state empty-state--compact", "No lessons in this module yet.");
     }
@@ -84,6 +122,7 @@ function renderLessons(lessons) {
 
     lessons.forEach((lesson) => {
         const item = createElement("li", "lesson-card");
+        const header = createElement("div", "lesson-card-header");
         const content = createElement("div");
         const title = createElement("h5", "lesson-title", lesson.title);
         const objective = createElement(
@@ -95,16 +134,26 @@ function renderLessons(lessons) {
             ? `Lesson ${lesson.order_index + 1} | ${lesson.estimated_time}`
             : `Lesson ${lesson.order_index + 1}`;
         const label = createElement("span", "badge badge--quiet", labelText);
+        const contentSection = createElement("section", "lesson-content");
+        const contentHeader = createElement("div", "lesson-content-header");
+        const contentHeading = createElement("h6", "", "Lesson content");
+        const addContentButton = createElement("button", "secondary-button lesson-action", "Add text content");
+        const lessonContentBlocks = contentBlocks.filter((contentBlock) => contentBlock.lesson_id === lesson.id);
 
+        addContentButton.type = "button";
+        addContentButton.addEventListener("click", () => toggleContentBlockForm(true, lesson));
         content.append(title, objective);
-        item.append(content, label);
+        header.append(content, label);
+        contentHeader.append(contentHeading, addContentButton);
+        contentSection.append(contentHeader, renderContentBlocks(lessonContentBlocks));
+        item.append(header, contentSection);
         list.append(item);
     });
 
     return list;
 }
 
-function renderModules(modules, lessons) {
+function renderModules(modules, lessons, contentBlocks) {
     if (!modules.length) {
         moduleList.replaceChildren(createElement("p", "empty-state", "No modules have been created yet."));
         return;
@@ -139,7 +188,7 @@ function renderModules(modules, lessons) {
         header.append(content, label);
         actions.append(editModuleButton, addLessonButton);
         lessonHeader.append(lessonHeading, actions);
-        lessonSection.append(lessonHeader, renderLessons(moduleLessons));
+        lessonSection.append(lessonHeader, renderLessons(moduleLessons, contentBlocks));
         item.append(header, lessonSection);
         list.append(item);
     });
@@ -162,6 +211,7 @@ async function loadModules() {
     }
 
     let lessons = [];
+    let contentBlocks = [];
 
     if (modules.length) {
         const { data, error: lessonsError } = await supabase
@@ -178,11 +228,29 @@ async function loadModules() {
         }
 
         lessons = data;
+
+        if (lessons.length) {
+            const { data: lessonContent, error: contentError } = await supabase
+                .from("lesson_content_blocks")
+                .select("id, lesson_id, block_type, title, body_text, order_index, is_visible")
+                .in("lesson_id", lessons.map((lesson) => lesson.id))
+                .is("archived_at", null)
+                .order("order_index", { ascending: true });
+
+            if (contentError) {
+                moduleList.replaceChildren(createElement("p", "empty-state", "Lesson content could not be loaded."));
+                setStatus("Lesson content could not be loaded.", "error");
+                return null;
+            }
+
+            contentBlocks = lessonContent;
+        }
     }
 
     loadedModules = modules;
     loadedLessons = lessons;
-    renderModules(modules, lessons);
+    loadedContentBlocks = contentBlocks;
+    renderModules(modules, lessons, contentBlocks);
     moduleCount.textContent = String(modules.length);
     lessonCount.textContent = String(lessons.length);
     return modules;
@@ -387,8 +455,53 @@ lessonForm.addEventListener("submit", async (event) => {
     setStatus("Lesson created.", "success");
 });
 
+contentBlockForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const formData = new FormData(contentBlockForm);
+    const lessonId = String(formData.get("lesson-id") || "");
+    const title = String(formData.get("title") || "").trim();
+    const bodyText = String(formData.get("body-text") || "").trim();
+    const submitButton = contentBlockForm.querySelector("button[type='submit']");
+    const lesson = loadedLessons.find((currentLesson) => currentLesson.id === lessonId);
+
+    if (!lesson || !title || !bodyText) {
+        setStatus("Choose a lesson and enter a title and written content before saving.", "error");
+        return;
+    }
+
+    const lessonContent = loadedContentBlocks.filter((contentBlock) => contentBlock.lesson_id === lessonId);
+    const nextOrder = lessonContent.reduce(
+        (highest, contentBlock) => Math.max(highest, contentBlock.order_index),
+        -1
+    ) + 1;
+    setStatus("Creating text content...");
+    submitButton.disabled = true;
+
+    const { error } = await supabase.from("lesson_content_blocks").insert({
+        lesson_id: lessonId,
+        block_type: "text",
+        title,
+        body_text: bodyText,
+        order_index: nextOrder,
+        is_visible: false,
+    });
+
+    submitButton.disabled = false;
+
+    if (error) {
+        setStatus(error.message || "The text content could not be created.", "error");
+        return;
+    }
+
+    toggleContentBlockForm(false);
+    await loadModules();
+    setStatus("Text content created.", "success");
+});
+
 addModuleButton.addEventListener("click", () => toggleModuleForm(true));
 cancelModuleButton.addEventListener("click", () => toggleModuleForm(false));
 cancelLessonButton.addEventListener("click", () => toggleLessonForm(false));
+cancelContentBlockButton.addEventListener("click", () => toggleContentBlockForm(false));
 
 await initializePage();
