@@ -760,6 +760,10 @@ h2 {
     opacity: 0.45;
 }
 
+.module-card--collapsed {
+    gap: 10px;
+}
+
 .module-card-header {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -783,6 +787,12 @@ h2 {
 
 .module-lessons-header h4 {
     margin: 0;
+}
+
+.module-collapse-summary {
+    margin: 0;
+    color: #49617f;
+    font-weight: 700;
 }
 
 .module-actions {

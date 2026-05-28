@@ -28,6 +28,7 @@ let loadedModules = [];
 let loadedLessons = [];
 let loadedContentBlocks = [];
 let loadedQuestions = [];
+const collapsedModuleIds = new Set();
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -428,13 +429,17 @@ function renderModules(modules, lessons, contentBlocks, questions) {
         const lessonHeading = createElement("h4", "", "Lessons");
         const actions = createElement("div", "module-actions");
         const dragHint = createElement("span", "module-drag-hint", "Drag to reorder");
+        const toggleModuleButton = createElement("button", "secondary-button lesson-action");
         const editModuleButton = createElement("button", "secondary-button lesson-action", "Edit module");
         const addLessonButton = createElement("button", "secondary-button lesson-action", "Add lesson");
         const deleteModuleButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete module");
         const moduleLessons = lessons.filter((lesson) => lesson.module_id === module.id);
+        const isCollapsed = collapsedModuleIds.has(module.id);
+        const lessonCountLabel = moduleLessons.length === 1 ? "1 lesson hidden." : `${moduleLessons.length} lessons hidden.`;
 
         item.draggable = true;
         item.dataset.moduleId = module.id;
+        item.classList.toggle("module-card--collapsed", isCollapsed);
         item.addEventListener("dragstart", (event) => {
             if (event.target.closest(".lesson-card")) {
                 return;
@@ -448,6 +453,17 @@ function renderModules(modules, lessons, contentBlocks, questions) {
             item.classList.remove("module-card--dragging");
             await saveModuleOrder(list);
         });
+        toggleModuleButton.type = "button";
+        toggleModuleButton.textContent = isCollapsed ? "Expand module" : "Collapse module";
+        toggleModuleButton.addEventListener("click", () => {
+            if (isCollapsed) {
+                collapsedModuleIds.delete(module.id);
+            } else {
+                collapsedModuleIds.add(module.id);
+            }
+
+            renderModules(loadedModules, loadedLessons, loadedContentBlocks, loadedQuestions);
+        });
         editModuleButton.type = "button";
         editModuleButton.addEventListener("click", () => toggleModuleForm(true, module));
         addLessonButton.type = "button";
@@ -456,10 +472,17 @@ function renderModules(modules, lessons, contentBlocks, questions) {
         deleteModuleButton.addEventListener("click", () => deleteModule(module));
         content.append(title, description);
         header.append(content, label);
-        actions.append(dragHint, editModuleButton, addLessonButton, deleteModuleButton);
+        actions.append(dragHint, toggleModuleButton, editModuleButton, addLessonButton, deleteModuleButton);
         lessonHeader.append(lessonHeading, actions);
-        lessonSection.append(lessonHeader, renderLessons(module, moduleLessons, contentBlocks, questions));
+        lessonSection.append(lessonHeader);
         item.append(header, lessonSection);
+
+        if (isCollapsed) {
+            lessonSection.append(createElement("p", "module-collapse-summary", lessonCountLabel));
+        } else {
+            lessonSection.append(renderLessons(module, moduleLessons, contentBlocks, questions));
+        }
+
         list.append(item);
     });
 
