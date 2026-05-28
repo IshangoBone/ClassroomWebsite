@@ -746,6 +746,20 @@ h2 {
     background: #f7faff;
 }
 
+.module-card[draggable="true"] {
+    cursor: grab;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.module-card[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.module-card--dragging {
+    border-style: dashed;
+    opacity: 0.45;
+}
+
 .module-card-header {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -776,6 +790,13 @@ h2 {
     gap: 8px;
     flex-wrap: wrap;
     justify-content: flex-end;
+}
+
+.module-drag-hint {
+    align-self: center;
+    color: #49617f;
+    font-size: 0.9rem;
+    font-weight: 700;
 }
 
 .lesson-action {
