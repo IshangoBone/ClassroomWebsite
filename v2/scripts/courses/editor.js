@@ -155,9 +155,9 @@ function renderQuestions(questions) {
     return list;
 }
 
-function getDragAfterElement(container, y) {
+function getDragAfterElement(container, y, itemClass, draggingClass) {
     const draggableElements = [...container.children].filter((child) => {
-        return child.classList.contains("module-card") && !child.classList.contains("module-card--dragging");
+        return child.classList.contains(itemClass) && !child.classList.contains(draggingClass);
     });
 
     return draggableElements.reduce(
@@ -173,6 +173,42 @@ function getDragAfterElement(container, y) {
         },
         { offset: Number.NEGATIVE_INFINITY, element: null }
     ).element;
+}
+
+async function saveLessonOrder(list, moduleId) {
+    const orderedIds = [...list.children].map((child) => child.dataset.lessonId).filter(Boolean);
+    const updates = orderedIds
+        .map((id, orderIndex) => ({ id, order_index: orderIndex }))
+        .filter((update) => {
+            const lesson = loadedLessons.find((currentLesson) => currentLesson.id === update.id);
+            return lesson && lesson.module_id === moduleId && lesson.order_index !== update.order_index;
+        });
+
+    if (!updates.length) {
+        return;
+    }
+
+    setStatus("Saving lesson order...");
+
+    const results = await Promise.all(
+        updates.map((update) => {
+            return supabase.from("lessons").update({ order_index: update.order_index }).eq("id", update.id);
+        })
+    );
+    const failedUpdate = results.find((result) => result.error);
+
+    if (failedUpdate) {
+        setStatus(failedUpdate.error.message || "The lesson order could not be saved.", "error");
+        await loadModules();
+        return;
+    }
+
+    loadedLessons = loadedLessons.map((lesson) => {
+        const orderIndex = orderedIds.indexOf(lesson.id);
+        return orderIndex === -1 ? lesson : { ...lesson, order_index: orderIndex };
+    });
+    renderModules(loadedModules, loadedLessons, loadedContentBlocks, loadedQuestions);
+    setStatus("Lesson order saved.", "success");
 }
 
 async function saveModuleOrder(list) {
@@ -263,12 +299,31 @@ async function deleteModule(module) {
     setStatus("Module deleted.", "success");
 }
 
-function renderLessons(lessons, contentBlocks, questions) {
+function renderLessons(module, lessons, contentBlocks, questions) {
     if (!lessons.length) {
         return createElement("p", "empty-state empty-state--compact", "No lessons in this module yet.");
     }
 
-    const list = createElement("ol", "lesson-list");
+    const list = createElement("ol", "lesson-list lesson-list--reorderable");
+
+    list.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const draggingItem = list.querySelector(".lesson-card--dragging");
+
+        if (!draggingItem) {
+            return;
+        }
+
+        const afterElement = getDragAfterElement(list, event.clientY, "lesson-card", "lesson-card--dragging");
+
+        if (afterElement) {
+            list.insertBefore(draggingItem, afterElement);
+        } else {
+            list.append(draggingItem);
+        }
+    });
 
     lessons.forEach((lesson) => {
         const item = createElement("li", "lesson-card");
@@ -285,6 +340,7 @@ function renderLessons(lessons, contentBlocks, questions) {
             : `Lesson ${lesson.order_index + 1}`;
         const label = createElement("span", "badge badge--quiet", labelText);
         const headerActions = createElement("div", "lesson-header-actions");
+        const dragHint = createElement("span", "lesson-drag-hint", "Drag to reorder");
         const deleteLessonButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete lesson");
         const contentSection = createElement("section", "lesson-content");
         const contentHeader = createElement("div", "lesson-content-header");
@@ -297,6 +353,19 @@ function renderLessons(lessons, contentBlocks, questions) {
         const addQuestionButton = createElement("button", "secondary-button lesson-action", "Add question");
         const lessonQuestions = questions.filter((question) => question.lesson_id === lesson.id);
 
+        item.draggable = true;
+        item.dataset.lessonId = lesson.id;
+        item.addEventListener("dragstart", (event) => {
+            event.stopPropagation();
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", lesson.id);
+            item.classList.add("lesson-card--dragging");
+        });
+        item.addEventListener("dragend", async (event) => {
+            event.stopPropagation();
+            item.classList.remove("lesson-card--dragging");
+            await saveLessonOrder(list, module.id);
+        });
         addContentButton.type = "button";
         addContentButton.addEventListener("click", () => toggleContentBlockForm(true, lesson));
         addQuestionButton.type = "button";
@@ -304,7 +373,7 @@ function renderLessons(lessons, contentBlocks, questions) {
         deleteLessonButton.type = "button";
         deleteLessonButton.addEventListener("click", () => deleteLesson(lesson));
         content.append(title, objective);
-        headerActions.append(label, deleteLessonButton);
+        headerActions.append(dragHint, label, deleteLessonButton);
         header.append(content, headerActions);
         contentHeader.append(contentHeading, addContentButton);
         contentSection.append(contentHeader, renderContentBlocks(lessonContentBlocks));
@@ -334,7 +403,7 @@ function renderModules(modules, lessons, contentBlocks, questions) {
             return;
         }
 
-        const afterElement = getDragAfterElement(list, event.clientY);
+        const afterElement = getDragAfterElement(list, event.clientY, "module-card", "module-card--dragging");
 
         if (afterElement) {
             list.insertBefore(draggingItem, afterElement);
@@ -367,6 +436,10 @@ function renderModules(modules, lessons, contentBlocks, questions) {
         item.draggable = true;
         item.dataset.moduleId = module.id;
         item.addEventListener("dragstart", (event) => {
+            if (event.target.closest(".lesson-card")) {
+                return;
+            }
+
             event.dataTransfer.effectAllowed = "move";
             event.dataTransfer.setData("text/plain", module.id);
             item.classList.add("module-card--dragging");
@@ -385,7 +458,7 @@ function renderModules(modules, lessons, contentBlocks, questions) {
         header.append(content, label);
         actions.append(dragHint, editModuleButton, addLessonButton, deleteModuleButton);
         lessonHeader.append(lessonHeading, actions);
-        lessonSection.append(lessonHeader, renderLessons(moduleLessons, contentBlocks, questions));
+        lessonSection.append(lessonHeader, renderLessons(module, moduleLessons, contentBlocks, questions));
         item.append(header, lessonSection);
         list.append(item);
     });

@@ -821,6 +821,20 @@ h2 {
     background: #ffffff;
 }
 
+.lesson-card[draggable="true"] {
+    cursor: grab;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.lesson-card[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.lesson-card--dragging {
+    border-style: dashed;
+    opacity: 0.45;
+}
+
 .lesson-card-header {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -832,6 +846,12 @@ h2 {
     align-items: center;
     display: flex;
     gap: 8px;
+}
+
+.lesson-drag-hint {
+    color: #49617f;
+    font-size: 0.85rem;
+    font-weight: 700;
 }
 
 .lesson-title {
