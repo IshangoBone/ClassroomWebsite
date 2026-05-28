@@ -10,25 +10,103 @@ const classroomList = qs("[data-classroom-list]");
 const createButton = qs("[data-toggle-classroom-form]");
 const cancelButton = qs("[data-cancel-classroom-form]");
 const classroomForm = qs("[data-classroom-form]");
+const classroomFormHeading = qs("[data-classroom-form-heading]");
+const classroomFormCopy = qs("[data-classroom-form-copy]");
+const classroomSubmitButton = qs("[data-classroom-submit]");
 let currentProfileId = null;
+let loadedClassrooms = [];
+let draggedClassroomId = null;
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
 }
 
-function toggleClassroomForm(isOpen) {
+function resetClassroomFormText() {
+    classroomFormHeading.textContent = "Create classroom";
+    classroomFormCopy.textContent = "Create one classroom for this course. Join access and roster tools come later.";
+    classroomSubmitButton.textContent = "Create classroom";
+}
+
+function toggleClassroomForm(isOpen, classroom = null) {
     classroomForm.hidden = !isOpen;
     createButton.hidden = isOpen;
 
     if (isOpen) {
+        classroomForm.reset();
+        classroomForm.elements["classroom-id"].value = "";
+
+        if (classroom) {
+            classroomForm.elements["classroom-id"].value = classroom.id;
+            classroomForm.elements.name.value = classroom.name || "";
+            classroomForm.elements.period_block.value = classroom.period_block || "";
+            classroomForm.elements.school_year.value = classroom.school_year || "";
+            classroomFormHeading.textContent = `Edit ${classroom.name}`;
+            classroomFormCopy.textContent = "Update the classroom name, period, or school year shown in the teacher dashboard.";
+            classroomSubmitButton.textContent = "Save classroom details";
+        } else {
+            resetClassroomFormText();
+        }
+
         classroomForm.elements.name.focus();
     } else {
         classroomForm.reset();
+        classroomForm.elements["classroom-id"].value = "";
+        resetClassroomFormText();
     }
 }
 
+function clearDragStyles() {
+    classroomList.querySelectorAll(".managed-classroom-card").forEach((card) => {
+        card.classList.remove("managed-classroom-card--dragging", "managed-classroom-card--drop-target");
+    });
+}
+
+async function saveClassroomOrder(classrooms) {
+    const results = await Promise.all(classrooms.map((classroom, index) => (
+        supabase
+            .from("classrooms")
+            .update({ display_order: index })
+            .eq("id", classroom.id)
+            .eq("course_id", courseId)
+    )));
+
+    return results.find((result) => result.error)?.error || null;
+}
+
+async function deleteClassroom(classroom) {
+    const label = classroom.period_block
+        ? `${classroom.name} - ${classroom.period_block}`
+        : classroom.name;
+    const confirmed = window.confirm(
+        `Delete "${label}"? This removes it from active classrooms while preserving its existing history.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus("Deleting classroom...");
+
+    const { error } = await supabase
+        .from("classrooms")
+        .update({ status: "deleted" })
+        .eq("id", classroom.id)
+        .eq("course_id", courseId);
+
+    if (error) {
+        setStatus(error.message || "The classroom could not be deleted.", "error");
+        return;
+    }
+
+    toggleClassroomForm(false);
+    await loadClassrooms();
+    setStatus("Classroom deleted.", "success");
+}
+
 function renderClassrooms(classrooms) {
+    loadedClassrooms = classrooms;
+
     if (!classrooms.length) {
         classroomList.replaceChildren(
             createElement("p", "empty-state", "No classrooms are attached to this course yet.")
@@ -40,6 +118,60 @@ function renderClassrooms(classrooms) {
 
     classrooms.forEach((classroom) => {
         const item = createElement("li", "managed-classroom-card");
+        item.dataset.classroomId = classroom.id;
+        item.draggable = true;
+        item.addEventListener("dragstart", (event) => {
+            draggedClassroomId = classroom.id;
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", classroom.id);
+            item.classList.add("managed-classroom-card--dragging");
+        });
+        item.addEventListener("dragover", (event) => {
+            if (!draggedClassroomId || draggedClassroomId === classroom.id) {
+                return;
+            }
+
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+            clearDragStyles();
+            item.classList.add("managed-classroom-card--drop-target");
+        });
+        item.addEventListener("drop", async (event) => {
+            event.preventDefault();
+
+            if (!draggedClassroomId || draggedClassroomId === classroom.id) {
+                clearDragStyles();
+                return;
+            }
+
+            const reordered = [...loadedClassrooms];
+            const fromIndex = reordered.findIndex((row) => row.id === draggedClassroomId);
+            const toIndex = reordered.findIndex((row) => row.id === classroom.id);
+            const [movedClassroom] = reordered.splice(fromIndex, 1);
+            reordered.splice(toIndex, 0, movedClassroom);
+            reordered.forEach((row, index) => {
+                row.display_order = index;
+            });
+
+            draggedClassroomId = null;
+            clearDragStyles();
+            renderClassrooms(reordered);
+            setStatus("Saving classroom order...");
+
+            const error = await saveClassroomOrder(reordered);
+
+            if (error) {
+                setStatus(error.message || "Classroom order could not be saved.", "error");
+                await loadClassrooms();
+                return;
+            }
+
+            setStatus("Classroom order saved.", "success");
+        });
+        item.addEventListener("dragend", () => {
+            draggedClassroomId = null;
+            clearDragStyles();
+        });
         const title = createElement("h3", "course-title", classroom.name);
         const details = createElement(
             "p",
@@ -47,7 +179,16 @@ function renderClassrooms(classrooms) {
             classroom.period_block || classroom.school_year || "Classroom details not set yet."
         );
         const badge = createElement("span", "badge badge--quiet", classroom.status);
-        item.append(title, details, badge);
+        const actions = createElement("div", "managed-classroom-actions");
+        const dragHint = createElement("span", "managed-classroom-drag-hint", "Drag to reorder");
+        const editButton = createElement("button", "secondary-button lesson-action", "Edit classroom");
+        const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete classroom");
+        editButton.type = "button";
+        editButton.addEventListener("click", () => toggleClassroomForm(true, classroom));
+        deleteButton.type = "button";
+        deleteButton.addEventListener("click", () => deleteClassroom(classroom));
+        actions.append(dragHint, editButton, deleteButton);
+        item.append(title, details, badge, actions);
         list.append(item);
     });
 
@@ -57,9 +198,10 @@ function renderClassrooms(classrooms) {
 async function loadClassrooms() {
     const { data: classrooms, error } = await supabase
         .from("classrooms")
-        .select("id, name, period_block, school_year, status")
+        .select("id, name, period_block, school_year, status, display_order")
         .eq("course_id", courseId)
         .neq("status", "deleted")
+        .order("display_order", { ascending: true })
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -73,34 +215,55 @@ async function loadClassrooms() {
 
 async function handleClassroomSubmit(event) {
     event.preventDefault();
-    setStatus("Creating classroom...");
 
     const formData = new FormData(classroomForm);
+    const classroomId = String(formData.get("classroom-id") || "").trim();
     const name = String(formData.get("name") || "").trim();
     const periodBlock = String(formData.get("period_block") || "").trim();
     const schoolYear = String(formData.get("school_year") || "").trim();
     const submitButton = classroomForm.querySelector("button[type='submit']");
+    const nextDisplayOrder = loadedClassrooms.reduce(
+        (highest, classroom) => Math.max(highest, classroom.display_order),
+        -1
+    ) + 1;
 
+    if (!name) {
+        setStatus("Enter a classroom name before saving.", "error");
+        return;
+    }
+
+    setStatus(classroomId ? "Saving classroom details..." : "Creating classroom...");
     submitButton.disabled = true;
 
-    const { error } = await supabase.from("classrooms").insert({
-        course_id: courseId,
-        owner_teacher_id: currentProfileId,
-        name,
-        period_block: periodBlock || null,
-        school_year: schoolYear || null,
-    });
+    const { error } = classroomId
+        ? await supabase
+            .from("classrooms")
+            .update({
+                name,
+                period_block: periodBlock || null,
+                school_year: schoolYear || null,
+            })
+            .eq("id", classroomId)
+            .eq("course_id", courseId)
+        : await supabase.from("classrooms").insert({
+            course_id: courseId,
+            owner_teacher_id: currentProfileId,
+            name,
+            period_block: periodBlock || null,
+            school_year: schoolYear || null,
+            display_order: nextDisplayOrder,
+        });
 
     submitButton.disabled = false;
 
     if (error) {
-        setStatus(error.message || "The classroom could not be created.", "error");
+        setStatus(error.message || `The classroom could not be ${classroomId ? "updated" : "created"}.`, "error");
         return;
     }
 
     toggleClassroomForm(false);
     await loadClassrooms();
-    setStatus("Classroom created.", "success");
+    setStatus(classroomId ? "Classroom details saved." : "Classroom created.", "success");
 }
 
 async function initializePage() {

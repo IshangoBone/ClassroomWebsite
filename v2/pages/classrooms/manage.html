@@ -27,19 +27,20 @@
             <div class="section-header section-header--actions">
                 <div>
                     <h2 id="managed-classrooms-heading">Managed classrooms</h2>
-                    <p class="section-copy">Only classrooms you are authorized to manage are displayed.</p>
+                    <p class="section-copy">Only classrooms you are authorized to manage are displayed. Drag classroom cards to arrange their order.</p>
                 </div>
                 <button type="button" class="primary-button management-action" data-toggle-classroom-form>Create classroom</button>
             </div>
 
             <form class="management-create-form" data-classroom-form hidden>
-                <h3>Create classroom</h3>
-                <p class="section-copy">Create one classroom for this course. Join access and roster tools come later.</p>
+                <h3 data-classroom-form-heading>Create classroom</h3>
+                <p class="section-copy" data-classroom-form-copy>Create one classroom for this course. Join access and roster tools come later.</p>
+                <input type="hidden" name="classroom-id" />
 
                 <div class="management-form-grid">
                     <label class="form-field">
                         <span>Classroom name</span>
-                        <input type="text" name="name" placeholder="Period 1 Earth Science" required />
+                        <input type="text" name="name" placeholder="Intro to Computer Science" required />
                     </label>
 
                     <label class="form-field">
@@ -54,7 +55,7 @@
                 </div>
 
                 <div class="course-form-actions">
-                    <button type="submit" class="primary-button">Create classroom</button>
+                    <button type="submit" class="primary-button" data-classroom-submit>Create classroom</button>
                     <button type="button" class="secondary-button" data-cancel-classroom-form>Cancel</button>
                 </div>
             </form>
@@ -69,12 +70,12 @@
             <ul class="feature-list">
                 <li>Generate join access for classrooms</li>
                 <li>View rosters, progress, and submissions</li>
-                <li>Archive a classroom while preserving history</li>
+                <li>Restore archived classroom history when needed</li>
             </ul>
         </section>
     </main>
 
-    <script type="module" src="../../scripts/classrooms/manage.js"></script>
+    <script type="module" src="../../scripts/classrooms/manage.js?v=20260526-delete-controls"></script>
 </body>
 
 </html>

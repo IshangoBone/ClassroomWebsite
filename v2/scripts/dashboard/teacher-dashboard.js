@@ -98,7 +98,7 @@ async function loadManagedClassrooms(profileId, courseIds) {
 
     const { data: ownedClassrooms, error: ownedError } = await supabase
         .from("classrooms")
-        .select("id, course_id, name, period_block, status")
+        .select("id, course_id, name, period_block, status, display_order")
         .eq("owner_teacher_id", profileId)
         .in("course_id", courseIds)
         .neq("status", "deleted");
@@ -122,7 +122,7 @@ async function loadManagedClassrooms(profileId, courseIds) {
     if (assignedClassroomIds.length) {
         const { data, error } = await supabase
             .from("classrooms")
-            .select("id, course_id, name, period_block, status")
+            .select("id, course_id, name, period_block, status, display_order")
             .in("id", assignedClassroomIds)
             .in("course_id", courseIds)
             .neq("status", "deleted");
@@ -137,7 +137,7 @@ async function loadManagedClassrooms(profileId, courseIds) {
     const classroomMap = new Map();
     [...ownedClassrooms, ...assignedClassrooms].forEach((classroom) => classroomMap.set(classroom.id, classroom));
 
-    return [...classroomMap.values()];
+    return [...classroomMap.values()].sort((first, second) => first.display_order - second.display_order);
 }
 
 async function loadRecentSubmissions(courseIds) {
@@ -214,10 +214,13 @@ function renderCourses(courses, classrooms) {
         const actions = createElement("div", "course-actions");
         const builderAction = createElement("a", "secondary-button", "Manage course");
         const classroomAction = createElement("a", "secondary-button", "Manage classrooms");
+        const deleteAction = createElement("button", "secondary-button destructive-button", "Delete course");
         const courseParam = encodeURIComponent(course.id);
         builderAction.href = `../courses/editor.html?course=${courseParam}`;
         classroomAction.href = `../classrooms/manage.html?course=${courseParam}`;
-        actions.append(builderAction, classroomAction);
+        deleteAction.type = "button";
+        deleteAction.addEventListener("click", () => deleteCourse(course));
+        actions.append(builderAction, classroomAction, deleteAction);
 
         card.append(heading, details, description, renderClassrooms(course, classrooms), actions);
         return card;
@@ -248,6 +251,31 @@ function renderSubmissions(submissions, courses) {
     });
 
     submissionList.replaceChildren(list);
+}
+
+async function deleteCourse(course) {
+    const confirmed = window.confirm(
+        `Delete "${course.title || "Untitled course"}"? This removes it from your dashboard while preserving its existing history.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus("Deleting course...");
+
+    const { error } = await supabase
+        .from("courses")
+        .update({ status: "deleted" })
+        .eq("id", course.id);
+
+    if (error) {
+        setStatus(error.message || "The course could not be deleted.", "error");
+        return;
+    }
+
+    await refreshDashboard();
+    setStatus("Course deleted.", "success");
 }
 
 async function refreshDashboard() {

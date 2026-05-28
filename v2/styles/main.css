@@ -483,6 +483,17 @@ h2 {
     background: #f7faff;
 }
 
+.destructive-button {
+    border-color: #efc3c0;
+    color: #b42318;
+}
+
+.destructive-button:hover,
+.destructive-button:focus-visible {
+    border-color: #dc8079;
+    background: #fff4f3;
+}
+
 .secondary-button:disabled {
     cursor: not-allowed;
     opacity: 0.58;
@@ -706,7 +717,8 @@ h2 {
     grid-row: span 2;
 }
 
-.content-block-form-grid {
+.content-block-form-grid,
+.question-form-grid {
     display: grid;
     gap: 12px;
     margin: 18px 0;
@@ -762,6 +774,8 @@ h2 {
 .module-actions {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .lesson-action {
@@ -793,6 +807,12 @@ h2 {
     align-items: start;
 }
 
+.lesson-header-actions {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
 .lesson-title {
     margin: 0 0 5px;
     font-size: 1rem;
@@ -817,7 +837,8 @@ h2 {
     font-size: 0.95rem;
 }
 
-.content-block-list {
+.content-block-list,
+.question-list {
     display: grid;
     gap: 8px;
     margin: 0;
@@ -825,7 +846,8 @@ h2 {
     list-style: none;
 }
 
-.content-block-card {
+.content-block-card,
+.question-card {
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 6px 12px;
@@ -844,6 +866,16 @@ h2 {
     grid-column: 1 / -1;
     margin: 0;
     white-space: pre-wrap;
+}
+
+.question-prompt {
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.question-instructions {
+    grid-column: 1 / -1;
+    margin: 0;
 }
 
 .empty-state--compact {
@@ -885,6 +917,21 @@ h2 {
     border: 1px solid #dbe4f1;
     border-radius: 16px;
     background: #f7faff;
+    cursor: grab;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.managed-classroom-card:active {
+    cursor: grabbing;
+}
+
+.managed-classroom-card--dragging {
+    opacity: 0.45;
+}
+
+.managed-classroom-card--drop-target {
+    border-color: #637fae;
+    box-shadow: 0 0 0 2px rgba(57, 86, 135, 0.12);
 }
 
 .managed-classroom-card .course-muted {
@@ -894,6 +941,21 @@ h2 {
 .managed-classroom-card .badge {
     grid-column: 2;
     grid-row: 1 / span 2;
+}
+
+.managed-classroom-actions {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    grid-column: 1 / -1;
+    margin-top: 8px;
+}
+
+.managed-classroom-drag-hint {
+    color: #49617f;
+    font-size: 0.9rem;
+    font-weight: 600;
 }
 
 @media (min-width: 900px) {
@@ -947,12 +1009,14 @@ h2 {
 
     .module-card-header,
     .lesson-card-header,
-    .content-block-card {
+    .content-block-card,
+    .question-card {
         grid-template-columns: 1fr;
     }
 
     .module-lessons-header,
     .module-actions,
+    .lesson-header-actions,
     .lesson-content-header {
         align-items: stretch;
         flex-direction: column;
