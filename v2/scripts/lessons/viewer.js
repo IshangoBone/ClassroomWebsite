@@ -483,8 +483,9 @@ async function loadLessonContext() {
         .single();
 
     if (lessonError) {
+        console.error("Lesson lookup failed", lessonError);
         headingElement.textContent = "Lesson unavailable";
-        setStatus("This lesson could not be loaded.", "error");
+        setStatus("This lesson could not be loaded. Check that the lesson link is correct and your account has access.", "error");
         return null;
     }
 
@@ -496,8 +497,9 @@ async function loadLessonContext() {
         .single();
 
     if (moduleError) {
+        console.error("Module lookup failed", moduleError);
         headingElement.textContent = "Lesson unavailable";
-        setStatus("The module for this lesson could not be loaded.", "error");
+        setStatus("The module for this lesson could not be loaded. Check that your account can access this course.", "error");
         return null;
     }
 
@@ -508,8 +510,9 @@ async function loadLessonContext() {
         .single();
 
     if (courseError) {
+        console.error("Course lookup failed", courseError);
         headingElement.textContent = "Lesson unavailable";
-        setStatus("The course for this lesson could not be loaded.", "error");
+        setStatus("The course for this lesson could not be loaded. Check that your account can access this course.", "error");
         return null;
     }
 
