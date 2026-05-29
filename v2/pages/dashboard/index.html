@@ -97,13 +97,39 @@
                     <p class="section-copy">Review final submitted lesson work from your managed courses.</p>
                 </div>
             </div>
+            <form class="submission-filter-form" data-submission-filter-form>
+                <label class="form-field">
+                    <span>Course</span>
+                    <select name="course" data-submission-filter-course>
+                        <option value="">All courses</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Classroom</span>
+                    <select name="classroom" data-submission-filter-classroom>
+                        <option value="">All classrooms</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Lesson</span>
+                    <select name="lesson" data-submission-filter-lesson>
+                        <option value="">All lessons</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Student</span>
+                    <select name="student" data-submission-filter-student>
+                        <option value="">All students</option>
+                    </select>
+                </label>
+            </form>
             <div data-submission-list>
                 <p class="empty-state">Loading submissions...</p>
             </div>
         </section>
     </main>
 
-    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260529-submission-links"></script>
+    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260529-submission-filters"></script>
 </body>
 
 </html>

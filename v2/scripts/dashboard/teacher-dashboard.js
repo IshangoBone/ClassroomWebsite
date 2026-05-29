@@ -9,11 +9,20 @@ const courseFormPanel = qs("[data-course-form-panel]");
 const courseForm = qs("[data-course-form]");
 const courseFormToggle = qs("[data-course-form-toggle]");
 const courseFormCancel = qs("[data-course-form-cancel]");
+const submissionFilterForm = qs("[data-submission-filter-form]");
+const submissionFilterCourse = qs("[data-submission-filter-course]");
+const submissionFilterClassroom = qs("[data-submission-filter-classroom]");
+const submissionFilterLesson = qs("[data-submission-filter-lesson]");
+const submissionFilterStudent = qs("[data-submission-filter-student]");
 const coursesSummary = qs("[data-summary-courses]");
 const classroomsSummary = qs("[data-summary-classrooms]");
 const submissionsSummary = qs("[data-summary-submissions]");
 
 let currentProfile = null;
+let dashboardCourses = [];
+let dashboardClassrooms = [];
+let dashboardLessons = [];
+let dashboardSubmissions = [];
 
 function setStatus(message, tone = "info") {
     dashboardStatus.textContent = message;
@@ -24,6 +33,10 @@ function formatStatus(status) {
     return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+function formatShortId(id) {
+    return id ? id.slice(0, 8) : "unknown";
+}
+
 function setCourseFormVisible(isVisible) {
     courseFormPanel.hidden = !isVisible;
     courseFormToggle.textContent = isVisible ? "Close form" : "New course";
@@ -31,6 +44,17 @@ function setCourseFormVisible(isVisible) {
     if (isVisible) {
         courseForm.elements.title.focus();
     }
+}
+
+function getSubmissionFilters() {
+    const formData = new FormData(submissionFilterForm);
+
+    return {
+        classroomId: String(formData.get("classroom") || ""),
+        courseId: String(formData.get("course") || ""),
+        lessonId: String(formData.get("lesson") || ""),
+        studentId: String(formData.get("student") || ""),
+    };
 }
 
 function renderEmpty(container, message) {
@@ -140,6 +164,46 @@ async function loadManagedClassrooms(profileId, courseIds) {
     return [...classroomMap.values()].sort((first, second) => first.display_order - second.display_order);
 }
 
+async function loadLessons(courseIds) {
+    if (!courseIds.length) {
+        return [];
+    }
+
+    const { data: modules, error: moduleError } = await supabase
+        .from("modules")
+        .select("id, course_id")
+        .in("course_id", courseIds)
+        .is("archived_at", null);
+
+    if (moduleError) {
+        throw moduleError;
+    }
+
+    const moduleIds = modules.map((module) => module.id);
+
+    if (!moduleIds.length) {
+        return [];
+    }
+
+    const { data: lessons, error: lessonError } = await supabase
+        .from("lessons")
+        .select("id, module_id, title, order_index")
+        .in("module_id", moduleIds)
+        .is("archived_at", null)
+        .order("order_index", { ascending: true });
+
+    if (lessonError) {
+        throw lessonError;
+    }
+
+    const courseByModuleId = new Map(modules.map((module) => [module.id, module.course_id]));
+
+    return lessons.map((lesson) => ({
+        ...lesson,
+        course_id: courseByModuleId.get(lesson.module_id),
+    }));
+}
+
 async function loadRecentSubmissions(courseIds) {
     if (!courseIds.length) {
         return [];
@@ -147,11 +211,11 @@ async function loadRecentSubmissions(courseIds) {
 
     const { data, error } = await supabase
         .from("lesson_submissions")
-        .select("id, course_id, lesson_id, status, submitted_at, updated_at")
+        .select("id, student_user_id, course_id, classroom_id, lesson_id, status, submitted_at, updated_at")
         .in("course_id", courseIds)
         .eq("status", "submitted")
         .order("updated_at", { ascending: false })
-        .limit(5);
+        .limit(50);
 
     if (error) {
         throw error;
@@ -230,13 +294,66 @@ function renderCourses(courses, classrooms) {
     courseList.replaceChildren(...cards);
 }
 
-function renderSubmissions(submissions, courses) {
+function populateSelect(select, options, placeholder) {
+    const currentValue = select.value;
+    const optionElements = [createElement("option", "", placeholder)];
+
+    optionElements[0].value = "";
+    options.forEach((option) => {
+        const element = createElement("option", "", option.label);
+
+        element.value = option.value;
+        optionElements.push(element);
+    });
+    select.replaceChildren(...optionElements);
+    select.value = options.some((option) => option.value === currentValue) ? currentValue : "";
+}
+
+function renderSubmissionFilters(courses, classrooms, lessons, submissions) {
+    const students = [...new Set(submissions.map((submission) => submission.student_user_id).filter(Boolean))]
+        .sort()
+        .map((studentId) => ({
+            label: `Student ${formatShortId(studentId)}`,
+            value: studentId,
+        }));
+
+    populateSelect(
+        submissionFilterCourse,
+        courses.map((course) => ({ label: course.title || "Untitled course", value: course.id })),
+        "All courses"
+    );
+    populateSelect(
+        submissionFilterClassroom,
+        classrooms.map((classroom) => ({ label: classroom.period_block ? `${classroom.name} - ${classroom.period_block}` : classroom.name, value: classroom.id })),
+        "All classrooms"
+    );
+    populateSelect(
+        submissionFilterLesson,
+        lessons.map((lesson) => ({ label: lesson.title || "Untitled lesson", value: lesson.id })),
+        "All lessons"
+    );
+    populateSelect(submissionFilterStudent, students, "All students");
+}
+
+function getFilteredSubmissions() {
+    const filters = getSubmissionFilters();
+
+    return dashboardSubmissions.filter((submission) => (
+        (!filters.courseId || submission.course_id === filters.courseId)
+        && (!filters.classroomId || submission.classroom_id === filters.classroomId)
+        && (!filters.lessonId || submission.lesson_id === filters.lessonId)
+        && (!filters.studentId || submission.student_user_id === filters.studentId)
+    ));
+}
+
+function renderSubmissions(submissions, courses, lessons) {
     if (!submissions.length) {
         renderEmpty(submissionList, "No recent student submissions are available for your managed courses.");
         return;
     }
 
     const courseNames = new Map(courses.map((course) => [course.id, course.title || "Untitled course"]));
+    const lessonNames = new Map(lessons.map((lesson) => [lesson.id, lesson.title || "Untitled lesson"]));
     const list = createElement("ul", "submission-list");
 
     submissions.forEach((submission) => {
@@ -244,8 +361,9 @@ function renderSubmissions(submissions, courses) {
         const link = createElement(
             "a",
             "submission-name",
-            `${courseNames.get(submission.course_id) || "Course"} submission`
+            lessonNames.get(submission.lesson_id) || `${courseNames.get(submission.course_id) || "Course"} submission`
         );
+        const context = createElement("span", "course-muted", courseNames.get(submission.course_id) || "Course");
         const submittedAt = submission.submitted_at
             ? createElement("span", "course-muted", new Date(submission.submitted_at).toLocaleString([], {
                 month: "short",
@@ -257,11 +375,15 @@ function renderSubmissions(submissions, courses) {
         const status = createElement("span", "badge badge--quiet", formatStatus(submission.status));
 
         link.href = `../submissions/view.html?submission=${encodeURIComponent(submission.id)}`;
-        item.append(link, submittedAt, status);
+        item.append(link, context, submittedAt, status);
         list.append(item);
     });
 
     submissionList.replaceChildren(list);
+}
+
+function refreshSubmissionList() {
+    renderSubmissions(getFilteredSubmissions(), dashboardCourses, dashboardLessons);
 }
 
 async function deleteCourse(course) {
@@ -295,16 +417,22 @@ async function refreshDashboard() {
     try {
         const courses = await loadTeachingCourses(currentProfile.id);
         const courseIds = courses.map((course) => course.id);
-        const [classrooms, submissions] = await Promise.all([
+        const [classrooms, lessons, submissions] = await Promise.all([
             loadManagedClassrooms(currentProfile.id, courseIds),
+            loadLessons(courseIds),
             loadRecentSubmissions(courseIds),
         ]);
 
+        dashboardCourses = courses;
+        dashboardClassrooms = classrooms;
+        dashboardLessons = lessons;
+        dashboardSubmissions = submissions;
         coursesSummary.textContent = String(courses.length);
         classroomsSummary.textContent = String(classrooms.length);
         submissionsSummary.textContent = String(submissions.length);
         renderCourses(courses, classrooms);
-        renderSubmissions(submissions, courses);
+        renderSubmissionFilters(courses, classrooms, lessons, submissions);
+        refreshSubmissionList();
         setStatus("");
     } catch (error) {
         setStatus(error.message || "Your teaching workspace could not be loaded.", "error");
@@ -351,6 +479,8 @@ courseFormCancel.addEventListener("click", () => {
     courseForm.reset();
     setCourseFormVisible(false);
 });
+
+submissionFilterForm.addEventListener("change", refreshSubmissionList);
 
 courseForm.addEventListener("submit", async (event) => {
     event.preventDefault();

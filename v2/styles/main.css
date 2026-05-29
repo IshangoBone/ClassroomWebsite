@@ -670,6 +670,20 @@ h2 {
     gap: 12px;
 }
 
+.submission-filter-form {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #dbe4f1;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.submission-filter-form .form-field {
+    gap: 6px;
+}
+
 .course-actions {
     display: flex;
     flex-wrap: wrap;
@@ -681,6 +695,11 @@ h2 {
     border: 1px solid #dbe4f1;
     border-radius: 18px;
     background: #f7faff;
+}
+
+.submission-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto auto;
 }
 
 .submission-name {
@@ -1515,7 +1534,8 @@ h2 {
     }
 
     .dashboard-summary,
-    .course-form {
+    .course-form,
+    .submission-filter-form {
         grid-template-columns: 1fr;
     }
 
@@ -1529,6 +1549,11 @@ h2 {
 
     .section-header--actions {
         display: grid;
+    }
+
+    .submission-item {
+        grid-template-columns: 1fr;
+        justify-items: start;
     }
 
     .management-action {
