@@ -8,6 +8,7 @@ const contextElement = qs("[data-lesson-context]");
 const statusElement = qs("[data-lesson-status]");
 const contentSections = [...document.querySelectorAll("[data-lesson-content]")];
 const courseEditorLink = qs("[data-course-editor-link]");
+const studentViewLink = qs("[data-student-view-link]");
 const modulePosition = qs("[data-module-position]");
 const lessonPosition = qs("[data-lesson-position]");
 const lessonDetails = qs("[data-lesson-details]");
@@ -1179,6 +1180,8 @@ async function initializePage() {
     contextElement.textContent = `${course.title || "Untitled course"} / ${module.title || "Untitled module"}`;
     courseEditorLink.href = `../courses/editor.html?course=${encodeURIComponent(course.id)}`;
     courseEditorLink.textContent = "Back to course editor";
+    studentViewLink.href = `view.html?lesson=${encodeURIComponent(lesson.id)}`;
+    studentViewLink.hidden = false;
     modulePosition.textContent = String(module.order_index + 1);
     lessonPosition.textContent = String(lesson.order_index + 1);
     lessonDetails.replaceChildren(buildDetailsList(lesson, module, course));
