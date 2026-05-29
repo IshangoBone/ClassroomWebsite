@@ -40,6 +40,11 @@ const questionTypeLabels = {
     true_false: "True / false",
 };
 const choiceQuestionTypes = ["multiple_choice", "select_all_that_apply"];
+const questionPhases = [
+    ["before", "Before lesson"],
+    ["during", "During lesson"],
+    ["reflection", "Reflection"],
+];
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -88,6 +93,26 @@ function getContentBlockFormType(contentBlock) {
 
 function getStoredBlockType(formBlockType) {
     return ["file", "image"].includes(formBlockType) ? "file" : formBlockType;
+}
+
+function getDragAfterElement(container, y, itemClass, draggingClass) {
+    const draggableElements = [...container.children].filter((child) => {
+        return child.classList.contains(itemClass) && !child.classList.contains(draggingClass);
+    });
+
+    return draggableElements.reduce(
+        (closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+
+            if (offset < 0 && offset > closest.offset) {
+                return { offset, element: child };
+            }
+
+            return closest;
+        },
+        { offset: Number.NEGATIVE_INFINITY, element: null }
+    ).element;
 }
 
 function setContentBlockFormMode(blockType) {
@@ -434,6 +459,47 @@ async function moveQuestion(question, direction) {
     setStatus("Draft question order saved.", "success");
 }
 
+async function saveQuestionOrder(list, phase) {
+    const orderedIds = [...list.children].map((child) => child.dataset.questionId).filter(Boolean);
+    const updates = orderedIds
+        .map((id, orderIndex) => ({ id, order_index: orderIndex }))
+        .filter((update) => {
+            const question = loadedQuestions.find((currentQuestion) => currentQuestion.id === update.id);
+            return question && question.phase === phase && question.order_index !== update.order_index;
+        });
+
+    if (!updates.length) {
+        return;
+    }
+
+    setStatus("Saving draft question order...");
+
+    const results = await Promise.all(
+        updates.map((update) => {
+            return supabase
+                .from("questions")
+                .update({ order_index: update.order_index })
+                .eq("id", update.id)
+                .eq("lesson_id", lessonId);
+        })
+    );
+    const failedUpdate = results.find((result) => result.error);
+
+    if (failedUpdate) {
+        setStatus(failedUpdate.error.message || "The draft question order could not be saved.", "error");
+        await loadQuestions();
+        return;
+    }
+
+    loadedQuestions = loadedQuestions.map((question) => {
+        const orderIndex = orderedIds.indexOf(question.id);
+        return orderIndex === -1 ? question : { ...question, order_index: orderIndex };
+    });
+    renderQuestions(loadedQuestions);
+    renderQuestionPreview(loadedQuestions);
+    setStatus("Draft question order saved.", "success");
+}
+
 async function toggleQuestionVisibility(question) {
     const nextVisibility = !question.is_visible;
 
@@ -546,13 +612,45 @@ function renderQuestions(questions) {
         return;
     }
 
-    const list = createElement("ol", "question-list");
+    const sections = questionPhases.map(([phase, phaseTitle]) => {
+        const section = createElement("section", "lesson-content question-phase-section");
+        const header = createElement("div", "lesson-content-header");
+        const heading = createElement("h6", "", phaseTitle);
+        const list = createElement("ol", "question-list question-list--reorderable");
+        const phaseQuestions = questions
+            .filter((question) => question.phase === phase)
+            .sort((first, second) => first.order_index - second.order_index);
 
-    questions.forEach((question) => {
+        header.append(heading);
+        section.append(header);
+
+        if (!phaseQuestions.length) {
+            section.append(createElement("p", "empty-state empty-state--compact", "No draft questions in this section yet."));
+            return section;
+        }
+
+        list.addEventListener("dragover", (event) => {
+            event.preventDefault();
+
+            const draggingItem = list.querySelector(".question-card--dragging");
+
+            if (!draggingItem) {
+                return;
+            }
+
+            const afterElement = getDragAfterElement(list, event.clientY, "question-card", "question-card--dragging");
+
+            if (afterElement) {
+                list.insertBefore(draggingItem, afterElement);
+            } else {
+                list.append(draggingItem);
+            }
+        });
+
+        phaseQuestions.forEach((question) => {
         const item = createElement("li", "question-card");
         const prompt = createElement("h3", "question-prompt", question.prompt);
-        const phaseLabel = question.phase.charAt(0).toUpperCase() + question.phase.slice(1);
-        const label = createElement("span", "badge badge--quiet", `Draft ${phaseLabel}`);
+        const label = createElement("span", "badge badge--quiet", `Draft ${question.order_index + 1}`);
         const typeLabel = createElement(
             "span",
             "badge badge--quiet",
@@ -572,8 +670,8 @@ function renderQuestions(questions) {
         const hint = createElement("p", "course-muted question-instructions", `Hint: ${question.hint || "None"}`);
         const options = getQuestionOptions(question);
         const optionList = createElement("ol", "question-option-list");
-        const phaseQuestions = questions.filter((currentQuestion) => currentQuestion.phase === question.phase);
         const phaseIndex = phaseQuestions.findIndex((currentQuestion) => currentQuestion.id === question.id);
+        const dragHint = createElement("span", "question-drag-hint", "Drag to reorder");
         const moveUpButton = createElement("button", "secondary-button lesson-action", "Move up");
         const moveDownButton = createElement("button", "secondary-button lesson-action", "Move down");
         const visibilityButton = createElement(
@@ -589,6 +687,17 @@ function renderQuestions(questions) {
         );
         const actions = createElement("div", "content-block-actions");
 
+        item.draggable = true;
+        item.dataset.questionId = question.id;
+        item.addEventListener("dragstart", (event) => {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", question.id);
+            item.classList.add("question-card--dragging");
+        });
+        item.addEventListener("dragend", async () => {
+            item.classList.remove("question-card--dragging");
+            await saveQuestionOrder(list, phase);
+        });
         options.forEach((option) => {
             const optionItem = createElement("li", "", option.option_text);
 
@@ -609,16 +718,20 @@ function renderQuestions(questions) {
         editButton.addEventListener("click", () => editQuestion(question));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteQuestion(question));
-        actions.append(moveUpButton, moveDownButton, visibilityButton, editButton, deleteButton);
+        actions.append(dragHint, moveUpButton, moveDownButton, visibilityButton, editButton, deleteButton);
         item.append(prompt, label, typeLabel, requiredLabel, pointsLabel, instructions, hint);
         if (choiceQuestionTypes.includes(question.question_type) && options.length) {
             item.append(optionList);
         }
         item.append(actions);
         list.append(item);
+        });
+
+        section.append(list);
+        return section;
     });
 
-    questionList.replaceChildren(list);
+    questionList.replaceChildren(...sections);
 }
 
 function renderQuestionPreview(questions) {
@@ -636,11 +749,10 @@ function renderQuestionPreview(questions) {
         return;
     }
 
-    const previewSections = ["before", "during", "reflection"].map((phase) => {
+    const previewSections = questionPhases.map(([phase, phaseTitle]) => {
         const phaseQuestions = visibleQuestions.filter((question) => question.phase === phase);
         const section = createElement("section", "lesson-content");
-        const headingText = phase === "before" ? "Before lesson" : phase === "during" ? "During lesson" : "Reflection";
-        const heading = createElement("h3", "course-subheading", headingText);
+        const heading = createElement("h3", "course-subheading", phaseTitle);
 
         section.append(heading);
 

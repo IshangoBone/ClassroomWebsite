@@ -960,6 +960,10 @@ h2 {
     list-style: none;
 }
 
+.question-phase-section {
+    gap: 12px;
+}
+
 .content-block-card,
 .question-card {
     display: grid;
@@ -969,6 +973,20 @@ h2 {
     border: 1px solid #edf1f7;
     border-radius: 10px;
     background: #f7faff;
+}
+
+.question-card[draggable="true"] {
+    cursor: grab;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.question-card[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.question-card--dragging {
+    border-style: dashed;
+    opacity: 0.45;
 }
 
 .content-block-title {
@@ -1005,6 +1023,13 @@ h2 {
 .question-instructions {
     grid-column: 1 / -1;
     margin: 0;
+}
+
+.question-drag-hint {
+    align-self: center;
+    color: #49617f;
+    font-size: 0.85rem;
+    font-weight: 700;
 }
 
 .question-option-list {
