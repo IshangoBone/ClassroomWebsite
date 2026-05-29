@@ -34,6 +34,7 @@ let answerState = {};
 let autoSaveTimer = null;
 let isSubmitted = false;
 let lastSavedAt = null;
+let submittedAt = null;
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -46,7 +47,9 @@ function setSubmitStatus(message, tone = "info") {
 }
 
 function formatSavedTime(date) {
-    return date.toLocaleTimeString([], {
+    return date.toLocaleString([], {
+        month: "short",
+        day: "numeric",
         hour: "numeric",
         minute: "2-digit",
     });
@@ -78,6 +81,7 @@ function setAnswer(questionId, value) {
         ...answerState,
         [questionId]: value,
     };
+    clearQuestionHighlights();
     scheduleDraftSave();
 }
 
@@ -128,6 +132,40 @@ function setQuestionInputsDisabled(disabled) {
 function setDraftControlsDisabled(disabled) {
     saveDraftButton.disabled = disabled;
     resetDraftButton.disabled = disabled;
+}
+
+function clearQuestionHighlights() {
+    questionFlow.querySelectorAll(".lesson-flow-question--missing").forEach((item) => {
+        item.classList.remove("lesson-flow-question--missing");
+    });
+    questionFlow.querySelectorAll("[data-required-warning]").forEach((warning) => {
+        warning.remove();
+    });
+}
+
+function highlightMissingQuestions(missingQuestions) {
+    clearQuestionHighlights();
+    missingQuestions.forEach((question) => {
+        const item = qs(`[data-question-id="${question.id}"]`, questionFlow);
+
+        if (!item) {
+            return;
+        }
+
+        item.classList.add("lesson-flow-question--missing");
+        item.append(createElement("p", "lesson-required-warning", "Required before turn-in."));
+        item.lastElementChild.dataset.requiredWarning = "true";
+    });
+}
+
+function showCompletionState(date = new Date()) {
+    const submittedDate = date instanceof Date ? date : new Date(date);
+
+    saveStatusElement.textContent = `Submitted ${formatSavedTime(submittedDate)}.`;
+    setSubmitStatus("Lesson turned in successfully. Your answers are locked.", "success");
+    turnInButton.hidden = true;
+    setDraftControlsDisabled(true);
+    setQuestionInputsDisabled(true);
 }
 
 function isAudioUrl(url) {
@@ -476,6 +514,7 @@ function renderQuestionFlow(questions) {
             );
             const badge = createElement("span", "badge badge--quiet", question.is_required ? "Required" : "Optional");
 
+            item.dataset.questionId = question.id;
             item.append(prompt, badge, instructions, createQuestionAnswerControl(question));
             list.append(item);
         });
@@ -652,6 +691,7 @@ async function loadSubmissionDraft() {
     currentSubmission = data;
     answerState = data?.answers_json || {};
     isSubmitted = data?.status === "submitted";
+    submittedAt = data?.submitted_at ? new Date(data.submitted_at) : null;
     if (data?.updated_at && !isSubmitted) {
         lastSavedAt = new Date(data.updated_at);
         saveStatusElement.textContent = `Draft restored. Last saved at ${formatSavedTime(lastSavedAt)}.`;
@@ -809,7 +849,14 @@ async function turnInLesson() {
     if (missingRequiredQuestions.length) {
         const questionText = missingRequiredQuestions.length === 1 ? "1 required question" : `${missingRequiredQuestions.length} required questions`;
 
+        highlightMissingQuestions(missingRequiredQuestions);
         setSubmitStatus(`Answer ${questionText} before turning in this lesson.`, "error");
+        return;
+    }
+
+    const confirmed = window.confirm("Turn in this lesson? After submission, you will not be able to edit your answers.");
+
+    if (!confirmed) {
         return;
     }
 
@@ -822,16 +869,19 @@ async function turnInLesson() {
         return;
     }
 
-    const { error } = await supabase
+    const submittedAtValue = new Date().toISOString();
+    const { data, error } = await supabase
         .from("lesson_submissions")
         .update({
             answers_json: answerState,
             total_questions: loadedQuestions.length,
             points_possible: loadedQuestions.reduce((total, question) => total + Number(question.points || 0), 0),
             status: "submitted",
-            submitted_at: new Date().toISOString(),
+            submitted_at: submittedAtValue,
         })
-        .eq("id", currentSubmission.id);
+        .eq("id", currentSubmission.id)
+        .select("id, answers_json, status, submitted_at, updated_at")
+        .single();
 
     if (error) {
         turnInButton.disabled = false;
@@ -839,10 +889,10 @@ async function turnInLesson() {
         return;
     }
 
+    currentSubmission = data;
     isSubmitted = true;
-    saveStatusElement.textContent = "Lesson submitted.";
-    setSubmitStatus("Lesson turned in successfully. Your answers are locked.", "success");
-    setQuestionInputsDisabled(true);
+    submittedAt = new Date(data?.submitted_at || submittedAtValue);
+    showCompletionState(submittedAt);
     await loadNextLesson();
 }
 
@@ -874,10 +924,7 @@ async function initializePage() {
     await loadQuestionFlow();
 
     if (isSubmitted) {
-        saveStatusElement.textContent = "Lesson submitted.";
-        setSubmitStatus("Lesson already turned in. Your answers are locked.", "success");
-        turnInButton.disabled = true;
-        setDraftControlsDisabled(true);
+        showCompletionState(submittedAt || new Date());
         await loadNextLesson();
     }
 

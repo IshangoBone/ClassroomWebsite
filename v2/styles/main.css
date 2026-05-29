@@ -1315,6 +1315,19 @@ h2 {
 .lesson-flow-question-list li {
     display: grid;
     gap: 8px;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.lesson-flow-question--missing {
+    border: 1px solid #efc3c0;
+    background: #fff6f5;
+}
+
+.lesson-required-warning {
+    margin: 0;
+    color: #b42318;
+    font-weight: 700;
 }
 
 .lesson-answer-grid {
