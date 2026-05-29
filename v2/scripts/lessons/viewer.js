@@ -25,7 +25,7 @@ const questionPhases = [
 ];
 const optionQuestionTypes = ["multiple_choice", "select_all_that_apply"];
 const responseQuestionTypes = ["short_response", "long_response", "fill_in_the_blank"];
-let currentUserId = "";
+let currentProfileId = "";
 let currentLessonContext = null;
 let currentSubmission = null;
 let loadedQuestions = [];
@@ -87,12 +87,32 @@ function setAnswer(questionId, value) {
 
 function getSubmissionFilter(query) {
     let filteredQuery = query
-        .eq("student_user_id", currentUserId)
+        .eq("student_user_id", currentProfileId)
         .eq("course_id", currentLessonContext.course.id)
         .eq("lesson_id", currentLessonContext.lesson.id);
 
     filteredQuery = classroomId ? filteredQuery.eq("classroom_id", classroomId) : filteredQuery.is("classroom_id", null);
     return filteredQuery;
+}
+
+async function loadCurrentProfile(authUserId) {
+    const { data, error } = await supabase
+        .from("profiles")
+        .select("id, profile_completed")
+        .eq("auth_user_id", authUserId)
+        .maybeSingle();
+
+    if (error || !data) {
+        setStatus("Your profile could not be loaded. Please sign in again.", "error");
+        return null;
+    }
+
+    if (!data.profile_completed) {
+        window.location.href = "../auth/onboarding.html";
+        return null;
+    }
+
+    return data;
 }
 
 function isQuestionAnswered(question) {
@@ -703,7 +723,7 @@ async function createSubmissionDraft() {
     const { data, error } = await supabase
         .from("lesson_submissions")
         .insert({
-            student_user_id: currentUserId,
+            student_user_id: currentProfileId,
             course_id: currentLessonContext.course.id,
             classroom_id: classroomId || null,
             lesson_id: currentLessonContext.lesson.id,
@@ -904,7 +924,13 @@ async function initializePage() {
         return;
     }
 
-    currentUserId = authData.user.id;
+    const profile = await loadCurrentProfile(authData.user.id);
+
+    if (!profile) {
+        return;
+    }
+
+    currentProfileId = profile.id;
     const context = await loadLessonContext();
 
     if (!context) {
