@@ -525,7 +525,7 @@ async function deleteCourse(course) {
 }
 
 async function refreshDashboard() {
-    setStatus("Loading your teaching workspace...");
+    setStatus("Loading your workspace...");
 
     try {
         const courses = await loadTeachingCourses(currentProfile.id);
@@ -556,7 +556,7 @@ async function refreshDashboard() {
         renderStudentSubmissions(studentSubmissions, visibleCourses, lessons);
         setStatus("");
     } catch (error) {
-        setStatus(error.message || "Your teaching workspace could not be loaded.", "error");
+        setStatus(error.message || "Your workspace could not be loaded.", "error");
         renderEmpty(courseList, "Courses could not be loaded right now.");
         renderEmpty(submissionList, "Submissions could not be loaded right now.");
         renderEmpty(studentSubmissionList, "Your submissions could not be loaded right now.");
@@ -588,7 +588,7 @@ async function initializeDashboard() {
     }
 
     currentProfile = profile;
-    greetingElement.textContent = `Welcome, ${profile.username || "teacher"}. Manage courses you own or help teach.`;
+    greetingElement.textContent = `Welcome, ${profile.username || "there"}. Manage teaching work and continue saved lessons.`;
     courseFormToggle.disabled = false;
     await refreshDashboard();
 }
