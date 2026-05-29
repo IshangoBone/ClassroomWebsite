@@ -15,6 +15,13 @@ const contentBlockForm = qs("[data-content-block-form]");
 const contentBlockFormHeading = qs("[data-content-block-form-heading]");
 const contentBlockSubmit = qs("[data-content-block-submit]");
 const cancelContentBlockEditButton = qs("[data-cancel-content-block-edit]");
+const contentBlockTypeSelect = qs("[data-content-block-type]");
+const contentTitleInput = qs("[data-content-title]");
+const textContentField = qs("[data-text-content-field]");
+const urlContentField = qs("[data-url-content-field]");
+const urlContentLabel = qs("[data-url-content-label]");
+const urlContentInput = qs("[data-url-content-input]");
+const fileTypeField = qs("[data-file-type-field]");
 const contentBlockList = qs("[data-content-block-list]");
 const questionForm = qs("[data-question-form]");
 const questionFormHeading = qs("[data-question-form-heading]");
@@ -57,34 +64,116 @@ function buildDetailsList(lesson, module, course) {
     return list;
 }
 
+function formatContentBlockType(blockType) {
+    return ["file", "image", "link", "slides", "youtube"].includes(blockType) ? blockType : "text";
+}
+
+function getContentBlockFormType(contentBlock) {
+    if (contentBlock.block_type === "file" && contentBlock.file_type === "image") {
+        return "image";
+    }
+
+    return formatContentBlockType(contentBlock.block_type);
+}
+
+function getStoredBlockType(formBlockType) {
+    return ["file", "image"].includes(formBlockType) ? "file" : formBlockType;
+}
+
+function setContentBlockFormMode(blockType) {
+    const normalizedBlockType = formatContentBlockType(blockType);
+    const isText = normalizedBlockType === "text";
+    const isSlides = normalizedBlockType === "slides";
+    const isYoutube = normalizedBlockType === "youtube";
+    const isImage = normalizedBlockType === "image";
+    const isFile = normalizedBlockType === "file";
+
+    contentBlockTypeSelect.value = normalizedBlockType;
+    textContentField.hidden = !isText;
+    urlContentField.hidden = isText;
+    fileTypeField.hidden = !isFile;
+    contentBlockForm.elements["body-text"].required = isText;
+    contentBlockForm.elements["content-url"].required = !isText;
+    contentBlockForm.elements["file-type"].required = isFile;
+    contentTitleInput.placeholder = isText ? "What is a computer?" : isYoutube ? "Video title" : "Resource title";
+    urlContentLabel.textContent = isYoutube
+        ? "YouTube URL"
+        : isSlides
+            ? "Slides URL"
+            : isImage
+                ? "Image URL"
+                : isFile
+                    ? "File URL"
+                    : "External URL";
+    urlContentInput.placeholder = isYoutube
+        ? "https://www.youtube.com/watch?v=..."
+        : isSlides
+            ? "https://docs.google.com/presentation/..."
+            : isImage
+                ? "https://example.com/image.png"
+                : isFile
+                    ? "https://example.com/worksheet.pdf"
+                    : "https://example.com/resource";
+}
+
+function getContentBlockTypeLabel(contentBlock) {
+    if (contentBlock.block_type === "file" && contentBlock.file_type === "image") {
+        return contentBlock.is_visible ? "Image" : "Draft image";
+    }
+
+    if (contentBlock.block_type === "file") {
+        return contentBlock.is_visible ? "File" : "Draft file";
+    }
+
+    if (contentBlock.block_type === "youtube") {
+        return contentBlock.is_visible ? "YouTube" : "Draft YouTube";
+    }
+
+    if (contentBlock.block_type === "slides") {
+        return contentBlock.is_visible ? "Slides" : "Draft slides";
+    }
+
+    if (contentBlock.block_type === "link") {
+        return contentBlock.is_visible ? "Link" : "Draft link";
+    }
+
+    return contentBlock.is_visible ? "Text" : "Draft text";
+}
+
 function resetContentBlockForm() {
     contentBlockForm.reset();
     contentBlockForm.elements["content-block-id"].value = "";
-    contentBlockFormHeading.textContent = "Add text content";
-    contentBlockSubmit.textContent = "Create text section";
+    setContentBlockFormMode("text");
+    contentBlockFormHeading.textContent = "Add lesson content";
+    contentBlockSubmit.textContent = "Create content block";
     cancelContentBlockEditButton.hidden = true;
 }
 
 function editContentBlock(contentBlock) {
+    const blockType = getContentBlockFormType(contentBlock);
+
+    setContentBlockFormMode(blockType);
     contentBlockForm.elements["content-block-id"].value = contentBlock.id;
     contentBlockForm.elements.title.value = contentBlock.title || "";
     contentBlockForm.elements["body-text"].value = contentBlock.body_text || "";
-    contentBlockFormHeading.textContent = `Edit ${contentBlock.title || "text section"}`;
-    contentBlockSubmit.textContent = "Save text section";
+    contentBlockForm.elements["content-url"].value = contentBlock.file_url || contentBlock.external_url || "";
+    contentBlockForm.elements["file-type"].value = contentBlock.file_type || "pdf";
+    contentBlockFormHeading.textContent = `Edit ${contentBlock.title || (blockType === "text" ? "text section" : "content block")}`;
+    contentBlockSubmit.textContent = blockType === "text" ? "Save text section" : "Save content block";
     cancelContentBlockEditButton.hidden = false;
     contentBlockForm.elements.title.focus();
 }
 
 async function deleteContentBlock(contentBlock) {
     const confirmed = window.confirm(
-        `Delete text section "${contentBlock.title || "Text section"}"? This hides it from the lesson while preserving its history.`
+        `Delete content block "${contentBlock.title || "Untitled content"}"? This hides it from the lesson while preserving its history.`
     );
 
     if (!confirmed) {
         return;
     }
 
-    setStatus("Deleting text content...");
+    setStatus("Deleting lesson content...");
 
     const { error } = await supabase
         .from("lesson_content_blocks")
@@ -93,7 +182,7 @@ async function deleteContentBlock(contentBlock) {
         .eq("lesson_id", lessonId);
 
     if (error) {
-        setStatus(error.message || "The text content could not be deleted.", "error");
+        setStatus(error.message || "The lesson content could not be deleted.", "error");
         return;
     }
 
@@ -102,7 +191,7 @@ async function deleteContentBlock(contentBlock) {
     }
 
     await loadContentBlocks();
-    setStatus("Text content deleted.", "success");
+    setStatus("Lesson content deleted.", "success");
 }
 
 async function moveContentBlock(contentBlock, direction) {
@@ -114,7 +203,7 @@ async function moveContentBlock(contentBlock, direction) {
         return;
     }
 
-    setStatus("Saving text content order...");
+    setStatus("Saving lesson content order...");
 
     const results = await Promise.all([
         supabase
@@ -131,18 +220,18 @@ async function moveContentBlock(contentBlock, direction) {
     const failedUpdate = results.find((result) => result.error);
 
     if (failedUpdate) {
-        setStatus(failedUpdate.error.message || "The text content order could not be saved.", "error");
+        setStatus(failedUpdate.error.message || "The lesson content order could not be saved.", "error");
         return;
     }
 
     await loadContentBlocks();
-    setStatus("Text content order saved.", "success");
+    setStatus("Lesson content order saved.", "success");
 }
 
 async function toggleContentBlockVisibility(contentBlock) {
     const nextVisibility = !contentBlock.is_visible;
 
-    setStatus(`${nextVisibility ? "Showing" : "Hiding"} text content...`);
+    setStatus(`${nextVisibility ? "Showing" : "Hiding"} lesson content...`);
 
     const { error } = await supabase
         .from("lesson_content_blocks")
@@ -151,12 +240,12 @@ async function toggleContentBlockVisibility(contentBlock) {
         .eq("lesson_id", lessonId);
 
     if (error) {
-        setStatus(error.message || "The text content visibility could not be updated.", "error");
+        setStatus(error.message || "The lesson content visibility could not be updated.", "error");
         return;
     }
 
     await loadContentBlocks();
-    setStatus(`Text content ${nextVisibility ? "shown" : "hidden"}.`, "success");
+    setStatus(`Lesson content ${nextVisibility ? "shown" : "hidden"}.`, "success");
 }
 
 function resetQuestionForm() {
@@ -275,19 +364,38 @@ function renderContentBlocks(contentBlocks) {
 
     contentBlocks.forEach((contentBlock, index) => {
         const item = createElement("li", "content-block-card");
-        const title = createElement("h3", "content-block-title", contentBlock.title || "Text section");
-        const body = createElement("p", "course-muted content-block-body", contentBlock.body_text || "");
-        const labelPrefix = contentBlock.is_visible ? "Text" : "Draft text";
-        const label = createElement("span", "badge badge--quiet", `${labelPrefix} ${contentBlock.order_index + 1}`);
+        const title = createElement("h3", "content-block-title", contentBlock.title || "Untitled content");
+        const label = createElement("span", "badge badge--quiet", `${getContentBlockTypeLabel(contentBlock)} ${contentBlock.order_index + 1}`);
+        const contentUrl = contentBlock.file_url || contentBlock.external_url || "";
+        const isImageResource = contentBlock.block_type === "file" && contentBlock.file_type === "image";
+        const contentPreview = ["file", "link", "slides", "youtube"].includes(contentBlock.block_type)
+            ? createElement("a", "course-muted content-block-body", contentUrl)
+            : createElement("p", "course-muted content-block-body", contentBlock.body_text || "");
         const moveUpButton = createElement("button", "secondary-button lesson-action", "Move up");
         const moveDownButton = createElement("button", "secondary-button lesson-action", "Move down");
         const visibilityButton = createElement(
             "button",
             "secondary-button lesson-action",
-            contentBlock.is_visible ? "Hide text" : "Show text"
+            contentBlock.is_visible ? "Hide content" : "Show content"
         );
-        const editButton = createElement("button", "secondary-button lesson-action", "Edit text");
-        const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete text");
+        const editButton = createElement("button", "secondary-button lesson-action", "Edit content");
+        const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete content");
+        const actions = createElement("div", "content-block-actions");
+
+        if (["file", "link", "slides", "youtube"].includes(contentBlock.block_type)) {
+            contentPreview.href = contentUrl || "#";
+            contentPreview.target = "_blank";
+            contentPreview.rel = "noopener noreferrer";
+
+            if (isImageResource && contentUrl) {
+                const image = createElement("img", "content-block-image-preview");
+                image.src = contentUrl;
+                image.alt = contentBlock.title || "Lesson image";
+                contentPreview.replaceChildren(image);
+            } else if (contentBlock.block_type === "file") {
+                contentPreview.textContent = `${contentBlock.file_type?.toUpperCase() || "File"} resource`;
+            }
+        }
 
         moveUpButton.type = "button";
         moveUpButton.disabled = index === 0;
@@ -301,7 +409,8 @@ function renderContentBlocks(contentBlocks) {
         editButton.addEventListener("click", () => editContentBlock(contentBlock));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteContentBlock(contentBlock));
-        item.append(title, label, body, moveUpButton, moveDownButton, visibilityButton, editButton, deleteButton);
+        actions.append(moveUpButton, moveDownButton, visibilityButton, editButton, deleteButton);
+        item.append(title, label, contentPreview, actions);
         list.append(item);
     });
 
@@ -311,16 +420,16 @@ function renderContentBlocks(contentBlocks) {
 async function loadContentBlocks() {
     const { data, error } = await supabase
         .from("lesson_content_blocks")
-        .select("id, title, body_text, order_index, is_visible")
+        .select("id, block_type, title, body_text, external_url, file_url, file_type, order_index, is_visible")
         .eq("lesson_id", lessonId)
         .is("archived_at", null)
         .order("order_index", { ascending: true });
 
     if (error) {
         contentBlockList.replaceChildren(
-            createElement("p", "empty-state", "Lesson text content could not be loaded.")
+            createElement("p", "empty-state", "Lesson content could not be loaded.")
         );
-        setStatus("Lesson text content could not be loaded.", "error");
+        setStatus("Lesson content could not be loaded.", "error");
         return false;
     }
 
@@ -362,6 +471,7 @@ function renderQuestions(questions) {
             "secondary-button destructive-button lesson-action",
             "Delete question"
         );
+        const actions = createElement("div", "content-block-actions");
 
         moveUpButton.type = "button";
         moveUpButton.disabled = phaseIndex === 0;
@@ -375,7 +485,8 @@ function renderQuestions(questions) {
         editButton.addEventListener("click", () => editQuestion(question));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteQuestion(question));
-        item.append(prompt, label, instructions, moveUpButton, moveDownButton, visibilityButton, editButton, deleteButton);
+        actions.append(moveUpButton, moveDownButton, visibilityButton, editButton, deleteButton);
+        item.append(prompt, label, instructions, actions);
         list.append(item);
     });
 
@@ -495,12 +606,16 @@ contentBlockForm.addEventListener("submit", async (event) => {
 
     const formData = new FormData(contentBlockForm);
     const contentBlockId = String(formData.get("content-block-id") || "").trim();
+    const blockType = formatContentBlockType(String(formData.get("block-type") || "text"));
+    const storedBlockType = getStoredBlockType(blockType);
     const title = String(formData.get("title") || "").trim();
     const bodyText = String(formData.get("body-text") || "").trim();
+    const contentUrl = String(formData.get("content-url") || "").trim();
+    const fileType = String(formData.get("file-type") || "pdf");
     const submitButton = contentBlockForm.querySelector("button[type='submit']");
 
-    if (!title || !bodyText) {
-        setStatus("Enter a title and written content before saving.", "error");
+    if (!title || (blockType === "text" && !bodyText) || (blockType !== "text" && !contentUrl)) {
+        setStatus(`Enter a title and ${blockType === "text" ? "written content" : "URL"} before saving.`, "error");
         return;
     }
 
@@ -508,18 +623,22 @@ contentBlockForm.addEventListener("submit", async (event) => {
         const contentBlock = loadedContentBlocks.find((currentBlock) => currentBlock.id === contentBlockId);
 
         if (!contentBlock) {
-            setStatus("Choose a text section before saving.", "error");
+            setStatus("Choose a content block before saving.", "error");
             return;
         }
 
-        setStatus("Saving text content...");
+        setStatus("Saving lesson content...");
         submitButton.disabled = true;
 
         const { error } = await supabase
             .from("lesson_content_blocks")
             .update({
+                block_type: storedBlockType,
                 title,
-                body_text: bodyText,
+                body_text: blockType === "text" ? bodyText : null,
+                external_url: ["link", "slides", "youtube"].includes(blockType) ? contentUrl : null,
+                file_url: ["file", "image"].includes(blockType) ? contentUrl : null,
+                file_type: blockType === "image" ? "image" : blockType === "file" ? fileType : null,
             })
             .eq("id", contentBlockId)
             .eq("lesson_id", lessonId);
@@ -527,13 +646,13 @@ contentBlockForm.addEventListener("submit", async (event) => {
         submitButton.disabled = false;
 
         if (error) {
-            setStatus(error.message || "The text content could not be saved.", "error");
+            setStatus(error.message || "The lesson content could not be saved.", "error");
             return;
         }
 
         resetContentBlockForm();
         await loadContentBlocks();
-        setStatus("Text content saved.", "success");
+        setStatus("Lesson content saved.", "success");
         return;
     }
 
@@ -541,14 +660,17 @@ contentBlockForm.addEventListener("submit", async (event) => {
         (highest, contentBlock) => Math.max(highest, contentBlock.order_index),
         -1
     ) + 1;
-    setStatus("Creating text content...");
+    setStatus("Creating lesson content...");
     submitButton.disabled = true;
 
     const { error } = await supabase.from("lesson_content_blocks").insert({
         lesson_id: lessonId,
-        block_type: "text",
+        block_type: storedBlockType,
         title,
-        body_text: bodyText,
+        body_text: blockType === "text" ? bodyText : null,
+        external_url: ["link", "slides", "youtube"].includes(blockType) ? contentUrl : null,
+        file_url: ["file", "image"].includes(blockType) ? contentUrl : null,
+        file_type: blockType === "image" ? "image" : blockType === "file" ? fileType : null,
         order_index: nextOrder,
         is_visible: false,
     });
@@ -556,13 +678,17 @@ contentBlockForm.addEventListener("submit", async (event) => {
     submitButton.disabled = false;
 
     if (error) {
-        setStatus(error.message || "The text content could not be created.", "error");
+        setStatus(error.message || "The lesson content could not be created.", "error");
         return;
     }
 
     resetContentBlockForm();
     await loadContentBlocks();
-    setStatus("Text content created.", "success");
+    setStatus("Lesson content created.", "success");
+});
+
+contentBlockTypeSelect.addEventListener("change", () => {
+    setContentBlockFormMode(contentBlockTypeSelect.value);
 });
 
 cancelContentBlockEditButton.addEventListener("click", resetContentBlockForm);

@@ -924,6 +924,21 @@ h2 {
     white-space: pre-wrap;
 }
 
+.content-block-actions {
+    display: flex;
+    flex-wrap: wrap;
+    grid-column: 1 / -1;
+    gap: 8px;
+}
+
+.content-block-image-preview {
+    display: block;
+    max-width: min(100%, 420px);
+    max-height: 240px;
+    border-radius: 8px;
+    object-fit: contain;
+}
+
 .question-prompt {
     margin: 0;
     font-size: 0.95rem;

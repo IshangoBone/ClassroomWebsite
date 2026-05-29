@@ -46,34 +46,61 @@
 
         <section class="management-section management-section--pending" data-lesson-content hidden>
             <div class="section-header">
-                <h2>Lesson text content</h2>
-                <p class="section-copy">Create draft written material for this lesson. Draft content stays hidden from students until publishing is built.</p>
+                <h2>Lesson content</h2>
+                <p class="section-copy">Create draft text, links, videos, slides, images, and file resources for this lesson. Draft content stays hidden from students until publishing is built.</p>
             </div>
 
             <form class="management-create-form" data-content-block-form>
-                <h3 data-content-block-form-heading>Add text content</h3>
+                <h3 data-content-block-form-heading>Add lesson content</h3>
                 <input type="hidden" name="content-block-id" />
 
                 <div class="content-block-form-grid">
                     <label class="form-field">
-                        <span>Section title</span>
-                        <input type="text" name="title" placeholder="What is a computer?" maxlength="120" required />
+                        <span>Content type</span>
+                        <select name="block-type" data-content-block-type required>
+                            <option value="text">Text section</option>
+                            <option value="link">External link</option>
+                            <option value="youtube">YouTube video</option>
+                            <option value="slides">Slides embed</option>
+                            <option value="image">Image resource</option>
+                            <option value="file">File/resource download</option>
+                        </select>
                     </label>
 
                     <label class="form-field">
+                        <span>Section title</span>
+                        <input type="text" name="title" placeholder="What is a computer?" maxlength="120" data-content-title required />
+                    </label>
+
+                    <label class="form-field" data-text-content-field>
                         <span>Section text</span>
                         <textarea name="body-text" rows="5" maxlength="3000" placeholder="Write the lesson content students will read here." required></textarea>
+                    </label>
+
+                    <label class="form-field" data-url-content-field hidden>
+                        <span data-url-content-label>External URL</span>
+                        <input type="url" name="content-url" placeholder="https://example.com/resource" maxlength="500" data-url-content-input />
+                    </label>
+
+                    <label class="form-field" data-file-type-field hidden>
+                        <span>File type</span>
+                        <select name="file-type">
+                            <option value="pdf">PDF</option>
+                            <option value="docx">Word document</option>
+                            <option value="pptx">Slides</option>
+                            <option value="zip">ZIP archive</option>
+                        </select>
                     </label>
                 </div>
 
                 <div class="course-form-actions">
-                    <button type="submit" class="primary-button" data-content-block-submit>Create text section</button>
+                    <button type="submit" class="primary-button" data-content-block-submit>Create content block</button>
                     <button type="button" class="secondary-button" data-cancel-content-block-edit hidden>Cancel edit</button>
                 </div>
             </form>
 
             <div data-content-block-list>
-                <p class="empty-state">Loading lesson text content...</p>
+                <p class="empty-state">Loading lesson content...</p>
             </div>
         </section>
 
@@ -122,7 +149,7 @@
         <section class="management-section management-section--pending" data-lesson-content hidden>
             <h2>Coming next</h2>
             <ul class="feature-list">
-                <li>Edit and reorder lesson text content</li>
+                <li>Edit and reorder lesson content</li>
                 <li>Edit, reorder, and score draft questions</li>
                 <li>Add media resources and preview lesson flow before publishing</li>
             </ul>
