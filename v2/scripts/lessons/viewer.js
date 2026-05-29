@@ -14,6 +14,8 @@ const questionFlow = qs("[data-question-flow]");
 const submitPanel = qs("[data-submit-panel]");
 const saveStatusElement = qs("[data-save-status]");
 const submitStatusElement = qs("[data-submit-status]");
+const saveDraftButton = qs("[data-save-draft-button]");
+const resetDraftButton = qs("[data-reset-draft-button]");
 const turnInButton = qs("[data-turn-in-button]");
 const nextLessonLink = qs("[data-next-lesson-link]");
 const questionPhases = [
@@ -31,6 +33,7 @@ let questionOptionsByQuestion = new Map();
 let answerState = {};
 let autoSaveTimer = null;
 let isSubmitted = false;
+let lastSavedAt = null;
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -40,6 +43,18 @@ function setStatus(message, tone = "info") {
 function setSubmitStatus(message, tone = "info") {
     submitStatusElement.textContent = message;
     submitStatusElement.dataset.tone = tone;
+}
+
+function formatSavedTime(date) {
+    return date.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+    });
+}
+
+function setSavedStatus(message = "Draft saved.") {
+    lastSavedAt = new Date();
+    saveStatusElement.textContent = `${message} Last saved at ${formatSavedTime(lastSavedAt)}.`;
 }
 
 function getBlockUrl(contentBlock) {
@@ -108,6 +123,11 @@ function setQuestionInputsDisabled(disabled) {
     questionFlow.querySelectorAll("input, textarea, select").forEach((input) => {
         input.disabled = disabled;
     });
+}
+
+function setDraftControlsDisabled(disabled) {
+    saveDraftButton.disabled = disabled;
+    resetDraftButton.disabled = disabled;
 }
 
 function isAudioUrl(url) {
@@ -621,7 +641,7 @@ async function loadSubmissionDraft() {
     const { data, error } = await getSubmissionFilter(
         supabase
             .from("lesson_submissions")
-            .select("id, answers_json, status, submitted_at")
+            .select("id, answers_json, status, submitted_at, updated_at")
     ).maybeSingle();
 
     if (error) {
@@ -632,6 +652,10 @@ async function loadSubmissionDraft() {
     currentSubmission = data;
     answerState = data?.answers_json || {};
     isSubmitted = data?.status === "submitted";
+    if (data?.updated_at && !isSubmitted) {
+        lastSavedAt = new Date(data.updated_at);
+        saveStatusElement.textContent = `Draft restored. Last saved at ${formatSavedTime(lastSavedAt)}.`;
+    }
     return true;
 }
 
@@ -645,7 +669,7 @@ async function createSubmissionDraft() {
             lesson_id: currentLessonContext.lesson.id,
             answers_json: answerState,
         })
-        .select("id, answers_json, status, submitted_at")
+        .select("id, answers_json, status, submitted_at, updated_at")
         .single();
 
     if (error) {
@@ -667,17 +691,21 @@ async function saveDraftAnswers() {
         if (!currentSubmission) {
             await createSubmissionDraft();
         } else {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from("lesson_submissions")
                 .update({ answers_json: answerState })
-                .eq("id", currentSubmission.id);
+                .eq("id", currentSubmission.id)
+                .select("id, answers_json, status, submitted_at, updated_at")
+                .single();
 
             if (error) {
                 throw error;
             }
+
+            currentSubmission = data;
         }
 
-        saveStatusElement.textContent = "Draft saved.";
+        setSavedStatus();
         setSubmitStatus("");
         return true;
     } catch (error) {
@@ -695,6 +723,54 @@ function scheduleDraftSave() {
     window.clearTimeout(autoSaveTimer);
     saveStatusElement.textContent = "Unsaved changes...";
     autoSaveTimer = window.setTimeout(saveDraftAnswers, 600);
+}
+
+async function manuallySaveDraft() {
+    window.clearTimeout(autoSaveTimer);
+    saveDraftButton.disabled = true;
+    await saveDraftAnswers();
+    saveDraftButton.disabled = isSubmitted;
+}
+
+async function resetDraft() {
+    if (isSubmitted) {
+        return;
+    }
+
+    const confirmed = window.confirm("Reset this draft? This clears all saved answers for this lesson.");
+
+    if (!confirmed) {
+        return;
+    }
+
+    window.clearTimeout(autoSaveTimer);
+    answerState = {};
+    setDraftControlsDisabled(true);
+    saveStatusElement.textContent = "Resetting draft...";
+    const { data, error } = currentSubmission
+        ? await supabase
+            .from("lesson_submissions")
+            .update({ answers_json: {} })
+            .eq("id", currentSubmission.id)
+            .select("id, answers_json, status, submitted_at, updated_at")
+            .single()
+        : { error: null };
+
+    setDraftControlsDisabled(false);
+
+    if (error) {
+        saveStatusElement.textContent = "Draft was not reset.";
+        setSubmitStatus(error.message || "Draft answers could not be reset.", "error");
+        return;
+    }
+
+    if (data) {
+        currentSubmission = data;
+    }
+
+    renderQuestionFlow(loadedQuestions);
+    setSavedStatus("Draft reset.");
+    setSubmitStatus("");
 }
 
 async function loadNextLesson() {
@@ -801,6 +877,7 @@ async function initializePage() {
         saveStatusElement.textContent = "Lesson submitted.";
         setSubmitStatus("Lesson already turned in. Your answers are locked.", "success");
         turnInButton.disabled = true;
+        setDraftControlsDisabled(true);
         await loadNextLesson();
     }
 
@@ -810,5 +887,7 @@ async function initializePage() {
 }
 
 turnInButton.addEventListener("click", turnInLesson);
+saveDraftButton.addEventListener("click", manuallySaveDraft);
+resetDraftButton.addEventListener("click", resetDraft);
 
 await initializePage();
