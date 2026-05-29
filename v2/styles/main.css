@@ -429,6 +429,33 @@ h2 {
     line-height: 1;
 }
 
+.dashboard-next-step {
+    margin: 0;
+    color: #1d3760;
+    font-weight: 800;
+}
+
+.dashboard-incomplete-note {
+    margin: 0;
+    color: #9b3c2f;
+    font-weight: 800;
+}
+
+.dashboard-progress {
+    width: 100%;
+    height: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e9eff8;
+}
+
+.dashboard-progress-value {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: #20395f;
+}
+
 .course-create-panel {
     padding: 22px;
     border: 1px solid #dbe4f1;
@@ -577,6 +604,29 @@ h2 {
 .dashboard-section--muted {
     padding-top: 8px;
     border-top: 1px solid #e6edf8;
+}
+
+.dashboard-join-panel {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 0;
+    border-top: 1px solid #e6edf8;
+    border-bottom: 1px solid #e6edf8;
+}
+
+.dashboard-join-panel[hidden] {
+    display: none;
+}
+
+.dashboard-join-panel h2 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.dashboard-join-panel .section-copy {
+    margin-top: 6px;
 }
 
 .course-grid {
@@ -1541,6 +1591,14 @@ h2 {
     .course-form,
     .submission-filter-form {
         grid-template-columns: 1fr;
+    }
+
+    .dashboard-join-panel {
+        display: grid;
+    }
+
+    .dashboard-join-panel .secondary-button {
+        width: 100%;
     }
 
     .course-card-header {

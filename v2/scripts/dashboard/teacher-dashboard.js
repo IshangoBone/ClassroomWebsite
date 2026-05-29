@@ -11,14 +11,24 @@ const courseForm = qs("[data-course-form]");
 const courseFormToggle = qs("[data-course-form-toggle]");
 const courseFormCancel = qs("[data-course-form-cancel]");
 const submissionFilterForm = qs("[data-submission-filter-form]");
+const studentActivitySection = qs("[data-student-activity-section]");
+const studentActivityList = qs("[data-student-activity-list]");
 const submissionFilterCourse = qs("[data-submission-filter-course]");
 const submissionFilterClassroom = qs("[data-submission-filter-classroom]");
 const submissionFilterLesson = qs("[data-submission-filter-lesson]");
 const submissionFilterStudent = qs("[data-submission-filter-student]");
 const coursesSummary = qs("[data-summary-courses]");
+const coursesSummaryLabel = qs("[data-summary-courses-label]");
 const classroomsSummary = qs("[data-summary-classrooms]");
+const classroomsSummaryLabel = qs("[data-summary-classrooms-label]");
 const submissionsSummary = qs("[data-summary-submissions]");
+const submissionsSummaryLabel = qs("[data-summary-submissions-label]");
 const studentSubmissionsSummary = qs("[data-summary-my-submissions]");
+const studentSubmissionsSummaryLabel = qs("[data-summary-my-submissions-label]");
+const managedCoursesHeading = qs("[data-managed-courses-heading]");
+const managedCoursesCopy = qs("[data-managed-courses-copy]");
+const teacherSubmissionsSection = qs("[data-teacher-submissions-section]");
+const studentJoinSection = qs("[data-student-join-section]");
 
 let currentProfile = null;
 let dashboardCourses = [];
@@ -26,6 +36,7 @@ let dashboardClassrooms = [];
 let dashboardLessons = [];
 let dashboardSubmissions = [];
 let dashboardStudentNames = new Map();
+let dashboardStudentTeachers = new Map();
 
 function setStatus(message, tone = "info") {
     dashboardStatus.textContent = message;
@@ -51,6 +62,16 @@ function formatStudentName(profile) {
 
 function getStudentName(studentId) {
     return dashboardStudentNames.get(studentId) || `Student ${formatShortId(studentId)}`;
+}
+
+function getTeacherKey(courseId, classroomId) {
+    return `${courseId}:${classroomId || "course"}`;
+}
+
+function getStudentTeacherName(enrollment) {
+    return dashboardStudentTeachers.get(getTeacherKey(enrollment.course_id, enrollment.classroom_id))
+        || dashboardStudentTeachers.get(getTeacherKey(enrollment.course_id, null))
+        || "Teacher";
 }
 
 function setCourseFormVisible(isVisible) {
@@ -141,6 +162,39 @@ async function loadVisibleCourses(courseIds) {
         .select("id, title")
         .in("id", courseIds)
         .neq("status", "deleted");
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}
+
+async function loadVisibleClassrooms(classroomIds) {
+    if (!classroomIds.length) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from("classrooms")
+        .select("id, course_id, name, period_block, status")
+        .in("id", classroomIds)
+        .neq("status", "deleted");
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}
+
+async function loadStudentEnrollments(profileId) {
+    const { data, error } = await supabase
+        .from("enrollments")
+        .select("id, course_id, classroom_id, enrollment_type, enrollment_status, joined_at")
+        .eq("user_id", profileId)
+        .neq("enrollment_status", "removed")
+        .order("joined_at", { ascending: false });
 
     if (error) {
         throw error;
@@ -261,7 +315,7 @@ async function loadRecentSubmissions(courseIds) {
 async function loadStudentSubmissions(profileId) {
     const { data, error } = await supabase
         .from("lesson_submissions")
-        .select("id, course_id, classroom_id, lesson_id, status, submitted_at, updated_at")
+        .select("id, course_id, classroom_id, lesson_id, status, submitted_at, updated_at, points_earned")
         .eq("student_user_id", profileId)
         .order("updated_at", { ascending: false })
         .limit(25);
@@ -281,6 +335,19 @@ async function loadStudentNameMap() {
     }
 
     return new Map(data.map((profile) => [profile.id, formatStudentName(profile)]));
+}
+
+async function loadStudentTeacherMap() {
+    const { data, error } = await supabase.rpc("student_visible_teachers");
+
+    if (error || !data) {
+        return new Map();
+    }
+
+    return new Map(data.map((profile) => [
+        getTeacherKey(profile.course_id, profile.classroom_id),
+        formatStudentName(profile),
+    ]));
 }
 
 function renderClassrooms(course, classrooms) {
@@ -347,6 +414,175 @@ function renderCourses(courses, classrooms) {
         actions.append(builderAction, classroomAction, deleteAction);
 
         card.append(heading, details, description, renderClassrooms(course, classrooms), actions);
+        return card;
+    });
+
+    courseList.replaceChildren(...cards);
+}
+
+function getEnrollmentCourse(enrollment, courses) {
+    return courses.find((course) => course.id === enrollment.course_id);
+}
+
+function getEnrollmentClassroom(enrollment, classrooms) {
+    return enrollment.classroom_id
+        ? classrooms.find((classroom) => classroom.id === enrollment.classroom_id)
+        : null;
+}
+
+function getDisplayStudentEnrollments(enrollments) {
+    const classroomCourseIds = new Set(
+        enrollments
+            .filter((enrollment) => enrollment.enrollment_type === "classroom")
+            .map((enrollment) => enrollment.course_id)
+    );
+
+    return enrollments.filter((enrollment) => (
+        enrollment.enrollment_type === "classroom" || !classroomCourseIds.has(enrollment.course_id)
+    ));
+}
+
+function getStudentCourseProgress(enrollment, lessons, submissions) {
+    const lessonCount = lessons.filter((lesson) => lesson.course_id === enrollment.course_id).length;
+    const submittedCount = submissions.filter((submission) => (
+        submission.course_id === enrollment.course_id
+        && submission.status === "submitted"
+        && (enrollment.classroom_id ? submission.classroom_id === enrollment.classroom_id : !submission.classroom_id)
+    )).length;
+
+    return {
+        incompleteCount: Math.max(lessonCount - submittedCount, 0),
+        lessonCount,
+        progressPercent: lessonCount ? Math.round((submittedCount / lessonCount) * 100) : 0,
+        submittedCount,
+    };
+}
+
+function getContinueLesson(enrollment, lessons, submissions) {
+    const courseLessons = lessons
+        .filter((lesson) => lesson.course_id === enrollment.course_id)
+        .sort((first, second) => first.order_index - second.order_index);
+
+    if (!courseLessons.length) {
+        return null;
+    }
+
+    const submissionsByLesson = new Map(
+        submissions
+            .filter((submission) => (
+                submission.course_id === enrollment.course_id
+                && (enrollment.classroom_id ? submission.classroom_id === enrollment.classroom_id : !submission.classroom_id)
+            ))
+            .map((submission) => [submission.lesson_id, submission])
+    );
+    const draft = [...submissionsByLesson.values()].find((submission) => submission.status === "draft");
+
+    if (draft) {
+        const draftLesson = courseLessons.find((lesson) => lesson.id === draft.lesson_id);
+
+        return {
+            href: getStudentWorkLink(draft),
+            label: "Continue draft",
+            detail: draftLesson?.title ? `Draft saved: ${draftLesson.title}` : "You have a saved draft.",
+            isComplete: false,
+        };
+    }
+
+    const nextLesson = courseLessons.find((lesson) => submissionsByLesson.get(lesson.id)?.status !== "submitted")
+        || courseLessons[courseLessons.length - 1];
+    const nextParams = new URLSearchParams({ lesson: nextLesson.id });
+
+    if (enrollment.classroom_id) {
+        nextParams.set("classroom", enrollment.classroom_id);
+    }
+
+    return {
+        href: `../lessons/view.html?${nextParams.toString()}`,
+        label: submissionsByLesson.get(nextLesson.id)?.status === "submitted" ? "Review lesson" : "Continue lesson",
+        detail: submissionsByLesson.get(nextLesson.id)?.status === "submitted"
+            ? `Completed: ${nextLesson.title || "Lesson"}`
+            : `Next: ${nextLesson.title || "Lesson"}`,
+        isComplete: submissionsByLesson.get(nextLesson.id)?.status === "submitted",
+    };
+}
+
+function renderStudentEnrollments(enrollments, courses, classrooms, lessons, submissions) {
+    if (!enrollments.length) {
+        renderEmpty(courseList, "You are not enrolled in any courses yet.");
+        return;
+    }
+
+    const cards = enrollments.map((enrollment) => {
+        const course = getEnrollmentCourse(enrollment, courses);
+        const classroom = getEnrollmentClassroom(enrollment, classrooms);
+        const { incompleteCount, lessonCount, progressPercent, submittedCount } = getStudentCourseProgress(enrollment, lessons, submissions);
+        const continueLesson = getContinueLesson(enrollment, lessons, submissions);
+        const card = createElement("article", "course-card");
+        const heading = createElement("div", "course-card-header");
+        const title = createElement("h3", "course-title", course?.title || "Untitled course");
+        const badges = createElement("div", "badge-row");
+        badges.append(
+            createElement("span", "badge", enrollment.enrollment_type === "classroom" ? "Classroom" : "Course"),
+            createElement("span", "badge badge--quiet", formatStatus(enrollment.enrollment_status))
+        );
+        heading.append(title, badges);
+
+        const classroomLabel = classroom
+            ? (classroom.period_block ? `${classroom.name} - ${classroom.period_block}` : classroom.name)
+            : "Independent course";
+        const details = createElement("p", "course-details", classroomLabel);
+        const teacher = createElement("p", "course-muted", `Teacher: ${getStudentTeacherName(enrollment)}`);
+        const progress = createElement(
+            "p",
+            "course-muted",
+            lessonCount
+                ? `${submittedCount} of ${lessonCount} lessons submitted.`
+                : "Lessons will appear here when your teacher adds them."
+        );
+        const progressBar = createElement("div", "dashboard-progress");
+        const progressValue = createElement("span", "dashboard-progress-value");
+        progressBar.setAttribute("role", "progressbar");
+        progressBar.setAttribute("aria-label", `${progressPercent}% complete`);
+        progressBar.setAttribute("aria-valuemin", "0");
+        progressBar.setAttribute("aria-valuemax", "100");
+        progressBar.setAttribute("aria-valuenow", String(progressPercent));
+        progressValue.style.width = `${progressPercent}%`;
+        progressBar.append(progressValue);
+        const nextStep = continueLesson
+            ? createElement(
+                "p",
+                continueLesson.isComplete ? "course-muted" : "dashboard-next-step",
+                continueLesson.detail
+            )
+            : null;
+        const incompleteNote = lessonCount && incompleteCount
+            ? createElement(
+                "p",
+                "dashboard-incomplete-note",
+                incompleteCount === 1
+                    ? "1 lesson still needs your attention."
+                    : `${incompleteCount} lessons still need your attention.`
+            )
+            : null;
+        const actions = createElement("div", "course-actions");
+
+        if (continueLesson) {
+            const continueAction = createElement("a", "primary-button", continueLesson.label);
+            continueAction.href = continueLesson.href;
+            actions.append(continueAction);
+        }
+
+        card.append(heading, details, teacher, progress, progressBar);
+
+        if (nextStep) {
+            card.append(nextStep);
+        }
+
+        if (incompleteNote) {
+            card.append(incompleteNote);
+        }
+
+        card.append(actions);
         return card;
     });
 
@@ -460,12 +696,7 @@ function getStudentWorkLink(submission) {
     return `../lessons/view.html?${params.toString()}`;
 }
 
-function renderStudentSubmissions(submissions, courses, lessons) {
-    if (!submissions.length) {
-        renderEmpty(studentSubmissionList, "You do not have any saved lesson work yet.");
-        return;
-    }
-
+function buildStudentSubmissionList(submissions, courses, lessons) {
     const courseNames = new Map(courses.map((course) => [course.id, course.title || "Untitled course"]));
     const lessonNames = new Map(lessons.map((lesson) => [lesson.id, lesson.title || "Untitled lesson"]));
     const list = createElement("ul", "submission-list");
@@ -496,7 +727,25 @@ function renderStudentSubmissions(submissions, courses, lessons) {
         list.append(item);
     });
 
-    studentSubmissionList.replaceChildren(list);
+    return list;
+}
+
+function renderStudentSubmissions(submissions, courses, lessons) {
+    if (!submissions.length) {
+        renderEmpty(studentSubmissionList, "You do not have any saved lesson work yet.");
+        return;
+    }
+
+    studentSubmissionList.replaceChildren(buildStudentSubmissionList(submissions, courses, lessons));
+}
+
+function renderStudentActivity(submissions, courses, lessons) {
+    if (!submissions.length) {
+        renderEmpty(studentActivityList, "No recent lesson activity yet.");
+        return;
+    }
+
+    studentActivityList.replaceChildren(buildStudentSubmissionList(submissions.slice(0, 3), courses, lessons));
 }
 
 async function deleteCourse(course) {
@@ -530,29 +779,84 @@ async function refreshDashboard() {
     try {
         const courses = await loadTeachingCourses(currentProfile.id);
         const courseIds = courses.map((course) => course.id);
+        const studentEnrollments = await loadStudentEnrollments(currentProfile.id);
+        const studentEnrollmentCourseIds = studentEnrollments.map((enrollment) => enrollment.course_id);
+        const studentEnrollmentClassroomIds = studentEnrollments
+            .map((enrollment) => enrollment.classroom_id)
+            .filter(Boolean);
         const studentSubmissions = await loadStudentSubmissions(currentProfile.id);
         const studentCourseIds = studentSubmissions.map((submission) => submission.course_id);
-        const allCourseIds = [...new Set([...courseIds, ...studentCourseIds])];
-        const [classrooms, lessons, submissions, visibleCourses, studentNames] = await Promise.all([
+        const allCourseIds = [...new Set([...courseIds, ...studentEnrollmentCourseIds, ...studentCourseIds])];
+        const [classrooms, studentClassrooms, lessons, submissions, visibleCourses, studentNames, studentTeachers] = await Promise.all([
             loadManagedClassrooms(currentProfile.id, courseIds),
+            loadVisibleClassrooms(studentEnrollmentClassroomIds),
             loadLessons(allCourseIds),
             loadRecentSubmissions(courseIds),
             loadVisibleCourses(allCourseIds),
             loadStudentNameMap(),
+            loadStudentTeacherMap(),
         ]);
+        const displayStudentEnrollments = getDisplayStudentEnrollments(studentEnrollments);
+        const isStudentOnly = !courses.length;
+        const submittedStudentWork = studentSubmissions.filter((submission) => submission.status === "submitted");
+        const studentPoints = submittedStudentWork.reduce((total, submission) => total + Number(submission.points_earned || 0), 0);
+        const progressTotals = displayStudentEnrollments.reduce((totals, enrollment) => {
+            const progress = getStudentCourseProgress(enrollment, lessons, studentSubmissions);
+
+            return {
+                lessonCount: totals.lessonCount + progress.lessonCount,
+                submittedCount: totals.submittedCount + progress.submittedCount,
+            };
+        }, { lessonCount: 0, submittedCount: 0 });
+        const overallProgress = progressTotals.lessonCount
+            ? Math.round((progressTotals.submittedCount / progressTotals.lessonCount) * 100)
+            : 0;
 
         dashboardCourses = courses;
         dashboardClassrooms = classrooms;
         dashboardLessons = lessons;
         dashboardSubmissions = submissions;
         dashboardStudentNames = studentNames;
-        coursesSummary.textContent = String(courses.length);
-        classroomsSummary.textContent = String(classrooms.length);
-        submissionsSummary.textContent = String(submissions.length);
-        studentSubmissionsSummary.textContent = String(studentSubmissions.length);
-        renderCourses(courses, classrooms);
+        dashboardStudentTeachers = studentTeachers;
+        courseFormToggle.hidden = isStudentOnly;
+        courseFormPanel.hidden = true;
+        teacherSubmissionsSection.hidden = isStudentOnly;
+        studentActivitySection.hidden = !isStudentOnly;
+        studentJoinSection.hidden = !isStudentOnly;
+
+        if (isStudentOnly) {
+            greetingElement.textContent = `Welcome, ${currentProfile.username || "there"}. Continue your courses and review lesson work.`;
+            coursesSummaryLabel.textContent = "My courses";
+            classroomsSummaryLabel.textContent = "Active classrooms";
+            submissionsSummaryLabel.textContent = "Course progress";
+            studentSubmissionsSummaryLabel.textContent = "Engagement points";
+            managedCoursesHeading.textContent = "My courses";
+            managedCoursesCopy.textContent = displayStudentEnrollments.length
+                ? "Open enrolled courses, continue drafts, and turn in lesson work."
+                : "Joined courses and classrooms will appear here.";
+            coursesSummary.textContent = String(displayStudentEnrollments.length);
+            classroomsSummary.textContent = String(displayStudentEnrollments.filter((enrollment) => enrollment.enrollment_type === "classroom").length);
+            submissionsSummary.textContent = `${overallProgress}%`;
+            studentSubmissionsSummary.textContent = String(studentPoints);
+            renderStudentEnrollments(displayStudentEnrollments, visibleCourses, studentClassrooms, lessons, studentSubmissions);
+        } else {
+            greetingElement.textContent = `Welcome, ${currentProfile.username || "there"}. Manage teaching work and continue saved lessons.`;
+            coursesSummaryLabel.textContent = "Courses I teach";
+            classroomsSummaryLabel.textContent = "Managed classrooms";
+            submissionsSummaryLabel.textContent = "Recent submissions";
+            studentSubmissionsSummaryLabel.textContent = "My lesson work";
+            managedCoursesHeading.textContent = "Your managed courses";
+            managedCoursesCopy.textContent = "Courses you own or help teach appear here. New courses start as private drafts.";
+            coursesSummary.textContent = String(courses.length);
+            classroomsSummary.textContent = String(classrooms.length);
+            submissionsSummary.textContent = String(submissions.length);
+            studentSubmissionsSummary.textContent = String(studentSubmissions.length);
+            renderCourses(courses, classrooms);
+        }
+
         renderSubmissionFilters(courses, classrooms, lessons.filter((lesson) => courseIds.includes(lesson.course_id)), submissions);
         refreshSubmissionList();
+        renderStudentActivity(studentSubmissions, visibleCourses, lessons);
         renderStudentSubmissions(studentSubmissions, visibleCourses, lessons);
         setStatus("");
     } catch (error) {
