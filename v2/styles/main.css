@@ -629,6 +629,17 @@ h2 {
     margin-top: 6px;
 }
 
+.dashboard-join-form {
+    display: flex;
+    align-items: end;
+    gap: 12px;
+    min-width: min(420px, 100%);
+}
+
+.dashboard-join-form .form-field {
+    flex: 1;
+}
+
 .course-grid {
     display: grid;
     gap: 16px;
@@ -1568,6 +1579,13 @@ h2 {
     font-weight: 600;
 }
 
+.managed-classroom-join-code {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: #1d3760;
+    font-weight: 800;
+}
+
 @media (min-width: 900px) {
     .auth-card {
         padding: 34px;
@@ -1595,6 +1613,11 @@ h2 {
 
     .dashboard-join-panel {
         display: grid;
+    }
+
+    .dashboard-join-form {
+        display: grid;
+        min-width: 0;
     }
 
     .dashboard-join-panel .secondary-button {

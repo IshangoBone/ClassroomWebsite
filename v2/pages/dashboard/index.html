@@ -49,9 +49,15 @@
             <div>
                 <p class="eyebrow">Join Access</p>
                 <h2 id="student-join-heading">Join a course or classroom</h2>
-                <p class="section-copy">Use this space for teacher join codes and invite links when the join flow is ready.</p>
+                <p class="section-copy">Enter a classroom join code from your teacher.</p>
             </div>
-            <button type="button" class="secondary-button" disabled>Join flow coming next</button>
+            <form class="dashboard-join-form" data-student-join-form>
+                <label class="form-field">
+                    <span>Join code</span>
+                    <input type="text" name="join-code" autocomplete="off" placeholder="Example: CTC-AB12CD" />
+                </label>
+                <button type="submit" class="secondary-button">Join classroom</button>
+            </form>
         </section>
 
         <section class="course-create-panel" data-course-form-panel hidden aria-labelledby="create-course-heading">
@@ -168,7 +174,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260529-student-dashboard"></script>
+    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260529-student-join"></script>
 </body>
 
 </html>

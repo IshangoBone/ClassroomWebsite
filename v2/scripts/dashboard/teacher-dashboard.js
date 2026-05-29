@@ -10,6 +10,7 @@ const courseFormPanel = qs("[data-course-form-panel]");
 const courseForm = qs("[data-course-form]");
 const courseFormToggle = qs("[data-course-form-toggle]");
 const courseFormCancel = qs("[data-course-form-cancel]");
+const studentJoinForm = qs("[data-student-join-form]");
 const submissionFilterForm = qs("[data-submission-filter-form]");
 const studentActivitySection = qs("[data-student-activity-section]");
 const studentActivityList = qs("[data-student-activity-list]");
@@ -96,6 +97,43 @@ function getSubmissionFilters() {
 
 function renderEmpty(container, message) {
     container.replaceChildren(createElement("p", "empty-state", message));
+}
+
+async function handleStudentJoinSubmit(event) {
+    event.preventDefault();
+
+    const formData = new FormData(studentJoinForm);
+    const joinCode = String(formData.get("join-code") || "").trim();
+    const submitButton = studentJoinForm.querySelector("button[type='submit']");
+
+    if (!joinCode) {
+        setStatus("Enter a classroom join code.", "error");
+        return;
+    }
+
+    setStatus("Joining classroom...");
+    submitButton.disabled = true;
+
+    const { data, error } = await supabase.rpc("join_classroom_by_code", {
+        join_code_input: joinCode,
+    });
+
+    submitButton.disabled = false;
+
+    if (error) {
+        setStatus(error.message || "That classroom could not be joined.", "error");
+        return;
+    }
+
+    const joinedClassroom = data?.[0];
+    studentJoinForm.reset();
+    await refreshDashboard();
+    setStatus(
+        joinedClassroom?.classroom_name
+            ? `Joined ${joinedClassroom.classroom_name}.`
+            : "Classroom joined.",
+        "success"
+    );
 }
 
 async function loadTeachingCourses(profileId) {
@@ -907,6 +945,7 @@ courseFormCancel.addEventListener("click", () => {
 });
 
 submissionFilterForm.addEventListener("change", refreshSubmissionList);
+studentJoinForm.addEventListener("submit", handleStudentJoinSubmit);
 
 courseForm.addEventListener("submit", async (event) => {
     event.preventDefault();

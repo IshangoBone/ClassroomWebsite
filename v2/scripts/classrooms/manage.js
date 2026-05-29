@@ -62,6 +62,43 @@ function clearDragStyles() {
     });
 }
 
+function createJoinCode() {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const values = new Uint32Array(6);
+    window.crypto.getRandomValues(values);
+
+    return `CTC-${[...values].map((value) => alphabet[value % alphabet.length]).join("")}`;
+}
+
+async function copyJoinCode(joinCode) {
+    try {
+        await navigator.clipboard.writeText(joinCode);
+        setStatus("Join code copied.", "success");
+    } catch (error) {
+        setStatus(`Copy this join code: ${joinCode}`, "success");
+    }
+}
+
+async function generateJoinCode(classroom) {
+    const joinCode = createJoinCode();
+
+    setStatus("Generating join code...");
+
+    const { error } = await supabase
+        .from("classrooms")
+        .update({ join_code: joinCode })
+        .eq("id", classroom.id)
+        .eq("course_id", courseId);
+
+    if (error) {
+        setStatus(error.message || "Join code could not be generated.", "error");
+        return;
+    }
+
+    await loadClassrooms();
+    setStatus(`Join code generated: ${joinCode}`, "success");
+}
+
 async function saveClassroomOrder(classrooms) {
     const results = await Promise.all(classrooms.map((classroom, index) => (
         supabase
@@ -178,17 +215,36 @@ function renderClassrooms(classrooms) {
             "course-muted",
             classroom.period_block || classroom.school_year || "Classroom details not set yet."
         );
+        const joinCode = createElement(
+            "p",
+            "managed-classroom-join-code",
+            classroom.join_code ? `Join code: ${classroom.join_code}` : "No join code generated yet."
+        );
         const badge = createElement("span", "badge badge--quiet", classroom.status);
         const actions = createElement("div", "managed-classroom-actions");
         const dragHint = createElement("span", "managed-classroom-drag-hint", "Drag to reorder");
         const editButton = createElement("button", "secondary-button lesson-action", "Edit classroom");
+        const joinButton = createElement(
+            "button",
+            "secondary-button lesson-action",
+            classroom.join_code ? "Copy join code" : "Generate join code"
+        );
         const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete classroom");
         editButton.type = "button";
         editButton.addEventListener("click", () => toggleClassroomForm(true, classroom));
+        joinButton.type = "button";
+        joinButton.addEventListener("click", () => {
+            if (classroom.join_code) {
+                copyJoinCode(classroom.join_code);
+                return;
+            }
+
+            generateJoinCode(classroom);
+        });
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteClassroom(classroom));
-        actions.append(dragHint, editButton, deleteButton);
-        item.append(title, details, badge, actions);
+        actions.append(dragHint, editButton, joinButton, deleteButton);
+        item.append(title, details, joinCode, badge, actions);
         list.append(item);
     });
 
@@ -198,7 +254,7 @@ function renderClassrooms(classrooms) {
 async function loadClassrooms() {
     const { data: classrooms, error } = await supabase
         .from("classrooms")
-        .select("id, name, period_block, school_year, status, display_order")
+        .select("id, name, period_block, school_year, status, display_order, join_code")
         .eq("course_id", courseId)
         .neq("status", "deleted")
         .order("display_order", { ascending: true })
