@@ -19,6 +19,7 @@ let currentSubmission = null;
 let currentSubmissionContext = null;
 let currentProfileId = "";
 let canReviewSubmission = false;
+let feedbackSchemaAvailable = true;
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -90,11 +91,23 @@ async function loadSubmission() {
         return null;
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from("lesson_submissions")
         .select("id, student_user_id, course_id, classroom_id, lesson_id, answers_json, total_questions, points_possible, points_earned, status, submitted_at, updated_at, teacher_feedback, feedback_updated_by, feedback_updated_at")
         .eq("id", submissionId)
         .single();
+
+    if (error) {
+        const fallbackResult = await supabase
+            .from("lesson_submissions")
+            .select("id, student_user_id, course_id, classroom_id, lesson_id, answers_json, total_questions, points_possible, points_earned, status, submitted_at, updated_at")
+            .eq("id", submissionId)
+            .single();
+
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+        feedbackSchemaAvailable = false;
+    }
 
     if (error) {
         headingElement.textContent = "Submission unavailable";
@@ -264,6 +277,11 @@ function renderAnswers(questions, answers, optionLabels) {
 }
 
 function renderFeedback(submission) {
+    if (!feedbackSchemaAvailable) {
+        feedbackPanel.replaceChildren(createElement("p", "empty-state", "Teacher feedback will appear here after feedback fields are enabled in Supabase."));
+        return;
+    }
+
     if (!canReviewSubmission) {
         const feedback = submission.teacher_feedback
             ? createElement("p", "submission-answer-text", submission.teacher_feedback)
