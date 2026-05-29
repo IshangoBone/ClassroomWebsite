@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Lesson Builder</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout">
+        <a class="back-link" href="../dashboard/index.html" data-course-editor-link>Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Lesson Builder</p>
+            <h1 data-lesson-heading>Loading lesson...</h1>
+            <p class="intro" data-lesson-context>
+                Open a lesson from course management to begin focused lesson authoring.
+            </p>
+        </header>
+
+        <p class="auth-status management-status" data-lesson-status aria-live="polite"></p>
+
+        <section class="management-section" data-lesson-content hidden aria-labelledby="lesson-overview-heading">
+            <div class="section-header">
+                <h2 id="lesson-overview-heading">Lesson overview</h2>
+                <p class="section-copy">Review the draft lesson details before adding content and questions.</p>
+            </div>
+
+            <div class="dashboard-summary dashboard-summary--compact">
+                <article class="summary-card">
+                    <span class="summary-label">Module</span>
+                    <strong class="summary-value" data-module-position>-</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Lesson</span>
+                    <strong class="summary-value" data-lesson-position>-</strong>
+                </article>
+            </div>
+
+            <div data-lesson-details>
+                <p class="empty-state">Loading lesson details...</p>
+            </div>
+        </section>
+
+        <section class="management-section management-section--pending" data-lesson-content hidden>
+            <div class="section-header">
+                <h2>Lesson text content</h2>
+                <p class="section-copy">Create draft written material for this lesson. Draft content stays hidden from students until publishing is built.</p>
+            </div>
+
+            <form class="management-create-form" data-content-block-form>
+                <h3 data-content-block-form-heading>Add text content</h3>
+                <input type="hidden" name="content-block-id" />
+
+                <div class="content-block-form-grid">
+                    <label class="form-field">
+                        <span>Section title</span>
+                        <input type="text" name="title" placeholder="What is a computer?" maxlength="120" required />
+                    </label>
+
+                    <label class="form-field">
+                        <span>Section text</span>
+                        <textarea name="body-text" rows="5" maxlength="3000" placeholder="Write the lesson content students will read here." required></textarea>
+                    </label>
+                </div>
+
+                <div class="course-form-actions">
+                    <button type="submit" class="primary-button" data-content-block-submit>Create text section</button>
+                    <button type="button" class="secondary-button" data-cancel-content-block-edit hidden>Cancel edit</button>
+                </div>
+            </form>
+
+            <div data-content-block-list>
+                <p class="empty-state">Loading lesson text content...</p>
+            </div>
+        </section>
+
+        <section class="management-section management-section--pending" data-lesson-content hidden>
+            <div class="section-header">
+                <h2>Draft questions</h2>
+                <p class="section-copy">Create short-response questions for this lesson. Answer options and scoring will be added later.</p>
+            </div>
+
+            <form class="management-create-form" data-question-form>
+                <h3 data-question-form-heading>Add draft question</h3>
+                <input type="hidden" name="question-id" />
+
+                <div class="content-block-form-grid">
+                    <label class="form-field">
+                        <span>Phase</span>
+                        <select name="phase" required>
+                            <option value="before">Before lesson</option>
+                            <option value="during">During lesson</option>
+                            <option value="reflection">Reflection</option>
+                        </select>
+                    </label>
+
+                    <label class="form-field">
+                        <span>Prompt</span>
+                        <textarea name="prompt" rows="4" maxlength="1000" placeholder="What should students answer?" required></textarea>
+                    </label>
+
+                    <label class="form-field form-field--wide">
+                        <span>Student instructions</span>
+                        <textarea name="student-instructions" rows="3" maxlength="800" placeholder="Explain your answer in two or three complete sentences."></textarea>
+                    </label>
+                </div>
+
+                <div class="course-form-actions">
+                    <button type="submit" class="primary-button" data-question-submit>Create draft question</button>
+                    <button type="button" class="secondary-button" data-cancel-question-edit hidden>Cancel edit</button>
+                </div>
+            </form>
+
+            <div data-question-list>
+                <p class="empty-state">Loading draft questions...</p>
+            </div>
+        </section>
+
+        <section class="management-section management-section--pending" data-lesson-content hidden>
+            <h2>Coming next</h2>
+            <ul class="feature-list">
+                <li>Edit and reorder lesson text content</li>
+                <li>Edit, reorder, and score draft questions</li>
+                <li>Add media resources and preview lesson flow before publishing</li>
+            </ul>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/lessons/builder.js"></script>
+</body>
+
+</html>

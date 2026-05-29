@@ -869,6 +869,11 @@ h2 {
     font-size: 1rem;
 }
 
+.lesson-meta-row {
+    justify-content: flex-start;
+    margin-top: 10px;
+}
+
 .lesson-content {
     display: grid;
     gap: 10px;

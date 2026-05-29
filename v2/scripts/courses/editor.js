@@ -18,12 +18,6 @@ const cancelModuleButton = qs("[data-cancel-module-form]");
 const lessonForm = qs("[data-lesson-form]");
 const lessonFormHeading = qs("[data-lesson-form-heading]");
 const cancelLessonButton = qs("[data-cancel-lesson-form]");
-const contentBlockForm = qs("[data-content-block-form]");
-const contentBlockFormHeading = qs("[data-content-block-form-heading]");
-const cancelContentBlockButton = qs("[data-cancel-content-block-form]");
-const questionForm = qs("[data-question-form]");
-const questionFormHeading = qs("[data-question-form-heading]");
-const cancelQuestionButton = qs("[data-cancel-question-form]");
 let loadedModules = [];
 let loadedLessons = [];
 let loadedContentBlocks = [];
@@ -82,78 +76,6 @@ function toggleLessonForm(isOpen, module = null) {
         lessonForm.reset();
         lessonFormHeading.textContent = "Add lesson";
     }
-}
-
-function toggleContentBlockForm(isOpen, lesson = null) {
-    contentBlockForm.hidden = !isOpen;
-
-    if (isOpen && lesson) {
-        contentBlockForm.elements["lesson-id"].value = lesson.id;
-        contentBlockFormHeading.textContent = `Add text content to ${lesson.title}`;
-        contentBlockForm.elements.title.focus();
-    } else {
-        contentBlockForm.reset();
-        contentBlockFormHeading.textContent = "Add text content";
-    }
-}
-
-function toggleQuestionForm(isOpen, lesson = null) {
-    questionForm.hidden = !isOpen;
-
-    if (isOpen && lesson) {
-        questionForm.elements["lesson-id"].value = lesson.id;
-        questionFormHeading.textContent = `Add draft question to ${lesson.title}`;
-        questionForm.elements.prompt.focus();
-    } else {
-        questionForm.reset();
-        questionFormHeading.textContent = "Add draft question";
-    }
-}
-
-function renderContentBlocks(contentBlocks) {
-    if (!contentBlocks.length) {
-        return createElement("p", "empty-state empty-state--compact", "No written content has been added yet.");
-    }
-
-    const list = createElement("ol", "content-block-list");
-
-    contentBlocks.forEach((contentBlock) => {
-        const item = createElement("li", "content-block-card");
-        const title = createElement("h6", "content-block-title", contentBlock.title || "Text section");
-        const body = createElement("p", "course-muted content-block-body", contentBlock.body_text || "");
-        const labelPrefix = contentBlock.is_visible ? "Text" : "Draft text";
-        const label = createElement("span", "badge badge--quiet", `${labelPrefix} ${contentBlock.order_index + 1}`);
-
-        item.append(title, label, body);
-        list.append(item);
-    });
-
-    return list;
-}
-
-function renderQuestions(questions) {
-    if (!questions.length) {
-        return createElement("p", "empty-state empty-state--compact", "No draft questions have been added yet.");
-    }
-
-    const list = createElement("ol", "question-list");
-
-    questions.forEach((question) => {
-        const item = createElement("li", "question-card");
-        const prompt = createElement("h6", "question-prompt", question.prompt);
-        const phaseLabel = question.phase.charAt(0).toUpperCase() + question.phase.slice(1);
-        const label = createElement("span", "badge badge--quiet", `Draft ${phaseLabel}`);
-        const instructions = createElement(
-            "p",
-            "course-muted question-instructions",
-            question.student_instructions || "Short response question"
-        );
-
-        item.append(prompt, label, instructions);
-        list.append(item);
-    });
-
-    return list;
 }
 
 function getDragAfterElement(container, y, itemClass, draggingClass) {
@@ -342,17 +264,15 @@ function renderLessons(module, lessons, contentBlocks, questions) {
         const label = createElement("span", "badge badge--quiet", labelText);
         const headerActions = createElement("div", "lesson-header-actions");
         const dragHint = createElement("span", "lesson-drag-hint", "Drag to reorder");
+        const openLessonBuilderLink = createElement("a", "secondary-button lesson-action", "Open lesson builder");
         const deleteLessonButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete lesson");
-        const contentSection = createElement("section", "lesson-content");
-        const contentHeader = createElement("div", "lesson-content-header");
-        const contentHeading = createElement("h6", "", "Lesson content");
-        const addContentButton = createElement("button", "secondary-button lesson-action", "Add text content");
         const lessonContentBlocks = contentBlocks.filter((contentBlock) => contentBlock.lesson_id === lesson.id);
-        const questionSection = createElement("section", "lesson-content lesson-questions");
-        const questionHeader = createElement("div", "lesson-content-header");
-        const questionHeading = createElement("h6", "", "Draft questions");
-        const addQuestionButton = createElement("button", "secondary-button lesson-action", "Add question");
         const lessonQuestions = questions.filter((question) => question.lesson_id === lesson.id);
+        const metaRow = createElement("div", "badge-row lesson-meta-row");
+        const contentCountText = lessonContentBlocks.length === 1 ? "1 text section" : `${lessonContentBlocks.length} text sections`;
+        const questionCountText = lessonQuestions.length === 1 ? "1 draft question" : `${lessonQuestions.length} draft questions`;
+        const contentCount = createElement("span", "badge badge--quiet", contentCountText);
+        const questionCount = createElement("span", "badge badge--quiet", questionCountText);
 
         item.draggable = true;
         item.dataset.lessonId = lesson.id;
@@ -367,20 +287,14 @@ function renderLessons(module, lessons, contentBlocks, questions) {
             item.classList.remove("lesson-card--dragging");
             await saveLessonOrder(list, module.id);
         });
-        addContentButton.type = "button";
-        addContentButton.addEventListener("click", () => toggleContentBlockForm(true, lesson));
-        addQuestionButton.type = "button";
-        addQuestionButton.addEventListener("click", () => toggleQuestionForm(true, lesson));
+        openLessonBuilderLink.href = `../lessons/builder.html?lesson=${encodeURIComponent(lesson.id)}`;
         deleteLessonButton.type = "button";
         deleteLessonButton.addEventListener("click", () => deleteLesson(lesson));
-        content.append(title, objective);
-        headerActions.append(dragHint, label, deleteLessonButton);
+        metaRow.append(contentCount, questionCount);
+        content.append(title, objective, metaRow);
+        headerActions.append(dragHint, label, openLessonBuilderLink, deleteLessonButton);
         header.append(content, headerActions);
-        contentHeader.append(contentHeading, addContentButton);
-        contentSection.append(contentHeader, renderContentBlocks(lessonContentBlocks));
-        questionHeader.append(questionHeading, addQuestionButton);
-        questionSection.append(questionHeader, renderQuestions(lessonQuestions));
-        item.append(header, contentSection, questionSection);
+        item.append(header);
         list.append(item);
     });
 
@@ -765,104 +679,8 @@ lessonForm.addEventListener("submit", async (event) => {
     setStatus("Lesson created.", "success");
 });
 
-contentBlockForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const formData = new FormData(contentBlockForm);
-    const lessonId = String(formData.get("lesson-id") || "");
-    const title = String(formData.get("title") || "").trim();
-    const bodyText = String(formData.get("body-text") || "").trim();
-    const submitButton = contentBlockForm.querySelector("button[type='submit']");
-    const lesson = loadedLessons.find((currentLesson) => currentLesson.id === lessonId);
-
-    if (!lesson || !title || !bodyText) {
-        setStatus("Choose a lesson and enter a title and written content before saving.", "error");
-        return;
-    }
-
-    const lessonContent = loadedContentBlocks.filter((contentBlock) => contentBlock.lesson_id === lessonId);
-    const nextOrder = lessonContent.reduce(
-        (highest, contentBlock) => Math.max(highest, contentBlock.order_index),
-        -1
-    ) + 1;
-    setStatus("Creating text content...");
-    submitButton.disabled = true;
-
-    const { error } = await supabase.from("lesson_content_blocks").insert({
-        lesson_id: lessonId,
-        block_type: "text",
-        title,
-        body_text: bodyText,
-        order_index: nextOrder,
-        is_visible: false,
-    });
-
-    submitButton.disabled = false;
-
-    if (error) {
-        setStatus(error.message || "The text content could not be created.", "error");
-        return;
-    }
-
-    toggleContentBlockForm(false);
-    await loadModules();
-    setStatus("Text content created.", "success");
-});
-
-questionForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const formData = new FormData(questionForm);
-    const lessonId = String(formData.get("lesson-id") || "");
-    const phase = String(formData.get("phase") || "");
-    const prompt = String(formData.get("prompt") || "").trim();
-    const studentInstructions = String(formData.get("student-instructions") || "").trim();
-    const submitButton = questionForm.querySelector("button[type='submit']");
-    const lesson = loadedLessons.find((currentLesson) => currentLesson.id === lessonId);
-
-    if (!lesson || !["before", "during", "reflection"].includes(phase) || !prompt) {
-        setStatus("Choose a lesson, phase, and question prompt before saving.", "error");
-        return;
-    }
-
-    const lessonPhaseQuestions = loadedQuestions.filter(
-        (question) => question.lesson_id === lessonId && question.phase === phase
-    );
-    const nextOrder = lessonPhaseQuestions.reduce(
-        (highest, question) => Math.max(highest, question.order_index),
-        -1
-    ) + 1;
-    setStatus("Creating draft question...");
-    submitButton.disabled = true;
-
-    const { error } = await supabase.from("questions").insert({
-        lesson_id: lessonId,
-        phase,
-        question_type: "short_response",
-        prompt,
-        student_instructions: studentInstructions || null,
-        points: 1,
-        is_required: false,
-        is_visible: false,
-        order_index: nextOrder,
-    });
-
-    submitButton.disabled = false;
-
-    if (error) {
-        setStatus(error.message || "The draft question could not be created.", "error");
-        return;
-    }
-
-    toggleQuestionForm(false);
-    await loadModules();
-    setStatus("Draft question created.", "success");
-});
-
 addModuleButton.addEventListener("click", () => toggleModuleForm(true));
 cancelModuleButton.addEventListener("click", () => toggleModuleForm(false));
 cancelLessonButton.addEventListener("click", () => toggleLessonForm(false));
-cancelContentBlockButton.addEventListener("click", () => toggleContentBlockForm(false));
-cancelQuestionButton.addEventListener("click", () => toggleQuestionForm(false));
 
 await initializePage();
