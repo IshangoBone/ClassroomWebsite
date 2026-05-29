@@ -107,7 +107,7 @@
         <section class="management-section management-section--pending" data-lesson-content hidden>
             <div class="section-header">
                 <h2>Draft questions</h2>
-                <p class="section-copy">Create short-response questions for this lesson. Answer options and scoring will be added later.</p>
+                <p class="section-copy">Create response questions, choice questions, and preview what students will answer.</p>
             </div>
 
             <form class="management-create-form" data-question-form>
@@ -125,6 +125,17 @@
                     </label>
 
                     <label class="form-field">
+                        <span>Question type</span>
+                        <select name="question-type" required>
+                            <option value="short_response">Short response</option>
+                            <option value="long_response">Long response</option>
+                            <option value="multiple_choice">Multiple choice</option>
+                            <option value="select_all_that_apply">Select all that apply</option>
+                            <option value="true_false">True / false</option>
+                        </select>
+                    </label>
+
+                    <label class="form-field">
                         <span>Prompt</span>
                         <textarea name="prompt" rows="4" maxlength="1000" placeholder="What should students answer?" required></textarea>
                     </label>
@@ -133,6 +144,53 @@
                         <span>Student instructions</span>
                         <textarea name="student-instructions" rows="3" maxlength="800" placeholder="Explain your answer in two or three complete sentences."></textarea>
                     </label>
+
+                    <label class="form-field form-field--wide">
+                        <span>Optional hint</span>
+                        <textarea name="hint" rows="2" maxlength="500" placeholder="Give students a nudge without giving away the answer."></textarea>
+                    </label>
+
+                    <label class="form-field">
+                        <span>Points</span>
+                        <input type="number" name="points" min="0" max="100" step="0.5" value="1" required />
+                    </label>
+
+                    <label class="form-field form-field--checkbox form-field--wide">
+                        <input type="checkbox" name="is-required" />
+                        <span>Require students to answer before turning in the lesson</span>
+                    </label>
+
+                    <fieldset class="form-field form-field--wide question-options-field" data-question-options-field hidden>
+                        <legend>Answer choices</legend>
+                        <div class="question-option-row">
+                            <input type="text" name="option-1" maxlength="300" placeholder="Choice 1" />
+                            <label>
+                                <input type="radio" name="correct-option" value="1" />
+                                <span>Correct</span>
+                            </label>
+                        </div>
+                        <div class="question-option-row">
+                            <input type="text" name="option-2" maxlength="300" placeholder="Choice 2" />
+                            <label>
+                                <input type="radio" name="correct-option" value="2" />
+                                <span>Correct</span>
+                            </label>
+                        </div>
+                        <div class="question-option-row">
+                            <input type="text" name="option-3" maxlength="300" placeholder="Choice 3" />
+                            <label>
+                                <input type="radio" name="correct-option" value="3" />
+                                <span>Correct</span>
+                            </label>
+                        </div>
+                        <div class="question-option-row">
+                            <input type="text" name="option-4" maxlength="300" placeholder="Choice 4" />
+                            <label>
+                                <input type="radio" name="correct-option" value="4" />
+                                <span>Correct</span>
+                            </label>
+                        </div>
+                    </fieldset>
                 </div>
 
                 <div class="course-form-actions">
@@ -143,6 +201,13 @@
 
             <div data-question-list>
                 <p class="empty-state">Loading draft questions...</p>
+            </div>
+
+            <div class="lesson-content" data-question-preview>
+                <div class="lesson-content-header">
+                    <h6>Student preview</h6>
+                </div>
+                <p class="empty-state empty-state--compact">Draft question preview will appear after questions load.</p>
             </div>
         </section>
 

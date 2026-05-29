@@ -28,8 +28,18 @@ const questionFormHeading = qs("[data-question-form-heading]");
 const questionSubmit = qs("[data-question-submit]");
 const cancelQuestionEditButton = qs("[data-cancel-question-edit]");
 const questionList = qs("[data-question-list]");
+const questionPreview = qs("[data-question-preview]");
+const questionOptionsField = qs("[data-question-options-field]");
 let loadedContentBlocks = [];
 let loadedQuestions = [];
+const questionTypeLabels = {
+    short_response: "Short response",
+    long_response: "Long response",
+    multiple_choice: "Multiple choice",
+    select_all_that_apply: "Select all",
+    true_false: "True / false",
+};
+const choiceQuestionTypes = ["multiple_choice", "select_all_that_apply"];
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -251,20 +261,112 @@ async function toggleContentBlockVisibility(contentBlock) {
 function resetQuestionForm() {
     questionForm.reset();
     questionForm.elements["question-id"].value = "";
+    setQuestionFormMode("short_response");
+    questionForm.elements.points.value = "1";
+    questionForm.elements["is-required"].checked = false;
     questionFormHeading.textContent = "Add draft question";
     questionSubmit.textContent = "Create draft question";
     cancelQuestionEditButton.hidden = true;
 }
 
+function getQuestionOptions(question) {
+    return [...(question.options || [])].sort((first, second) => first.order_index - second.order_index);
+}
+
+function setQuestionFormMode(questionType) {
+    const isChoiceQuestion = choiceQuestionTypes.includes(questionType);
+    const allowsMultipleCorrectAnswers = questionType === "select_all_that_apply";
+    const correctInputs = [...questionOptionsField.querySelectorAll("[name='correct-option']")];
+
+    questionForm.elements["question-type"].value = questionType;
+    questionOptionsField.hidden = !isChoiceQuestion;
+    [1, 2, 3, 4].forEach((index) => {
+        questionForm.elements[`option-${index}`].required = isChoiceQuestion;
+    });
+    correctInputs.forEach((input) => {
+        input.type = allowsMultipleCorrectAnswers ? "checkbox" : "radio";
+    });
+
+    if (!isChoiceQuestion) {
+        correctInputs.forEach((input) => {
+            input.checked = false;
+        });
+        return;
+    }
+
+    if (!allowsMultipleCorrectAnswers) {
+        const checkedInputs = correctInputs.filter((input) => input.checked);
+
+        checkedInputs.slice(1).forEach((input) => {
+            input.checked = false;
+        });
+    }
+}
+
+function getChoiceOptions(formData, questionType) {
+    if (!choiceQuestionTypes.includes(questionType)) {
+        return [];
+    }
+
+    const correctIndexes = new Set(formData.getAll("correct-option").map((value) => Number(value)));
+
+    return [1, 2, 3, 4].map((index) => ({
+        text: String(formData.get(`option-${index}`) || "").trim(),
+        isCorrect: correctIndexes.has(index),
+    }));
+}
+
 function editQuestion(question) {
     questionForm.elements["question-id"].value = question.id;
     questionForm.elements.phase.value = question.phase || "before";
+    setQuestionFormMode(question.question_type || "short_response");
     questionForm.elements.prompt.value = question.prompt || "";
     questionForm.elements["student-instructions"].value = question.student_instructions || "";
+    questionForm.elements.hint.value = question.hint || "";
+    questionForm.elements.points.value = String(question.points ?? 1);
+    questionForm.elements["is-required"].checked = Boolean(question.is_required);
+    [1, 2, 3, 4].forEach((index) => {
+        const option = getQuestionOptions(question)[index - 1];
+
+        questionForm.elements[`option-${index}`].value = option?.option_text || "";
+        questionOptionsField.querySelector(`[name='correct-option'][value='${index}']`).checked = Boolean(option?.is_correct);
+    });
     questionFormHeading.textContent = "Edit draft question";
     questionSubmit.textContent = "Save draft question";
     cancelQuestionEditButton.hidden = false;
     questionForm.elements.prompt.focus();
+}
+
+async function saveQuestionOptions(questionId, optionInputs, existingOptions = []) {
+    if (!optionInputs.length) {
+        return null;
+    }
+
+    const existingOptionsByIndex = getQuestionOptions({ options: existingOptions });
+    const results = await Promise.all(optionInputs.map((optionInput, index) => {
+        const existingOption = existingOptionsByIndex[index];
+        const optionPayload = {
+            option_text: optionInput.text,
+            option_value: `option_${index + 1}`,
+            is_correct: optionInput.isCorrect,
+            match_group: null,
+            order_index: index,
+        };
+
+        if (existingOption) {
+            return supabase
+                .from("question_options")
+                .update(optionPayload)
+                .eq("id", existingOption.id)
+                .eq("question_id", questionId);
+        }
+
+        return supabase
+            .from("question_options")
+            .insert({ question_id: questionId, ...optionPayload });
+    }));
+
+    return results.find((result) => result.error)?.error || null;
 }
 
 async function deleteQuestion(question) {
@@ -451,11 +553,25 @@ function renderQuestions(questions) {
         const prompt = createElement("h3", "question-prompt", question.prompt);
         const phaseLabel = question.phase.charAt(0).toUpperCase() + question.phase.slice(1);
         const label = createElement("span", "badge badge--quiet", `Draft ${phaseLabel}`);
+        const typeLabel = createElement(
+            "span",
+            "badge badge--quiet",
+            questionTypeLabels[question.question_type] || "Question"
+        );
+        const requiredLabel = createElement(
+            "span",
+            "badge badge--quiet",
+            question.is_required ? "Required" : "Optional"
+        );
+        const pointsLabel = createElement("span", "badge badge--quiet", `${Number(question.points ?? 1)} pt`);
         const instructions = createElement(
             "p",
             "course-muted question-instructions",
             question.student_instructions || "Short response question"
         );
+        const hint = createElement("p", "course-muted question-instructions", `Hint: ${question.hint || "None"}`);
+        const options = getQuestionOptions(question);
+        const optionList = createElement("ol", "question-option-list");
         const phaseQuestions = questions.filter((currentQuestion) => currentQuestion.phase === question.phase);
         const phaseIndex = phaseQuestions.findIndex((currentQuestion) => currentQuestion.id === question.id);
         const moveUpButton = createElement("button", "secondary-button lesson-action", "Move up");
@@ -473,6 +589,14 @@ function renderQuestions(questions) {
         );
         const actions = createElement("div", "content-block-actions");
 
+        options.forEach((option) => {
+            const optionItem = createElement("li", "", option.option_text);
+
+            if (option.is_correct) {
+                optionItem.append(createElement("span", "badge badge--quiet", "Correct"));
+            }
+            optionList.append(optionItem);
+        });
         moveUpButton.type = "button";
         moveUpButton.disabled = phaseIndex === 0;
         moveUpButton.addEventListener("click", () => moveQuestion(question, "up"));
@@ -486,17 +610,116 @@ function renderQuestions(questions) {
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteQuestion(question));
         actions.append(moveUpButton, moveDownButton, visibilityButton, editButton, deleteButton);
-        item.append(prompt, label, instructions, actions);
+        item.append(prompt, label, typeLabel, requiredLabel, pointsLabel, instructions, hint);
+        if (choiceQuestionTypes.includes(question.question_type) && options.length) {
+            item.append(optionList);
+        }
+        item.append(actions);
         list.append(item);
     });
 
     questionList.replaceChildren(list);
 }
 
+function renderQuestionPreview(questions) {
+    const visibleQuestions = questions.filter((question) => question.is_visible);
+    const header = createElement("div", "lesson-content-header");
+    const heading = createElement("h6", "", "Student preview");
+
+    header.append(heading);
+
+    if (!visibleQuestions.length) {
+        questionPreview.replaceChildren(
+            header,
+            createElement("p", "empty-state empty-state--compact", "No visible questions are ready for student preview.")
+        );
+        return;
+    }
+
+    const previewSections = ["before", "during", "reflection"].map((phase) => {
+        const phaseQuestions = visibleQuestions.filter((question) => question.phase === phase);
+        const section = createElement("section", "lesson-content");
+        const headingText = phase === "before" ? "Before lesson" : phase === "during" ? "During lesson" : "Reflection";
+        const heading = createElement("h3", "course-subheading", headingText);
+
+        section.append(heading);
+
+        if (!phaseQuestions.length) {
+            section.append(createElement("p", "empty-state empty-state--compact", "No visible questions in this section."));
+            return section;
+        }
+
+        phaseQuestions.forEach((question) => {
+            const card = createElement("article", "question-card");
+            const prompt = createElement("h4", "question-prompt", question.prompt);
+            const responseType = question.question_type || "short_response";
+            const instructions = createElement(
+                "p",
+                "course-muted question-instructions",
+                question.student_instructions || "Answer in your own words."
+            );
+
+            card.append(prompt, instructions);
+
+            if (responseType === "multiple_choice" || responseType === "select_all_that_apply") {
+                const options = getQuestionOptions(question);
+                const fieldset = createElement("fieldset", "question-preview-options");
+                const legend = createElement("legend", "screen-reader-only", "Answer choices");
+
+                fieldset.append(legend);
+                if (!options.length) {
+                    fieldset.append(
+                        createElement("p", "empty-state empty-state--compact", "Answer choices will appear here after options are added.")
+                    );
+                }
+
+                options.forEach((option) => {
+                    const label = createElement("label", "question-preview-option");
+                    const input = document.createElement("input");
+
+                    input.type = responseType === "multiple_choice" ? "radio" : "checkbox";
+                    input.disabled = true;
+                    label.append(input, createElement("span", "", option.option_text));
+                    fieldset.append(label);
+                });
+                card.append(fieldset);
+            } else if (responseType === "true_false") {
+                const fieldset = createElement("fieldset", "question-preview-options");
+                const legend = createElement("legend", "screen-reader-only", "True or false answer choices");
+
+                fieldset.append(legend);
+                ["True", "False"].forEach((option) => {
+                    const label = createElement("label", "question-preview-option");
+                    const input = document.createElement("input");
+
+                    input.type = "radio";
+                    input.disabled = true;
+                    label.append(input, createElement("span", "", option));
+                    fieldset.append(label);
+                });
+                card.append(fieldset);
+            } else {
+                const response = createElement("textarea", "question-preview-response", "");
+
+                response.rows = responseType === "long_response" ? 5 : 3;
+                response.placeholder = question.hint ? `Hint: ${question.hint}` : "Student response";
+                response.disabled = true;
+                card.append(response);
+            }
+
+            section.append(card);
+        });
+
+        return section;
+    });
+
+    questionPreview.replaceChildren(header, ...previewSections);
+}
+
 async function loadQuestions() {
     const { data, error } = await supabase
         .from("questions")
-        .select("id, phase, prompt, student_instructions, order_index, is_visible")
+        .select("id, phase, question_type, prompt, student_instructions, hint, points, is_required, order_index, is_visible")
         .eq("lesson_id", lessonId)
         .is("archived_at", null)
         .order("order_index", { ascending: true });
@@ -507,8 +730,25 @@ async function loadQuestions() {
         return false;
     }
 
-    loadedQuestions = data;
-    renderQuestions(data);
+    const questionIds = data.map((question) => question.id);
+    const { data: options, error: optionsError } = questionIds.length
+        ? await supabase
+            .from("question_options")
+            .select("id, question_id, option_text, option_value, is_correct, match_group, order_index")
+            .in("question_id", questionIds)
+            .order("order_index", { ascending: true })
+        : { data: [], error: null };
+
+    if (optionsError) {
+        setStatus("Draft question options could not be loaded.", "error");
+    }
+
+    loadedQuestions = data.map((question) => ({
+        ...question,
+        options: (options || []).filter((option) => option.question_id === question.id),
+    }));
+    renderQuestions(loadedQuestions);
+    renderQuestionPreview(loadedQuestions);
     return true;
 }
 
@@ -699,12 +939,42 @@ questionForm.addEventListener("submit", async (event) => {
     const formData = new FormData(questionForm);
     const questionId = String(formData.get("question-id") || "").trim();
     const phase = String(formData.get("phase") || "");
+    const questionType = String(formData.get("question-type") || "short_response");
     const prompt = String(formData.get("prompt") || "").trim();
     const studentInstructions = String(formData.get("student-instructions") || "").trim();
+    const hint = String(formData.get("hint") || "").trim();
+    const points = Number(formData.get("points") || 0);
+    const isRequired = formData.get("is-required") === "on";
+    const optionInputs = getChoiceOptions(formData, questionType);
     const submitButton = questionForm.querySelector("button[type='submit']");
 
     if (!["before", "during", "reflection"].includes(phase) || !prompt) {
         setStatus("Choose a phase and enter a question prompt before saving.", "error");
+        return;
+    }
+
+    if (!Object.hasOwn(questionTypeLabels, questionType)) {
+        setStatus("Choose a supported question type before saving.", "error");
+        return;
+    }
+
+    if (!Number.isFinite(points) || points < 0) {
+        setStatus("Enter a valid non-negative point value before saving.", "error");
+        return;
+    }
+
+    if (choiceQuestionTypes.includes(questionType) && optionInputs.some((optionInput) => !optionInput.text)) {
+        setStatus("Enter all four answer choices before saving this question type.", "error");
+        return;
+    }
+
+    if (choiceQuestionTypes.includes(questionType) && !optionInputs.some((optionInput) => optionInput.isCorrect)) {
+        setStatus("Mark at least one correct answer before saving this question type.", "error");
+        return;
+    }
+
+    if (questionType === "multiple_choice" && optionInputs.filter((optionInput) => optionInput.isCorrect).length > 1) {
+        setStatus("Multiple choice questions can only have one correct answer.", "error");
         return;
     }
 
@@ -723,16 +993,27 @@ questionForm.addEventListener("submit", async (event) => {
             .from("questions")
             .update({
                 phase,
+                question_type: questionType,
                 prompt,
                 student_instructions: studentInstructions || null,
+                hint: hint || null,
+                points,
+                is_required: isRequired,
             })
             .eq("id", questionId)
             .eq("lesson_id", lessonId);
 
+        if (error) {
+            submitButton.disabled = false;
+            setStatus(error.message || "The draft question could not be saved.", "error");
+            return;
+        }
+
+        const optionError = await saveQuestionOptions(questionId, optionInputs, question.options || []);
         submitButton.disabled = false;
 
-        if (error) {
-            setStatus(error.message || "The draft question could not be saved.", "error");
+        if (optionError) {
+            setStatus(optionError.message || "The answer choices could not be saved.", "error");
             return;
         }
 
@@ -750,28 +1031,40 @@ questionForm.addEventListener("submit", async (event) => {
     setStatus("Creating draft question...");
     submitButton.disabled = true;
 
-    const { error } = await supabase.from("questions").insert({
+    const { data: createdQuestion, error } = await supabase.from("questions").insert({
         lesson_id: lessonId,
         phase,
-        question_type: "short_response",
+        question_type: questionType,
         prompt,
         student_instructions: studentInstructions || null,
-        points: 1,
-        is_required: false,
+        hint: hint || null,
+        points,
+        is_required: isRequired,
         is_visible: false,
         order_index: nextOrder,
-    });
-
-    submitButton.disabled = false;
+    }).select("id").single();
 
     if (error) {
+        submitButton.disabled = false;
         setStatus(error.message || "The draft question could not be created.", "error");
+        return;
+    }
+
+    const optionError = await saveQuestionOptions(createdQuestion.id, optionInputs);
+    submitButton.disabled = false;
+
+    if (optionError) {
+        setStatus(optionError.message || "The answer choices could not be saved.", "error");
         return;
     }
 
     resetQuestionForm();
     await loadQuestions();
     setStatus("Draft question created.", "success");
+});
+
+questionForm.elements["question-type"].addEventListener("change", (event) => {
+    setQuestionFormMode(event.target.value);
 });
 
 cancelQuestionEditButton.addEventListener("click", resetQuestionForm);
