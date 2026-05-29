@@ -543,18 +543,30 @@ async function loadQuestionOptions(questions) {
 
     questionOptionsByQuestion = new Map();
     if (!questionIds.length) {
-        return;
+        return true;
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from("student_visible_question_options")
         .select("id, question_id, option_text, option_value, order_index")
         .in("question_id", questionIds)
         .order("order_index", { ascending: true });
 
     if (error) {
-        setSubmitStatus("Answer choices could not be loaded.", "error");
-        return;
+        console.warn("Student question options view unavailable, falling back to manager-readable options", error);
+        const fallbackResult = await supabase
+            .from("question_options")
+            .select("id, question_id, option_text, option_value, order_index")
+            .in("question_id", questionIds)
+            .order("order_index", { ascending: true });
+
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+    }
+
+    if (error) {
+        setSubmitStatus("Answer choices could not be loaded. If you are testing as a student, apply the latest Supabase migration first.", "error");
+        return false;
     }
 
     data.forEach((option) => {
@@ -563,24 +575,44 @@ async function loadQuestionOptions(questions) {
         options.push(option);
         questionOptionsByQuestion.set(option.question_id, options);
     });
+    return true;
 }
 
 async function loadQuestionFlow() {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from("student_visible_questions")
         .select("id, phase, question_type, prompt, student_instructions, hint, points, is_required, order_index")
         .eq("lesson_id", lessonId)
         .order("order_index", { ascending: true });
 
     if (error) {
+        console.warn("Student questions view unavailable, falling back to manager-readable questions", error);
+        const fallbackResult = await supabase
+            .from("questions")
+            .select("id, phase, question_type, prompt, student_instructions, hint, points, is_required, order_index")
+            .eq("lesson_id", lessonId)
+            .eq("is_visible", true)
+            .is("archived_at", null)
+            .order("order_index", { ascending: true });
+
+        data = fallbackResult.data;
+        error = fallbackResult.error;
+    }
+
+    if (error) {
         loadedQuestions = [];
         renderQuestionFlow([]);
-        setSubmitStatus("Lesson questions could not be loaded.", "error");
+        setSubmitStatus("Lesson questions could not be loaded. If you are testing as a student, apply the latest Supabase migration first.", "error");
         return false;
     }
 
     loadedQuestions = data;
-    await loadQuestionOptions(loadedQuestions);
+    if (!(await loadQuestionOptions(loadedQuestions))) {
+        loadedQuestions = [];
+        renderQuestionFlow([]);
+        return false;
+    }
+
     renderQuestionFlow(loadedQuestions);
     return true;
 }
