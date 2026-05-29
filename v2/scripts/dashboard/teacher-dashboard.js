@@ -5,6 +5,7 @@ const dashboardStatus = qs("[data-dashboard-status]");
 const greetingElement = qs("[data-dashboard-greeting]");
 const courseList = qs("[data-course-list]");
 const submissionList = qs("[data-submission-list]");
+const studentSubmissionList = qs("[data-student-submission-list]");
 const courseFormPanel = qs("[data-course-form-panel]");
 const courseForm = qs("[data-course-form]");
 const courseFormToggle = qs("[data-course-form-toggle]");
@@ -17,6 +18,7 @@ const submissionFilterStudent = qs("[data-submission-filter-student]");
 const coursesSummary = qs("[data-summary-courses]");
 const classroomsSummary = qs("[data-summary-classrooms]");
 const submissionsSummary = qs("[data-summary-submissions]");
+const studentSubmissionsSummary = qs("[data-summary-my-submissions]");
 
 let currentProfile = null;
 let dashboardCourses = [];
@@ -113,6 +115,24 @@ async function loadTeachingCourses(profileId) {
     return [...courseMap.values()].sort((first, second) => (
         new Date(second.updated_at) - new Date(first.updated_at)
     ));
+}
+
+async function loadVisibleCourses(courseIds) {
+    if (!courseIds.length) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from("courses")
+        .select("id, title")
+        .in("id", courseIds)
+        .neq("status", "deleted");
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
 }
 
 async function loadManagedClassrooms(profileId, courseIds) {
@@ -216,6 +236,22 @@ async function loadRecentSubmissions(courseIds) {
         .eq("status", "submitted")
         .order("updated_at", { ascending: false })
         .limit(50);
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}
+
+async function loadStudentSubmissions(profileId) {
+    const { data, error } = await supabase
+        .from("lesson_submissions")
+        .select("id, course_id, classroom_id, lesson_id, status, submitted_at, updated_at")
+        .eq("student_user_id", profileId)
+        .eq("status", "submitted")
+        .order("submitted_at", { ascending: false })
+        .limit(25);
 
     if (error) {
         throw error;
@@ -386,6 +422,42 @@ function refreshSubmissionList() {
     renderSubmissions(getFilteredSubmissions(), dashboardCourses, dashboardLessons);
 }
 
+function renderStudentSubmissions(submissions, courses, lessons) {
+    if (!submissions.length) {
+        renderEmpty(studentSubmissionList, "You do not have any submitted lessons yet.");
+        return;
+    }
+
+    const courseNames = new Map(courses.map((course) => [course.id, course.title || "Untitled course"]));
+    const lessonNames = new Map(lessons.map((lesson) => [lesson.id, lesson.title || "Untitled lesson"]));
+    const list = createElement("ul", "submission-list");
+
+    submissions.forEach((submission) => {
+        const item = createElement("li", "submission-item");
+        const link = createElement(
+            "a",
+            "submission-name",
+            lessonNames.get(submission.lesson_id) || `${courseNames.get(submission.course_id) || "Course"} submission`
+        );
+        const context = createElement("span", "course-muted", courseNames.get(submission.course_id) || "Course");
+        const submittedAt = submission.submitted_at
+            ? createElement("span", "course-muted", new Date(submission.submitted_at).toLocaleString([], {
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+            }))
+            : createElement("span", "course-muted", "Submitted");
+        const feedbackStatus = createElement("span", "badge badge--quiet", "Submitted");
+
+        link.href = `../submissions/view.html?submission=${encodeURIComponent(submission.id)}`;
+        item.append(link, context, submittedAt, feedbackStatus);
+        list.append(item);
+    });
+
+    studentSubmissionList.replaceChildren(list);
+}
+
 async function deleteCourse(course) {
     const confirmed = window.confirm(
         `Delete "${course.title || "Untitled course"}"? This removes it from your dashboard while preserving its existing history.`
@@ -417,10 +489,14 @@ async function refreshDashboard() {
     try {
         const courses = await loadTeachingCourses(currentProfile.id);
         const courseIds = courses.map((course) => course.id);
-        const [classrooms, lessons, submissions] = await Promise.all([
+        const studentSubmissions = await loadStudentSubmissions(currentProfile.id);
+        const studentCourseIds = studentSubmissions.map((submission) => submission.course_id);
+        const allCourseIds = [...new Set([...courseIds, ...studentCourseIds])];
+        const [classrooms, lessons, submissions, visibleCourses] = await Promise.all([
             loadManagedClassrooms(currentProfile.id, courseIds),
-            loadLessons(courseIds),
+            loadLessons(allCourseIds),
             loadRecentSubmissions(courseIds),
+            loadVisibleCourses(allCourseIds),
         ]);
 
         dashboardCourses = courses;
@@ -430,14 +506,17 @@ async function refreshDashboard() {
         coursesSummary.textContent = String(courses.length);
         classroomsSummary.textContent = String(classrooms.length);
         submissionsSummary.textContent = String(submissions.length);
+        studentSubmissionsSummary.textContent = String(studentSubmissions.length);
         renderCourses(courses, classrooms);
-        renderSubmissionFilters(courses, classrooms, lessons, submissions);
+        renderSubmissionFilters(courses, classrooms, lessons.filter((lesson) => courseIds.includes(lesson.course_id)), submissions);
         refreshSubmissionList();
+        renderStudentSubmissions(studentSubmissions, visibleCourses, lessons);
         setStatus("");
     } catch (error) {
         setStatus(error.message || "Your teaching workspace could not be loaded.", "error");
         renderEmpty(courseList, "Courses could not be loaded right now.");
         renderEmpty(submissionList, "Submissions could not be loaded right now.");
+        renderEmpty(studentSubmissionList, "Your submissions could not be loaded right now.");
     }
 }
 
