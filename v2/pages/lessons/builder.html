@@ -132,6 +132,10 @@
                             <option value="multiple_choice">Multiple choice</option>
                             <option value="select_all_that_apply">Select all that apply</option>
                             <option value="true_false">True / false</option>
+                            <option value="rating_scale">Rating scale</option>
+                            <option value="fill_in_the_blank">Fill in the blank</option>
+                            <option value="matching">Matching</option>
+                            <option value="ordering">Ordering</option>
                         </select>
                     </label>
 
@@ -160,32 +164,53 @@
                         <span>Require students to answer before turning in the lesson</span>
                     </label>
 
+                    <fieldset class="form-field form-field--wide correct-answer-field" data-correct-answer-field>
+                        <legend>Optional correct answer</legend>
+                        <input type="text" name="correct-text" maxlength="500" placeholder="Sample correct answer" data-correct-text />
+                        <select name="correct-boolean" data-correct-boolean hidden>
+                            <option value="">No correct answer</option>
+                            <option value="true">True</option>
+                            <option value="false">False</option>
+                        </select>
+                        <input type="number" name="correct-rating" min="1" max="5" step="1" placeholder="1-5" data-correct-rating hidden />
+                    </fieldset>
+
+                    <fieldset class="form-field form-field--wide response-rules-field" data-response-rules-field>
+                        <legend>Optional response length rules</legend>
+                        <input type="number" name="min-length" min="0" max="5000" step="1" placeholder="Minimum characters" />
+                        <input type="number" name="max-length" min="0" max="5000" step="1" placeholder="Maximum characters" />
+                    </fieldset>
+
                     <fieldset class="form-field form-field--wide question-options-field" data-question-options-field hidden>
                         <legend>Answer choices</legend>
                         <div class="question-option-row">
                             <input type="text" name="option-1" maxlength="300" placeholder="Choice 1" />
-                            <label>
+                            <input type="text" name="match-1" maxlength="300" placeholder="Match 1" data-match-input hidden />
+                            <label data-correct-control>
                                 <input type="radio" name="correct-option" value="1" />
                                 <span>Correct</span>
                             </label>
                         </div>
                         <div class="question-option-row">
                             <input type="text" name="option-2" maxlength="300" placeholder="Choice 2" />
-                            <label>
+                            <input type="text" name="match-2" maxlength="300" placeholder="Match 2" data-match-input hidden />
+                            <label data-correct-control>
                                 <input type="radio" name="correct-option" value="2" />
                                 <span>Correct</span>
                             </label>
                         </div>
                         <div class="question-option-row">
                             <input type="text" name="option-3" maxlength="300" placeholder="Choice 3" />
-                            <label>
+                            <input type="text" name="match-3" maxlength="300" placeholder="Match 3" data-match-input hidden />
+                            <label data-correct-control>
                                 <input type="radio" name="correct-option" value="3" />
                                 <span>Correct</span>
                             </label>
                         </div>
                         <div class="question-option-row">
                             <input type="text" name="option-4" maxlength="300" placeholder="Choice 4" />
-                            <label>
+                            <input type="text" name="match-4" maxlength="300" placeholder="Match 4" data-match-input hidden />
+                            <label data-correct-control>
                                 <input type="radio" name="correct-option" value="4" />
                                 <span>Correct</span>
                             </label>

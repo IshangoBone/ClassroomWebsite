@@ -247,6 +247,8 @@ h2 {
 
 .form-field input,
 .form-field select,
+.correct-answer-field input,
+.correct-answer-field select,
 .question-options-field input {
     min-height: 44px;
     padding: 0 14px;
@@ -259,6 +261,8 @@ h2 {
 
 .form-field input:focus,
 .form-field select:focus,
+.correct-answer-field input:focus,
+.correct-answer-field select:focus,
 .question-options-field input:focus {
     outline: 2px solid #9cb5df;
     outline-offset: 2px;
@@ -477,6 +481,8 @@ h2 {
     grid-column: 1 / -1;
 }
 
+.correct-answer-field,
+.response-rules-field,
 .question-options-field {
     padding: 14px;
     border: 1px solid #dbe4f1;
@@ -484,6 +490,8 @@ h2 {
     background: #f7faff;
 }
 
+.correct-answer-field legend,
+.response-rules-field legend,
 .question-options-field legend {
     padding: 0 4px;
     font-weight: 700;
@@ -491,7 +499,7 @@ h2 {
 
 .question-option-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
     gap: 10px;
     align-items: center;
 }
@@ -1060,6 +1068,17 @@ h2 {
     resize: vertical;
 }
 
+.question-preview-blank {
+    grid-column: 1 / -1;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid #d8e2f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #49617f;
+    font: inherit;
+}
+
 .question-preview-options {
     display: grid;
     grid-column: 1 / -1;
@@ -1067,6 +1086,36 @@ h2 {
     margin: 0;
     padding: 0;
     border: 0;
+}
+
+.question-matching-preview {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px 12px;
+    margin: 0;
+}
+
+.question-matching-preview dt,
+.question-matching-preview dd {
+    margin: 0;
+    padding: 8px 10px;
+    border: 1px solid #d8e2f0;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.question-ordering-preview {
+    display: grid;
+    grid-column: 1 / -1;
+    gap: 8px;
+    margin: 0;
+    padding-left: 22px;
+    color: #334766;
+}
+
+.question-rating-scale {
+    grid-template-columns: repeat(5, max-content);
 }
 
 .question-preview-option {

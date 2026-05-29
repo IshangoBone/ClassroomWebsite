@@ -29,6 +29,8 @@ const questionSubmit = qs("[data-question-submit]");
 const cancelQuestionEditButton = qs("[data-cancel-question-edit]");
 const questionList = qs("[data-question-list]");
 const questionPreview = qs("[data-question-preview]");
+const correctAnswerField = qs("[data-correct-answer-field]");
+const responseRulesField = qs("[data-response-rules-field]");
 const questionOptionsField = qs("[data-question-options-field]");
 let loadedContentBlocks = [];
 let loadedQuestions = [];
@@ -38,8 +40,15 @@ const questionTypeLabels = {
     multiple_choice: "Multiple choice",
     select_all_that_apply: "Select all",
     true_false: "True / false",
+    rating_scale: "Rating scale",
+    fill_in_the_blank: "Fill in the blank",
+    matching: "Matching",
+    ordering: "Ordering",
 };
 const choiceQuestionTypes = ["multiple_choice", "select_all_that_apply"];
+const optionQuestionTypes = [...choiceQuestionTypes, "matching", "ordering"];
+const textCorrectAnswerTypes = ["short_response", "long_response", "fill_in_the_blank"];
+const scalarCorrectAnswerTypes = [...textCorrectAnswerTypes, "true_false", "rating_scale"];
 const questionPhases = [
     ["before", "Before lesson"],
     ["during", "During lesson"],
@@ -294,42 +303,190 @@ function resetQuestionForm() {
     cancelQuestionEditButton.hidden = true;
 }
 
+function hasQuestionAnswerConfig(question) {
+    return Boolean(question.correct_answer) || getQuestionOptions(question).length > 0;
+}
+
 function getQuestionOptions(question) {
     return [...(question.options || [])].sort((first, second) => first.order_index - second.order_index);
 }
 
 function setQuestionFormMode(questionType) {
     const isChoiceQuestion = choiceQuestionTypes.includes(questionType);
+    const isOptionQuestion = optionQuestionTypes.includes(questionType);
+    const isMatchingQuestion = questionType === "matching";
+    const isOrderingQuestion = questionType === "ordering";
     const allowsMultipleCorrectAnswers = questionType === "select_all_that_apply";
     const correctInputs = [...questionOptionsField.querySelectorAll("[name='correct-option']")];
+    const matchInputs = [...questionOptionsField.querySelectorAll("[data-match-input]")];
+    const correctControls = [...questionOptionsField.querySelectorAll("[data-correct-control]")];
+    const correctTextInput = questionForm.elements["correct-text"];
+    const correctBooleanInput = questionForm.elements["correct-boolean"];
+    const correctRatingInput = questionForm.elements["correct-rating"];
+    const usesScalarCorrectAnswer = scalarCorrectAnswerTypes.includes(questionType);
+    const usesTextCorrectAnswer = textCorrectAnswerTypes.includes(questionType);
+    const usesBooleanCorrectAnswer = questionType === "true_false";
+    const usesRatingCorrectAnswer = questionType === "rating_scale";
 
     questionForm.elements["question-type"].value = questionType;
-    questionOptionsField.hidden = !isChoiceQuestion;
+    correctAnswerField.hidden = !usesScalarCorrectAnswer;
+    responseRulesField.hidden = !usesTextCorrectAnswer;
+    correctTextInput.hidden = !usesTextCorrectAnswer;
+    correctBooleanInput.hidden = !usesBooleanCorrectAnswer;
+    correctRatingInput.hidden = !usesRatingCorrectAnswer;
+    correctTextInput.required = false;
+    correctBooleanInput.required = false;
+    correctRatingInput.required = false;
+    correctAnswerField.querySelector("legend").textContent = usesRatingCorrectAnswer
+        ? "Optional correct rating"
+        : usesBooleanCorrectAnswer
+            ? "Optional correct answer"
+            : "Optional sample answer";
+    questionOptionsField.hidden = !isOptionQuestion;
+    questionOptionsField.querySelector("legend").textContent = isMatchingQuestion
+        ? "Matching pairs"
+        : isOrderingQuestion
+            ? "Correct order"
+            : "Answer choices";
     [1, 2, 3, 4].forEach((index) => {
-        questionForm.elements[`option-${index}`].required = isChoiceQuestion;
+        const optionInput = questionForm.elements[`option-${index}`];
+        const matchInput = questionForm.elements[`match-${index}`];
+
+        optionInput.required = isOptionQuestion;
+        optionInput.placeholder = isMatchingQuestion
+            ? `Prompt ${index}`
+            : isOrderingQuestion
+                ? `Step ${index}`
+                : `Choice ${index}`;
+        matchInput.required = isMatchingQuestion;
+        matchInput.hidden = !isMatchingQuestion;
+        matchInput.placeholder = `Match ${index}`;
+    });
+    correctControls.forEach((control) => {
+        control.hidden = !isChoiceQuestion;
     });
     correctInputs.forEach((input) => {
         input.type = allowsMultipleCorrectAnswers ? "checkbox" : "radio";
+    });
+    matchInputs.forEach((input) => {
+        if (!isMatchingQuestion) {
+            input.value = "";
+        }
     });
 
     if (!isChoiceQuestion) {
         correctInputs.forEach((input) => {
             input.checked = false;
         });
-        return;
-    }
-
-    if (!allowsMultipleCorrectAnswers) {
+    } else if (!allowsMultipleCorrectAnswers) {
         const checkedInputs = correctInputs.filter((input) => input.checked);
 
         checkedInputs.slice(1).forEach((input) => {
             input.checked = false;
         });
     }
+
+    if (!usesTextCorrectAnswer) {
+        correctTextInput.value = "";
+        questionForm.elements["min-length"].value = "";
+        questionForm.elements["max-length"].value = "";
+    }
+
+    if (!usesBooleanCorrectAnswer) {
+        correctBooleanInput.value = "";
+    }
+
+    if (!usesRatingCorrectAnswer) {
+        correctRatingInput.value = "";
+    }
 }
 
-function getChoiceOptions(formData, questionType) {
-    if (!choiceQuestionTypes.includes(questionType)) {
+function getCorrectAnswerInput(formData, questionType) {
+    const minLengthRaw = String(formData.get("min-length") || "").trim();
+    const maxLengthRaw = String(formData.get("max-length") || "").trim();
+    const minLength = minLengthRaw ? Number(minLengthRaw) : null;
+    const maxLength = maxLengthRaw ? Number(maxLengthRaw) : null;
+    const hasLengthRules = minLength !== null || maxLength !== null;
+    const lengthRulePayload = hasLengthRules ? { minLength, maxLength } : {};
+
+    if (
+        hasLengthRules &&
+        (!Number.isInteger(minLength ?? 0) ||
+            !Number.isInteger(maxLength ?? 0) ||
+            (minLength !== null && minLength < 0) ||
+            (maxLength !== null && maxLength < 0) ||
+            (minLength !== null && maxLength !== null && minLength > maxLength))
+    ) {
+        return { invalid: true, reason: "length" };
+    }
+
+    if (textCorrectAnswerTypes.includes(questionType)) {
+        const value = String(formData.get("correct-text") || "").trim();
+        return value || hasLengthRules ? { type: questionType, value: value || null, ...lengthRulePayload } : null;
+    }
+
+    if (questionType === "true_false") {
+        const value = String(formData.get("correct-boolean") || "");
+        return value ? { type: questionType, value: value === "true" } : null;
+    }
+
+    if (questionType === "rating_scale") {
+        const rawValue = String(formData.get("correct-rating") || "").trim();
+        const value = Number(rawValue);
+
+        if (!rawValue) {
+            return null;
+        }
+
+        return Number.isInteger(value) && value >= 1 && value <= 5
+            ? { type: questionType, value }
+            : { invalid: true, reason: "rating" };
+    }
+
+    return null;
+}
+
+function formatCorrectAnswer(question) {
+    const correctAnswer = question.correct_answer;
+
+    if (!correctAnswer || typeof correctAnswer !== "object") {
+        return "";
+    }
+
+    if (correctAnswer.type === "true_false") {
+        return correctAnswer.value ? "True" : "False";
+    }
+
+    return String(correctAnswer.value ?? "");
+}
+
+function formatLengthRules(question) {
+    const correctAnswer = question.correct_answer;
+
+    if (!correctAnswer || typeof correctAnswer !== "object") {
+        return "";
+    }
+
+    const minLength = correctAnswer.minLength;
+    const maxLength = correctAnswer.maxLength;
+
+    if (minLength !== null && minLength !== undefined && maxLength !== null && maxLength !== undefined) {
+        return `${minLength}-${maxLength} characters`;
+    }
+
+    if (minLength !== null && minLength !== undefined) {
+        return `At least ${minLength} characters`;
+    }
+
+    if (maxLength !== null && maxLength !== undefined) {
+        return `Up to ${maxLength} characters`;
+    }
+
+    return "";
+}
+
+function getQuestionOptionInputs(formData, questionType) {
+    if (!optionQuestionTypes.includes(questionType)) {
         return [];
     }
 
@@ -337,7 +494,8 @@ function getChoiceOptions(formData, questionType) {
 
     return [1, 2, 3, 4].map((index) => ({
         text: String(formData.get(`option-${index}`) || "").trim(),
-        isCorrect: correctIndexes.has(index),
+        matchText: questionType === "matching" ? String(formData.get(`match-${index}`) || "").trim() : "",
+        isCorrect: choiceQuestionTypes.includes(questionType) && correctIndexes.has(index),
     }));
 }
 
@@ -350,10 +508,26 @@ function editQuestion(question) {
     questionForm.elements.hint.value = question.hint || "";
     questionForm.elements.points.value = String(question.points ?? 1);
     questionForm.elements["is-required"].checked = Boolean(question.is_required);
+    questionForm.elements["correct-text"].value = textCorrectAnswerTypes.includes(question.question_type)
+        ? formatCorrectAnswer(question)
+        : "";
+    questionForm.elements["correct-boolean"].value = question.question_type === "true_false" && question.correct_answer
+        ? String(Boolean(question.correct_answer.value))
+        : "";
+    questionForm.elements["correct-rating"].value = question.question_type === "rating_scale"
+        ? formatCorrectAnswer(question)
+        : "";
+    questionForm.elements["min-length"].value = textCorrectAnswerTypes.includes(question.question_type)
+        ? question.correct_answer?.minLength ?? ""
+        : "";
+    questionForm.elements["max-length"].value = textCorrectAnswerTypes.includes(question.question_type)
+        ? question.correct_answer?.maxLength ?? ""
+        : "";
     [1, 2, 3, 4].forEach((index) => {
         const option = getQuestionOptions(question)[index - 1];
 
         questionForm.elements[`option-${index}`].value = option?.option_text || "";
+        questionForm.elements[`match-${index}`].value = option?.match_group || "";
         questionOptionsField.querySelector(`[name='correct-option'][value='${index}']`).checked = Boolean(option?.is_correct);
     });
     questionFormHeading.textContent = "Edit draft question";
@@ -374,7 +548,7 @@ async function saveQuestionOptions(questionId, optionInputs, existingOptions = [
             option_text: optionInput.text,
             option_value: `option_${index + 1}`,
             is_correct: optionInput.isCorrect,
-            match_group: null,
+            match_group: optionInput.matchText || null,
             order_index: index,
         };
 
@@ -668,6 +842,10 @@ function renderQuestions(questions) {
             question.student_instructions || "Short response question"
         );
         const hint = createElement("p", "course-muted question-instructions", `Hint: ${question.hint || "None"}`);
+        const correctAnswerText = formatCorrectAnswer(question);
+        const lengthRulesText = formatLengthRules(question);
+        const correctAnswer = createElement("p", "course-muted question-instructions", `Correct answer: ${correctAnswerText}`);
+        const lengthRules = createElement("p", "course-muted question-instructions", `Length rule: ${lengthRulesText}`);
         const options = getQuestionOptions(question);
         const optionList = createElement("ol", "question-option-list");
         const phaseIndex = phaseQuestions.findIndex((currentQuestion) => currentQuestion.id === question.id);
@@ -699,7 +877,10 @@ function renderQuestions(questions) {
             await saveQuestionOrder(list, phase);
         });
         options.forEach((option) => {
-            const optionItem = createElement("li", "", option.option_text);
+            const optionText = question.question_type === "matching" && option.match_group
+                ? `${option.option_text} -> ${option.match_group}`
+                : option.option_text;
+            const optionItem = createElement("li", "", optionText);
 
             if (option.is_correct) {
                 optionItem.append(createElement("span", "badge badge--quiet", "Correct"));
@@ -720,7 +901,13 @@ function renderQuestions(questions) {
         deleteButton.addEventListener("click", () => deleteQuestion(question));
         actions.append(dragHint, moveUpButton, moveDownButton, visibilityButton, editButton, deleteButton);
         item.append(prompt, label, typeLabel, requiredLabel, pointsLabel, instructions, hint);
-        if (choiceQuestionTypes.includes(question.question_type) && options.length) {
+        if (correctAnswerText) {
+            item.append(correctAnswer);
+        }
+        if (lengthRulesText) {
+            item.append(lengthRules);
+        }
+        if (optionQuestionTypes.includes(question.question_type) && options.length) {
             item.append(optionList);
         }
         item.append(actions);
@@ -795,6 +982,33 @@ function renderQuestionPreview(questions) {
                     fieldset.append(label);
                 });
                 card.append(fieldset);
+            } else if (responseType === "matching") {
+                const options = getQuestionOptions(question);
+                const list = createElement("dl", "question-matching-preview");
+
+                if (!options.length) {
+                    card.append(createElement("p", "empty-state empty-state--compact", "Matching pairs will appear here after they are added."));
+                }
+
+                options.forEach((option) => {
+                    list.append(
+                        createElement("dt", "", option.option_text),
+                        createElement("dd", "", option.match_group || "Match")
+                    );
+                });
+                card.append(list);
+            } else if (responseType === "ordering") {
+                const options = getQuestionOptions(question);
+                const list = createElement("ol", "question-ordering-preview");
+
+                if (!options.length) {
+                    card.append(createElement("p", "empty-state empty-state--compact", "Sequence items will appear here after they are added."));
+                }
+
+                options.forEach((option) => {
+                    list.append(createElement("li", "", option.option_text));
+                });
+                card.append(list);
             } else if (responseType === "true_false") {
                 const fieldset = createElement("fieldset", "question-preview-options");
                 const legend = createElement("legend", "screen-reader-only", "True or false answer choices");
@@ -810,6 +1024,29 @@ function renderQuestionPreview(questions) {
                     fieldset.append(label);
                 });
                 card.append(fieldset);
+            } else if (responseType === "rating_scale") {
+                const fieldset = createElement("fieldset", "question-preview-options question-rating-scale");
+                const legend = createElement("legend", "screen-reader-only", "Rating scale choices");
+
+                fieldset.append(legend);
+                [1, 2, 3, 4, 5].forEach((rating) => {
+                    const label = createElement("label", "question-preview-option");
+                    const input = document.createElement("input");
+
+                    input.type = "radio";
+                    input.disabled = true;
+                    label.append(input, createElement("span", "", String(rating)));
+                    fieldset.append(label);
+                });
+                card.append(fieldset);
+            } else if (responseType === "fill_in_the_blank") {
+                const response = document.createElement("input");
+
+                response.className = "question-preview-blank";
+                response.type = "text";
+                response.placeholder = question.hint ? `Hint: ${question.hint}` : "Student answer";
+                response.disabled = true;
+                card.append(response);
             } else {
                 const response = createElement("textarea", "question-preview-response", "");
 
@@ -831,7 +1068,7 @@ function renderQuestionPreview(questions) {
 async function loadQuestions() {
     const { data, error } = await supabase
         .from("questions")
-        .select("id, phase, question_type, prompt, student_instructions, hint, points, is_required, order_index, is_visible")
+        .select("id, phase, question_type, prompt, student_instructions, hint, correct_answer, points, is_required, order_index, is_visible")
         .eq("lesson_id", lessonId)
         .is("archived_at", null)
         .order("order_index", { ascending: true });
@@ -1057,7 +1294,8 @@ questionForm.addEventListener("submit", async (event) => {
     const hint = String(formData.get("hint") || "").trim();
     const points = Number(formData.get("points") || 0);
     const isRequired = formData.get("is-required") === "on";
-    const optionInputs = getChoiceOptions(formData, questionType);
+    const correctAnswer = getCorrectAnswerInput(formData, questionType);
+    const optionInputs = getQuestionOptionInputs(formData, questionType);
     const submitButton = questionForm.querySelector("button[type='submit']");
 
     if (!["before", "during", "reflection"].includes(phase) || !prompt) {
@@ -1075,8 +1313,23 @@ questionForm.addEventListener("submit", async (event) => {
         return;
     }
 
-    if (choiceQuestionTypes.includes(questionType) && optionInputs.some((optionInput) => !optionInput.text)) {
-        setStatus("Enter all four answer choices before saving this question type.", "error");
+    if (correctAnswer?.invalid && correctAnswer.reason === "length") {
+        setStatus("Enter valid response length rules before saving.", "error");
+        return;
+    }
+
+    if (correctAnswer?.invalid) {
+        setStatus("Enter a correct rating from 1 to 5, or leave it blank.", "error");
+        return;
+    }
+
+    if (optionQuestionTypes.includes(questionType) && optionInputs.some((optionInput) => !optionInput.text)) {
+        setStatus("Enter all four option rows before saving this question type.", "error");
+        return;
+    }
+
+    if (questionType === "matching" && optionInputs.some((optionInput) => !optionInput.matchText)) {
+        setStatus("Enter all four matching pairs before saving this question type.", "error");
         return;
     }
 
@@ -1109,6 +1362,7 @@ questionForm.addEventListener("submit", async (event) => {
                 prompt,
                 student_instructions: studentInstructions || null,
                 hint: hint || null,
+                correct_answer: correctAnswer,
                 points,
                 is_required: isRequired,
             })
@@ -1150,6 +1404,7 @@ questionForm.addEventListener("submit", async (event) => {
         prompt,
         student_instructions: studentInstructions || null,
         hint: hint || null,
+        correct_answer: correctAnswer,
         points,
         is_required: isRequired,
         is_visible: false,
@@ -1176,6 +1431,20 @@ questionForm.addEventListener("submit", async (event) => {
 });
 
 questionForm.elements["question-type"].addEventListener("change", (event) => {
+    const questionId = questionForm.elements["question-id"].value;
+    const question = loadedQuestions.find((currentQuestion) => currentQuestion.id === questionId);
+
+    if (question && question.question_type !== event.target.value && hasQuestionAnswerConfig(question)) {
+        const confirmed = window.confirm(
+            "Changing this question type may ignore existing options or correct-answer data. Continue?"
+        );
+
+        if (!confirmed) {
+            event.target.value = question.question_type;
+            return;
+        }
+    }
+
     setQuestionFormMode(event.target.value);
 });
 
