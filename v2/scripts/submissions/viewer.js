@@ -9,11 +9,16 @@ const statusElement = qs("[data-submission-status]");
 const shellElements = [...document.querySelectorAll("[data-submission-shell]")];
 const summaryElement = qs("[data-submission-summary]");
 const answerListElement = qs("[data-answer-list]");
+const feedbackPanel = qs("[data-feedback-panel]");
 const questionPhases = [
     ["before", "Before lesson"],
     ["during", "During lesson"],
     ["reflection", "Reflection"],
 ];
+let currentSubmission = null;
+let currentSubmissionContext = null;
+let currentProfileId = "";
+let canReviewSubmission = false;
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -50,6 +55,14 @@ function createSummaryCard(label, value) {
     return card;
 }
 
+function createFeedbackMeta(submission) {
+    const updatedAt = submission.feedback_updated_at
+        ? `Last updated ${formatDate(submission.feedback_updated_at)}.`
+        : "No teacher feedback has been saved yet.";
+
+    return createElement("p", "course-muted", updatedAt);
+}
+
 function getAnswerValue(question, answers, optionLabels) {
     const rawAnswer = answers?.[question.id];
 
@@ -79,7 +92,7 @@ async function loadSubmission() {
 
     const { data, error } = await supabase
         .from("lesson_submissions")
-        .select("id, student_user_id, course_id, classroom_id, lesson_id, answers_json, total_questions, points_possible, points_earned, status, submitted_at, updated_at")
+        .select("id, student_user_id, course_id, classroom_id, lesson_id, answers_json, total_questions, points_possible, points_earned, status, submitted_at, updated_at, teacher_feedback, feedback_updated_by, feedback_updated_at")
         .eq("id", submissionId)
         .single();
 
@@ -183,6 +196,19 @@ async function loadOptionLabels(questionIds) {
     return labels;
 }
 
+async function loadReviewPermission(submission) {
+    const { data, error } = await supabase.rpc("can_review_student_context", {
+        course_to_check: submission.course_id,
+        classroom_to_check: submission.classroom_id,
+    });
+
+    if (error) {
+        return false;
+    }
+
+    return Boolean(data);
+}
+
 function renderSummary(submission, context) {
     const classroomName = context.classroom
         ? `${context.classroom.name}${context.classroom.period_block ? ` - ${context.classroom.period_block}` : ""}`
@@ -237,6 +263,85 @@ function renderAnswers(questions, answers, optionLabels) {
     answerListElement.replaceChildren(...sections);
 }
 
+function renderFeedback(submission) {
+    if (!canReviewSubmission) {
+        const feedback = submission.teacher_feedback
+            ? createElement("p", "submission-answer-text", submission.teacher_feedback)
+            : createElement("p", "empty-state", "Teacher feedback has not been added yet.");
+
+        feedbackPanel.replaceChildren(feedback, createFeedbackMeta(submission));
+        return;
+    }
+
+    const form = createElement("form", "submission-feedback-form");
+    const pointsLabel = createElement("label", "form-field");
+    const pointsInput = document.createElement("input");
+    const feedbackLabel = createElement("label", "form-field");
+    const feedbackInput = document.createElement("textarea");
+    const actions = createElement("div", "course-form-actions");
+    const saveButton = createElement("button", "primary-button", "Save feedback");
+
+    pointsInput.type = "number";
+    pointsInput.name = "points-earned";
+    pointsInput.min = "0";
+    pointsInput.max = String(submission.points_possible || 0);
+    pointsInput.step = "0.5";
+    pointsInput.value = String(submission.points_earned || 0);
+    feedbackInput.name = "teacher-feedback";
+    feedbackInput.rows = 5;
+    feedbackInput.maxLength = 2000;
+    feedbackInput.value = submission.teacher_feedback || "";
+    saveButton.type = "submit";
+    pointsLabel.append(createElement("span", "", "Points earned"), pointsInput);
+    feedbackLabel.append(createElement("span", "", "Feedback"), feedbackInput);
+    actions.append(saveButton);
+    form.append(pointsLabel, feedbackLabel, actions, createFeedbackMeta(submission));
+    form.addEventListener("submit", saveFeedback);
+    feedbackPanel.replaceChildren(form);
+}
+
+async function saveFeedback(event) {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const pointsEarned = Number(formData.get("points-earned") || 0);
+    const teacherFeedback = String(formData.get("teacher-feedback") || "").trim();
+    const saveButton = form.querySelector("button[type='submit']");
+
+    if (!Number.isFinite(pointsEarned) || pointsEarned < 0 || pointsEarned > Number(currentSubmission.points_possible || 0)) {
+        setStatus("Enter points within the possible score range.", "error");
+        return;
+    }
+
+    saveButton.disabled = true;
+    setStatus("Saving feedback...");
+
+    const { data, error } = await supabase
+        .from("lesson_submissions")
+        .update({
+            points_earned: pointsEarned,
+            teacher_feedback: teacherFeedback || null,
+            feedback_updated_by: currentProfileId,
+            feedback_updated_at: new Date().toISOString(),
+        })
+        .eq("id", currentSubmission.id)
+        .select("id, student_user_id, course_id, classroom_id, lesson_id, answers_json, total_questions, points_possible, points_earned, status, submitted_at, updated_at, teacher_feedback, feedback_updated_by, feedback_updated_at")
+        .single();
+
+    saveButton.disabled = false;
+
+    if (error) {
+        setStatus(error.message || "Feedback could not be saved.", "error");
+        return;
+    }
+
+    currentSubmission = data;
+    renderSummary(currentSubmission, currentSubmissionContext);
+    renderFeedback(currentSubmission);
+    setStatus("Feedback saved.", "success");
+}
+
 async function initializePage() {
     const { data: authData, error: authError } = await supabase.auth.getUser();
 
@@ -245,18 +350,33 @@ async function initializePage() {
         return;
     }
 
+    const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("auth_user_id", authData.user.id)
+        .maybeSingle();
+
+    if (profileError || !profile) {
+        setStatus("Your profile could not be loaded. Please sign in again.", "error");
+        return;
+    }
+
+    currentProfileId = profile.id;
     const submission = await loadSubmission();
 
     if (!submission) {
         return;
     }
 
+    currentSubmission = submission;
     const context = await loadContext(submission);
 
     if (!context) {
         return;
     }
 
+    currentSubmissionContext = context;
+    canReviewSubmission = await loadReviewPermission(submission);
     const questions = await loadQuestions(submission.lesson_id);
     const optionLabels = await loadOptionLabels(questions.map((question) => question.id));
 
@@ -264,6 +384,7 @@ async function initializePage() {
     contextElement.textContent = `${context.course.title || "Untitled course"} submission`;
     renderSummary(submission, context);
     renderAnswers(questions, submission.answers_json || {}, optionLabels);
+    renderFeedback(submission);
     showShell();
     setStatus("");
 }

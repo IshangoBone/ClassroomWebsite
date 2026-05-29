@@ -1412,6 +1412,11 @@ h2 {
     white-space: pre-wrap;
 }
 
+.submission-feedback-form {
+    display: grid;
+    gap: 14px;
+}
+
 @media (max-width: 900px) {
     .lesson-view-shell {
         grid-template-columns: 1fr;
