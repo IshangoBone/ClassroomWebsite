@@ -46,6 +46,21 @@ function setSubmitStatus(message, tone = "info") {
     submitStatusElement.dataset.tone = tone;
 }
 
+function getSubmissionErrorMessage(error, fallback) {
+    const message = error?.message || "";
+    const normalized = message.toLowerCase();
+
+    if (normalized.includes("row-level security")) {
+        return "This lesson work could not be saved because Supabase is blocking the submission. Check that the student is enrolled and the latest lesson submission migrations have been applied.";
+    }
+
+    if (normalized.includes("schema cache") || normalized.includes("column") || normalized.includes("lesson_submissions")) {
+        return "This lesson work could not be saved because the live Supabase submission schema is behind the app. Apply the latest migrations, then try again.";
+    }
+
+    return message || fallback;
+}
+
 function formatSavedTime(date) {
     return date.toLocaleString([], {
         month: "short",
@@ -704,7 +719,7 @@ async function loadSubmissionDraft() {
     ).maybeSingle();
 
     if (error) {
-        setSubmitStatus("Your draft could not be loaded.", "error");
+        setSubmitStatus(getSubmissionErrorMessage(error, "Your draft could not be loaded."), "error");
         return false;
     }
 
@@ -770,7 +785,7 @@ async function saveDraftAnswers() {
         return true;
     } catch (error) {
         saveStatusElement.textContent = "Draft was not saved.";
-        setSubmitStatus(error.message || "Draft answers could not be saved.", "error");
+        setSubmitStatus(getSubmissionErrorMessage(error, "Draft answers could not be saved."), "error");
         return false;
     }
 }
@@ -820,7 +835,7 @@ async function resetDraft() {
 
     if (error) {
         saveStatusElement.textContent = "Draft was not reset.";
-        setSubmitStatus(error.message || "Draft answers could not be reset.", "error");
+        setSubmitStatus(getSubmissionErrorMessage(error, "Draft answers could not be reset."), "error");
         return;
     }
 
@@ -905,7 +920,7 @@ async function turnInLesson() {
 
     if (error) {
         turnInButton.disabled = false;
-        setSubmitStatus(error.message || "This lesson could not be turned in.", "error");
+        setSubmitStatus(getSubmissionErrorMessage(error, "This lesson could not be turned in."), "error");
         return;
     }
 

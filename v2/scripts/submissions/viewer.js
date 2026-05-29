@@ -26,6 +26,21 @@ function setStatus(message, tone = "info") {
     statusElement.dataset.tone = tone;
 }
 
+function getFeedbackErrorMessage(error) {
+    const message = error?.message || "";
+    const normalized = message.toLowerCase();
+
+    if (normalized.includes("schema cache") || normalized.includes("column")) {
+        return "Feedback could not be saved because feedback fields are not enabled in Supabase yet. Apply the latest feedback migration, then try again.";
+    }
+
+    if (normalized.includes("row-level security")) {
+        return "Feedback could not be saved because Supabase is blocking review updates. Check that your account can review this classroom and that the latest feedback policy migration has been applied.";
+    }
+
+    return message || "Feedback could not be saved.";
+}
+
 function formatStatus(status = "draft") {
     return status.charAt(0).toUpperCase() + status.slice(1);
 }
@@ -350,7 +365,7 @@ async function saveFeedback(event) {
     saveButton.disabled = false;
 
     if (error) {
-        setStatus(error.message || "Feedback could not be saved.", "error");
+        setStatus(getFeedbackErrorMessage(error), "error");
         return;
     }
 
