@@ -1194,7 +1194,8 @@ h2 {
 }
 
 .lesson-render-block,
-.lesson-flow-card {
+.lesson-flow-card,
+.lesson-submit-card {
     display: grid;
     gap: 10px;
     padding: 18px;
@@ -1225,13 +1226,15 @@ h2 {
 }
 
 .lesson-render-block h3,
-.lesson-flow-card h3 {
+.lesson-flow-card h3,
+.lesson-submit-card h3 {
     margin: 0;
     color: #16233f;
 }
 
 .lesson-render-text,
 .lesson-flow-card p,
+.lesson-submit-card p,
 .lesson-embed-fallback {
     margin: 0;
     color: #49617f;
@@ -1294,6 +1297,30 @@ h2 {
 
 .lesson-flow-question-list p {
     margin: 4px 0 0;
+}
+
+.lesson-flow-question-list li {
+    display: grid;
+    gap: 8px;
+}
+
+.lesson-answer-grid {
+    display: grid;
+    gap: 10px;
+}
+
+.lesson-answer-field {
+    gap: 6px;
+}
+
+.lesson-submit-card {
+    border-left: 5px solid #183153;
+}
+
+.lesson-submit-card .secondary-button {
+    width: 100%;
+    justify-content: center;
+    text-decoration: none;
 }
 
 @media (max-width: 900px) {
