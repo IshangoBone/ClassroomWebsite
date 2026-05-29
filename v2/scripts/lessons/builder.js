@@ -139,6 +139,26 @@ async function moveContentBlock(contentBlock, direction) {
     setStatus("Text content order saved.", "success");
 }
 
+async function toggleContentBlockVisibility(contentBlock) {
+    const nextVisibility = !contentBlock.is_visible;
+
+    setStatus(`${nextVisibility ? "Showing" : "Hiding"} text content...`);
+
+    const { error } = await supabase
+        .from("lesson_content_blocks")
+        .update({ is_visible: nextVisibility })
+        .eq("id", contentBlock.id)
+        .eq("lesson_id", lessonId);
+
+    if (error) {
+        setStatus(error.message || "The text content visibility could not be updated.", "error");
+        return;
+    }
+
+    await loadContentBlocks();
+    setStatus(`Text content ${nextVisibility ? "shown" : "hidden"}.`, "success");
+}
+
 function resetQuestionForm() {
     questionForm.reset();
     questionForm.elements["question-id"].value = "";
@@ -223,6 +243,26 @@ async function moveQuestion(question, direction) {
     setStatus("Draft question order saved.", "success");
 }
 
+async function toggleQuestionVisibility(question) {
+    const nextVisibility = !question.is_visible;
+
+    setStatus(`${nextVisibility ? "Showing" : "Hiding"} draft question...`);
+
+    const { error } = await supabase
+        .from("questions")
+        .update({ is_visible: nextVisibility })
+        .eq("id", question.id)
+        .eq("lesson_id", lessonId);
+
+    if (error) {
+        setStatus(error.message || "The draft question visibility could not be updated.", "error");
+        return;
+    }
+
+    await loadQuestions();
+    setStatus(`Draft question ${nextVisibility ? "shown" : "hidden"}.`, "success");
+}
+
 function renderContentBlocks(contentBlocks) {
     if (!contentBlocks.length) {
         contentBlockList.replaceChildren(
@@ -241,6 +281,11 @@ function renderContentBlocks(contentBlocks) {
         const label = createElement("span", "badge badge--quiet", `${labelPrefix} ${contentBlock.order_index + 1}`);
         const moveUpButton = createElement("button", "secondary-button lesson-action", "Move up");
         const moveDownButton = createElement("button", "secondary-button lesson-action", "Move down");
+        const visibilityButton = createElement(
+            "button",
+            "secondary-button lesson-action",
+            contentBlock.is_visible ? "Hide text" : "Show text"
+        );
         const editButton = createElement("button", "secondary-button lesson-action", "Edit text");
         const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete text");
 
@@ -250,11 +295,13 @@ function renderContentBlocks(contentBlocks) {
         moveDownButton.type = "button";
         moveDownButton.disabled = index === contentBlocks.length - 1;
         moveDownButton.addEventListener("click", () => moveContentBlock(contentBlock, "down"));
+        visibilityButton.type = "button";
+        visibilityButton.addEventListener("click", () => toggleContentBlockVisibility(contentBlock));
         editButton.type = "button";
         editButton.addEventListener("click", () => editContentBlock(contentBlock));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteContentBlock(contentBlock));
-        item.append(title, label, body, moveUpButton, moveDownButton, editButton, deleteButton);
+        item.append(title, label, body, moveUpButton, moveDownButton, visibilityButton, editButton, deleteButton);
         list.append(item);
     });
 
@@ -304,6 +351,11 @@ function renderQuestions(questions) {
         const phaseIndex = phaseQuestions.findIndex((currentQuestion) => currentQuestion.id === question.id);
         const moveUpButton = createElement("button", "secondary-button lesson-action", "Move up");
         const moveDownButton = createElement("button", "secondary-button lesson-action", "Move down");
+        const visibilityButton = createElement(
+            "button",
+            "secondary-button lesson-action",
+            question.is_visible ? "Hide question" : "Show question"
+        );
         const editButton = createElement("button", "secondary-button lesson-action", "Edit question");
         const deleteButton = createElement(
             "button",
@@ -317,11 +369,13 @@ function renderQuestions(questions) {
         moveDownButton.type = "button";
         moveDownButton.disabled = phaseIndex === phaseQuestions.length - 1;
         moveDownButton.addEventListener("click", () => moveQuestion(question, "down"));
+        visibilityButton.type = "button";
+        visibilityButton.addEventListener("click", () => toggleQuestionVisibility(question));
         editButton.type = "button";
         editButton.addEventListener("click", () => editQuestion(question));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteQuestion(question));
-        item.append(prompt, label, instructions, moveUpButton, moveDownButton, editButton, deleteButton);
+        item.append(prompt, label, instructions, moveUpButton, moveDownButton, visibilityButton, editButton, deleteButton);
         list.append(item);
     });
 
