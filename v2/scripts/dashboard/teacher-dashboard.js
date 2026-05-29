@@ -25,6 +25,7 @@ let dashboardCourses = [];
 let dashboardClassrooms = [];
 let dashboardLessons = [];
 let dashboardSubmissions = [];
+let dashboardStudentNames = new Map();
 
 function setStatus(message, tone = "info") {
     dashboardStatus.textContent = message;
@@ -37,6 +38,19 @@ function formatStatus(status) {
 
 function formatShortId(id) {
     return id ? id.slice(0, 8) : "unknown";
+}
+
+function formatStudentName(profile) {
+    const fullName = [profile.legal_first_name, profile.legal_last_name]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+    return fullName || profile.username || `Student ${formatShortId(profile.id)}`;
+}
+
+function getStudentName(studentId) {
+    return dashboardStudentNames.get(studentId) || `Student ${formatShortId(studentId)}`;
 }
 
 function setCourseFormVisible(isVisible) {
@@ -259,6 +273,16 @@ async function loadStudentSubmissions(profileId) {
     return data;
 }
 
+async function loadStudentNameMap() {
+    const { data, error } = await supabase.rpc("reviewable_student_profiles");
+
+    if (error || !data) {
+        return new Map();
+    }
+
+    return new Map(data.map((profile) => [profile.id, formatStudentName(profile)]));
+}
+
 function renderClassrooms(course, classrooms) {
     const courseClassrooms = classrooms.filter((classroom) => classroom.course_id === course.id);
     const area = createElement("div", "course-classrooms");
@@ -348,7 +372,7 @@ function renderSubmissionFilters(courses, classrooms, lessons, submissions) {
     const students = [...new Set(submissions.map((submission) => submission.student_user_id).filter(Boolean))]
         .sort()
         .map((studentId) => ({
-            label: `Student ${formatShortId(studentId)}`,
+            label: getStudentName(studentId),
             value: studentId,
         }));
 
@@ -392,13 +416,14 @@ function renderSubmissions(submissions, courses, lessons) {
     const list = createElement("ul", "submission-list");
 
     submissions.forEach((submission) => {
-        const item = createElement("li", "submission-item");
+        const item = createElement("li", "submission-item submission-item--review");
         const link = createElement(
             "a",
             "submission-name",
             lessonNames.get(submission.lesson_id) || `${courseNames.get(submission.course_id) || "Course"} submission`
         );
         const context = createElement("span", "course-muted", courseNames.get(submission.course_id) || "Course");
+        const student = createElement("span", "course-muted", getStudentName(submission.student_user_id));
         const submittedAt = submission.submitted_at
             ? createElement("span", "course-muted", new Date(submission.submitted_at).toLocaleString([], {
                 month: "short",
@@ -410,7 +435,7 @@ function renderSubmissions(submissions, courses, lessons) {
         const status = createElement("span", "badge badge--quiet", formatStatus(submission.status));
 
         link.href = `../submissions/view.html?submission=${encodeURIComponent(submission.id)}`;
-        item.append(link, context, submittedAt, status);
+        item.append(link, context, student, submittedAt, status);
         list.append(item);
     });
 
@@ -508,17 +533,19 @@ async function refreshDashboard() {
         const studentSubmissions = await loadStudentSubmissions(currentProfile.id);
         const studentCourseIds = studentSubmissions.map((submission) => submission.course_id);
         const allCourseIds = [...new Set([...courseIds, ...studentCourseIds])];
-        const [classrooms, lessons, submissions, visibleCourses] = await Promise.all([
+        const [classrooms, lessons, submissions, visibleCourses, studentNames] = await Promise.all([
             loadManagedClassrooms(currentProfile.id, courseIds),
             loadLessons(allCourseIds),
             loadRecentSubmissions(courseIds),
             loadVisibleCourses(allCourseIds),
+            loadStudentNameMap(),
         ]);
 
         dashboardCourses = courses;
         dashboardClassrooms = classrooms;
         dashboardLessons = lessons;
         dashboardSubmissions = submissions;
+        dashboardStudentNames = studentNames;
         coursesSummary.textContent = String(courses.length);
         classroomsSummary.textContent = String(classrooms.length);
         submissionsSummary.textContent = String(submissions.length);
