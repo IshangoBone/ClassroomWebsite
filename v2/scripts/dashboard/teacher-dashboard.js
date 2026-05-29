@@ -249,8 +249,7 @@ async function loadStudentSubmissions(profileId) {
         .from("lesson_submissions")
         .select("id, course_id, classroom_id, lesson_id, status, submitted_at, updated_at")
         .eq("student_user_id", profileId)
-        .eq("status", "submitted")
-        .order("submitted_at", { ascending: false })
+        .order("updated_at", { ascending: false })
         .limit(25);
 
     if (error) {
@@ -422,9 +421,23 @@ function refreshSubmissionList() {
     renderSubmissions(getFilteredSubmissions(), dashboardCourses, dashboardLessons);
 }
 
+function getStudentWorkLink(submission) {
+    if (submission.status === "submitted") {
+        return `../submissions/view.html?submission=${encodeURIComponent(submission.id)}`;
+    }
+
+    const params = new URLSearchParams({ lesson: submission.lesson_id });
+
+    if (submission.classroom_id) {
+        params.set("classroom", submission.classroom_id);
+    }
+
+    return `../lessons/view.html?${params.toString()}`;
+}
+
 function renderStudentSubmissions(submissions, courses, lessons) {
     if (!submissions.length) {
-        renderEmpty(studentSubmissionList, "You do not have any submitted lessons yet.");
+        renderEmpty(studentSubmissionList, "You do not have any saved lesson work yet.");
         return;
     }
 
@@ -440,18 +453,21 @@ function renderStudentSubmissions(submissions, courses, lessons) {
             lessonNames.get(submission.lesson_id) || `${courseNames.get(submission.course_id) || "Course"} submission`
         );
         const context = createElement("span", "course-muted", courseNames.get(submission.course_id) || "Course");
-        const submittedAt = submission.submitted_at
-            ? createElement("span", "course-muted", new Date(submission.submitted_at).toLocaleString([], {
+        const activityDate = submission.status === "submitted" ? submission.submitted_at : submission.updated_at;
+        const activityLabel = activityDate
+            ? createElement("span", "course-muted", new Date(activityDate).toLocaleString([], {
                 month: "short",
                 day: "numeric",
                 hour: "numeric",
                 minute: "2-digit",
             }))
-            : createElement("span", "course-muted", "Submitted");
-        const feedbackStatus = createElement("span", "badge badge--quiet", "Submitted");
+            : createElement("span", "course-muted", "In progress");
+        const status = submission.status === "submitted"
+            ? createElement("span", "badge", "Submitted")
+            : createElement("span", "badge badge--quiet", "Draft");
 
-        link.href = `../submissions/view.html?submission=${encodeURIComponent(submission.id)}`;
-        item.append(link, context, submittedAt, feedbackStatus);
+        link.href = getStudentWorkLink(submission);
+        item.append(link, context, activityLabel, status);
         list.append(item);
     });
 
