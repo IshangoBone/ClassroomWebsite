@@ -147,8 +147,9 @@ async function loadRecentSubmissions(courseIds) {
 
     const { data, error } = await supabase
         .from("lesson_submissions")
-        .select("id, course_id, status, submitted_at, updated_at")
+        .select("id, course_id, lesson_id, status, submitted_at, updated_at")
         .in("course_id", courseIds)
+        .eq("status", "submitted")
         .order("updated_at", { ascending: false })
         .limit(5);
 
@@ -240,13 +241,23 @@ function renderSubmissions(submissions, courses) {
 
     submissions.forEach((submission) => {
         const item = createElement("li", "submission-item");
-        const text = createElement(
-            "span",
+        const link = createElement(
+            "a",
             "submission-name",
             `${courseNames.get(submission.course_id) || "Course"} submission`
         );
+        const submittedAt = submission.submitted_at
+            ? createElement("span", "course-muted", new Date(submission.submitted_at).toLocaleString([], {
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+            }))
+            : createElement("span", "course-muted", "Not submitted");
         const status = createElement("span", "badge badge--quiet", formatStatus(submission.status));
-        item.append(text, status);
+
+        link.href = `../submissions/view.html?submission=${encodeURIComponent(submission.id)}`;
+        item.append(link, submittedAt, status);
         list.append(item);
     });
 

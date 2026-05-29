@@ -687,6 +687,16 @@ h2 {
     font-weight: 700;
 }
 
+.submission-name {
+    color: #365a9b;
+    text-decoration: none;
+}
+
+.submission-name:hover,
+.submission-name:focus-visible {
+    text-decoration: underline;
+}
+
 .empty-state {
     margin: 0;
     padding: 20px;
@@ -1355,8 +1365,59 @@ h2 {
     text-decoration: none;
 }
 
+.submission-review-layout {
+    max-width: 1040px;
+}
+
+.submission-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.summary-value--small {
+    font-size: 1.1rem;
+}
+
+.submission-answer-list {
+    display: grid;
+    gap: 16px;
+}
+
+.submission-answer-section {
+    display: grid;
+    gap: 12px;
+}
+
+.submission-answer-card {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border: 1px solid #dbe4f1;
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.submission-answer-card h4 {
+    margin: 0;
+}
+
+.submission-answer-card .badge-row {
+    justify-content: start;
+}
+
+.submission-answer-text {
+    margin: 0;
+    color: #334766;
+    white-space: pre-wrap;
+}
+
 @media (max-width: 900px) {
     .lesson-view-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .submission-summary-grid {
         grid-template-columns: 1fr;
     }
 

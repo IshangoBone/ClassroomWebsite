@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Submission</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout submission-review-layout">
+        <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Submission Review</p>
+            <h1 data-submission-heading>Loading submission...</h1>
+            <p class="intro" data-submission-context>Preparing submitted lesson work.</p>
+        </header>
+
+        <p class="auth-status management-status" data-submission-status aria-live="polite"></p>
+
+        <section class="management-section" data-submission-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Submission summary</h2>
+                    <p class="section-copy">Read-only lesson work and scoring details.</p>
+                </div>
+            </div>
+
+            <div class="submission-summary-grid" data-submission-summary>
+                <p class="empty-state">Loading submission summary...</p>
+            </div>
+        </section>
+
+        <section class="management-section management-section--pending" data-submission-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Questions and answers</h2>
+                    <p class="section-copy">Student responses are shown exactly as saved at turn-in.</p>
+                </div>
+            </div>
+
+            <div class="submission-answer-list" data-answer-list>
+                <p class="empty-state">Loading answers...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/submissions/viewer.js"></script>
+</body>
+
+</html>
