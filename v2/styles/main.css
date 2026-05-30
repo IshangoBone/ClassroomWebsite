@@ -1586,6 +1586,17 @@ h2 {
     font-weight: 800;
 }
 
+.managed-classroom-join-state {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: #237a4f;
+    font-weight: 800;
+}
+
+.managed-classroom-join-state--closed {
+    color: #9b3c2f;
+}
+
 @media (min-width: 900px) {
     .auth-card {
         padding: 34px;

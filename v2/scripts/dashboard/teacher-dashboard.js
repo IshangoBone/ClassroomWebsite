@@ -111,8 +111,49 @@ async function handleStudentJoinSubmit(event) {
         return;
     }
 
-    setStatus("Joining classroom...");
+    setStatus("Checking join code...");
     submitButton.disabled = true;
+
+    const { data: previewData, error: previewError } = await supabase.rpc("preview_classroom_join_by_code", {
+        join_code_input: joinCode,
+    });
+
+    if (previewError) {
+        submitButton.disabled = false;
+        setStatus(previewError.message || "That classroom could not be joined.", "error");
+        return;
+    }
+
+    const preview = previewData?.[0];
+
+    if (!preview) {
+        submitButton.disabled = false;
+        setStatus("That join code was not found.", "error");
+        return;
+    }
+
+    if (preview.already_enrolled) {
+        submitButton.disabled = false;
+        studentJoinForm.reset();
+        setStatus(`You are already enrolled in ${preview.classroom_name}.`, "success");
+        return;
+    }
+
+    if (!preview.is_joining_open) {
+        submitButton.disabled = false;
+        setStatus("Joining is closed for this classroom.", "error");
+        return;
+    }
+
+    const confirmed = window.confirm(`Join ${preview.course_title} / ${preview.classroom_name}?`);
+
+    if (!confirmed) {
+        submitButton.disabled = false;
+        setStatus("Join canceled.");
+        return;
+    }
+
+    setStatus("Joining classroom...");
 
     const { data, error } = await supabase.rpc("join_classroom_by_code", {
         join_code_input: joinCode,

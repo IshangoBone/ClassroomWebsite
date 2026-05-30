@@ -80,6 +80,14 @@ async function copyJoinCode(joinCode) {
 }
 
 async function generateJoinCode(classroom) {
+    if (classroom.join_code) {
+        const confirmed = window.confirm(`Replace the join code for "${classroom.name}"? The old code will stop working.`);
+
+        if (!confirmed) {
+            return;
+        }
+    }
+
     const joinCode = createJoinCode();
 
     setStatus("Generating join code...");
@@ -97,6 +105,26 @@ async function generateJoinCode(classroom) {
 
     await loadClassrooms();
     setStatus(`Join code generated: ${joinCode}`, "success");
+}
+
+async function toggleJoining(classroom) {
+    const nextJoinState = !classroom.join_enabled;
+
+    setStatus(nextJoinState ? "Opening classroom joining..." : "Closing classroom joining...");
+
+    const { error } = await supabase
+        .from("classrooms")
+        .update({ join_enabled: nextJoinState })
+        .eq("id", classroom.id)
+        .eq("course_id", courseId);
+
+    if (error) {
+        setStatus(error.message || "Joining status could not be changed.", "error");
+        return;
+    }
+
+    await loadClassrooms();
+    setStatus(nextJoinState ? "Classroom joining opened." : "Classroom joining closed.", "success");
 }
 
 async function saveClassroomOrder(classrooms) {
@@ -220,6 +248,11 @@ function renderClassrooms(classrooms) {
             "managed-classroom-join-code",
             classroom.join_code ? `Join code: ${classroom.join_code}` : "No join code generated yet."
         );
+        const joinState = createElement(
+            "p",
+            classroom.join_enabled ? "managed-classroom-join-state" : "managed-classroom-join-state managed-classroom-join-state--closed",
+            classroom.join_enabled ? "Joining is open" : "Joining is closed"
+        );
         const badge = createElement("span", "badge badge--quiet", classroom.status);
         const actions = createElement("div", "managed-classroom-actions");
         const dragHint = createElement("span", "managed-classroom-drag-hint", "Drag to reorder");
@@ -228,6 +261,12 @@ function renderClassrooms(classrooms) {
             "button",
             "secondary-button lesson-action",
             classroom.join_code ? "Copy join code" : "Generate join code"
+        );
+        const regenerateButton = createElement("button", "secondary-button lesson-action", "Regenerate code");
+        const joinToggleButton = createElement(
+            "button",
+            "secondary-button lesson-action",
+            classroom.join_enabled ? "Close joining" : "Open joining"
         );
         const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete classroom");
         editButton.type = "button";
@@ -241,10 +280,15 @@ function renderClassrooms(classrooms) {
 
             generateJoinCode(classroom);
         });
+        regenerateButton.type = "button";
+        regenerateButton.hidden = !classroom.join_code;
+        regenerateButton.addEventListener("click", () => generateJoinCode(classroom));
+        joinToggleButton.type = "button";
+        joinToggleButton.addEventListener("click", () => toggleJoining(classroom));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteClassroom(classroom));
-        actions.append(dragHint, editButton, joinButton, deleteButton);
-        item.append(title, details, joinCode, badge, actions);
+        actions.append(dragHint, editButton, joinButton, regenerateButton, joinToggleButton, deleteButton);
+        item.append(title, details, joinCode, joinState, badge, actions);
         list.append(item);
     });
 
@@ -254,7 +298,7 @@ function renderClassrooms(classrooms) {
 async function loadClassrooms() {
     const { data: classrooms, error } = await supabase
         .from("classrooms")
-        .select("id, name, period_block, school_year, status, display_order, join_code")
+        .select("id, name, period_block, school_year, status, display_order, join_code, join_enabled")
         .eq("course_id", courseId)
         .neq("status", "deleted")
         .order("display_order", { ascending: true })
