@@ -1,79 +1,240 @@
 # Codex Handoff
 
-## Project
+## Context
 
-CodeTheCurrent V2 teacher and student platform repository.
+Repository: `/Users/jakebroos-williams/Developer/ClassroomWebsite`
 
-## Current Status
+Branch: `v2`
 
-The `v2` branch is pushed through the initial database foundation and minimum
-profile onboarding flow. The Supabase CLI is initialized and linked to the
-hosted CodeTheCurrent V2 project; migration history is synchronized locally
-and remotely through `20260525000700`.
+User wants small, complete GitHub issue chunks. Avoid long retry loops. If the same command or browser/test path fails twice the same way, stop and diagnose instead of rerunning blindly.
 
-## Current Commit
+Preserve unrelated/untracked work. In particular, `v2/CREATE_USERS_PROFILES_SCHEMA_HANDOFF.md` is still untracked from older work and should not be committed unless the user explicitly asks.
 
-`501b973` - Create file metadata and reference schema
+## Current Goal
 
-## Completed Checkpoints
+Working on GitHub issue #20: `TEACHER PORTAL: Build publish and archive controls`.
 
-- Working Supabase email signup/login and profile-aware routing.
-- Tested onboarding flow: confirmed account -> onboarding -> saved profile -> dashboard.
-- Supabase CLI configuration and linked migration workflow.
-- Issue #3: profiles schema and minimum self-only profile RLS.
-- Issue #4: courses and course collaborators schema.
-- Issue #5: classrooms, enrollments, and classroom teachers schema.
-- Issues #6-#8: modules, lessons, lesson blocks, questions, and options schema.
-- Issue #9: submissions and progress schema with private draft boundaries.
-- Issue #10: file metadata and references schema, without storage buckets or uploads.
+Issue #22 was completed, committed, and pushed earlier as:
 
-## Permission Model
+`cf1f737 Complete student course join flows`
 
-Issue #2 is documented in `v2/ROLE_PERMISSIONS.md`. In brief:
+The user should be able to close #22 if they have not already.
 
-- Platform roles remain `user` and reserved `admin`.
-- Teacher and student status is contextual, not a permanent account role.
-- Owners/collaborators manage courses; classroom teachers manage classrooms;
-  enrollments represent student access.
-- Admin behavior is not enabled until admin authorization and protected routes
-  are implemented.
+## Current Local State
 
-## Migration Status
+As of this handoff, `git status --short` showed:
 
-Applied locally and in the linked Supabase project:
+```text
+ M v2/pages/courses/editor.html
+ M v2/scripts/classrooms/manage.js
+ M v2/scripts/courses/editor.js
+?? supabase/migrations/20260531000300_enforce_archive_visibility_rules.sql
+?? v2/CREATE_USERS_PROFILES_SCHEMA_HANDOFF.md
+```
 
-- `20260524000100_create_profiles.sql`
-- `20260525000100_create_courses_and_collaborators.sql`
-- `20260525000200_create_classrooms_and_enrollments.sql`
-- `20260525000300_create_modules_and_lessons.sql`
-- `20260525000400_create_lesson_content_blocks.sql`
-- `20260525000500_create_questions_and_options.sql`
-- `20260525000600_create_submissions_and_progress.sql`
-- `20260525000700_create_files_and_references.sql`
+`v2/CODEX_HANDOFF.md` itself is also modified by this handoff.
 
-## Next Work
+The next thread verified the non-destructive browser paths and source-backed
+confirmation behavior, then prepared the issue #20 files for commit.
 
-- Commit the issue #2 permission-model documentation checkpoint.
-- Do not implement issue #11 activity/audit visibility until an explicit admin
-  authorization path exists; the issue requires admin-only viewing.
-- Defer issue #12 monetization schema because it is marked non-MVP planning.
-- Proceed into teacher-facing functionality with issue #13 only after keeping
-  the contextual role model and route-security dependency visible.
+## Work Done In This Chunk
 
-## Development Rules
+### Course publish/archive controls
 
-- Inspect the repository before editing and keep changes small.
-- Use migrations for database changes and verify with `supabase db push --dry-run`
-  before applying them.
-- Avoid enabling admin, payment, storage upload, or Google OAuth behavior as an
-  incidental part of another issue.
-- Keep RLS additions scoped to the feature being introduced.
+Files changed:
 
-## Important Notes
+- `v2/pages/courses/editor.html`
+- `v2/scripts/courses/editor.js`
 
-- A formatting-only local change in `v2/pages/auth/login.html` is intentionally
-  unstaged and must not be included in database or documentation commits.
-- The local server was run from inside `v2`, so local page URLs omit `/v2`, for
-  example `http://127.0.0.1:4173/pages/auth/login.html`.
-- The Supabase Auth redirect allow list includes
-  `http://127.0.0.1:4173/pages/auth/onboarding.html`.
+Added course access controls:
+
+- `Publish course` / `Make private`
+- `Copy public course link`
+- `Archive course`
+- `Delete course`
+
+Added publish validation blockers before a course can be published:
+
+- course title required
+- course description required
+- subject area required
+- estimated course length required
+- at least one module required
+- at least one lesson required
+- at least one visible lesson content block required
+- each lesson needs objective
+- each lesson needs overview/summary
+- each lesson needs estimated time
+- each lesson needs visible `before`, `during`, and `reflection` questions
+
+Added confirmation warnings for:
+
+- publish
+- unpublish/make private
+- archive course
+- soft delete course
+
+Archive behavior:
+
+- status becomes `archived`
+- public course link disabled
+- publish button disabled
+- copy link disabled
+- historical management screen remains visible
+
+Delete behavior:
+
+- status becomes `deleted`
+- redirects to dashboard
+- this is soft delete only
+
+### Classroom archive controls
+
+File changed:
+
+- `v2/scripts/classrooms/manage.js`
+
+Added `Archive classroom` button with confirmation warning.
+
+Archived classroom behavior:
+
+- status becomes `archived`
+- `join_enabled` becomes `false`
+- card remains visible in classroom manager
+- card says archived classrooms are view-only
+- edit, join code, invite link, regenerate code, open/close joining, and drag reorder are disabled/hidden
+- delete remains available as a soft-delete action
+
+### Backend archive enforcement
+
+New migration:
+
+- `supabase/migrations/20260531000300_enforce_archive_visibility_rules.sql`
+
+This migration was successfully applied to the remote Supabase project with:
+
+```bash
+supabase db push
+```
+
+The first attempt failed because sandboxing blocked writing `~/.supabase/telemetry.json`. It was retried once with escalation and succeeded. Do not rerun blindly.
+
+The migration updates:
+
+- `preview_classroom_join_by_code`
+- `join_classroom_by_code`
+- `preview_classroom_join_by_invite`
+- `join_classroom_by_invite`
+- `can_submit_draft_for_context`
+
+Backend behavior now blocks:
+
+- joining classrooms when the course is `archived` or `deleted`
+- joining classrooms unless classroom status is `active`
+- student draft/submission writes when the course is `archived` or `deleted`
+- student draft/submission writes when the classroom context is not `active`
+
+Teacher review access remains allowed through `can_review_student_context`.
+
+## Verification Already Run
+
+Passed:
+
+```bash
+node --input-type=module --check < v2/scripts/courses/editor.js
+node --input-type=module --check < v2/scripts/classrooms/manage.js
+git diff --check
+supabase db push
+```
+
+Browser/local page checks:
+
+- Login page loaded at `http://127.0.0.1:4173/pages/auth/login.html` through the in-app browser.
+- The local server appears to be running on `4173`; trying to start another server on `4173` returned `Address already in use`.
+- Dashboard loaded at `http://127.0.0.1:4173/pages/dashboard/index.html` with an authenticated teacher session.
+- Incomplete draft course `Introduction to Engineering Design` showed `Course access` controls.
+- Clicking `Publish course` on that incomplete draft did not change state and showed missing requirements:
+  course description, at least one lesson, and at least one visible content block.
+- Published course `AP Computer Science A` showed `Make private`, enabled public link copy, archive, and delete controls.
+- Public link copy fell back to displaying the join URL in-page when browser clipboard access was unavailable.
+- Classroom manager for `Intro to Computer Science` showed `Archive classroom` controls for active classrooms.
+- Native confirm dialogs were not accepted on live records to avoid unpublishing or archiving real course/classroom data.
+  Confirmation warning strings and post-confirm state updates were verified in source.
+
+Browser asset verification was interrupted before completion. I tried one page-scope asset check, but browser runtime does not expose ordinary `fetch`/`XMLHttpRequest` constructors in that evaluation context. Do not repeat that path. Use normal page navigation/manual testing instead.
+
+## What Still Needs Testing
+
+Use this link if the server is still running:
+
+`http://127.0.0.1:4173/pages/dashboard/index.html`
+
+If not running, start from VS Code terminal:
+
+```bash
+cd /Users/jakebroos-williams/Developer/ClassroomWebsite/v2
+python3 -m http.server 4173 --bind 127.0.0.1
+```
+
+Optional remaining destructive-ish test path, only with an explicit throwaway record or user approval:
+
+1. On a complete throwaway course, accept the `Publish course` confirmation.
+   - Badge should show public and public link copy should enable.
+2. Accept `Make private` on that throwaway course.
+   - Existing enrolled students/classrooms should keep access.
+3. Accept `Archive classroom` on a throwaway classroom.
+   - Classroom card should become view-only and joining should close.
+4. Optional deeper check:
+   - As a student in an archived classroom, try to submit work.
+   - The database should block the write.
+
+Do not archive/delete the user’s real useful course/classroom unless they are okay with it. For destructive-ish tests, use a throwaway test course/classroom if possible.
+
+## Likely Next Code Fixes If Testing Fails
+
+Potential gaps to watch:
+
+- Publish validation may be stricter than the user expects because it requires every lesson to have before/during/reflection questions and estimated time.
+- Course editor cache may need hard refresh because the script query string was changed to `v=20260531-publish-controls`.
+- If archived classroom still allows a student to open an existing lesson, that may be okay; #20 specifically says archived classrooms should not allow new submissions. The migration blocks saving/submitting.
+- If the UI should support unarchiving/restoring, that is not implemented yet. #20 did not explicitly require restore.
+
+## Commit Guidance
+
+After manual testing, stage only the issue #20 files:
+
+```bash
+git add \
+  supabase/migrations/20260531000300_enforce_archive_visibility_rules.sql \
+  v2/pages/courses/editor.html \
+  v2/scripts/classrooms/manage.js \
+  v2/scripts/courses/editor.js \
+  v2/CODEX_HANDOFF.md
+```
+
+Do not add:
+
+```text
+v2/CREATE_USERS_PROFILES_SCHEMA_HANDOFF.md
+```
+
+Suggested commit message after verified:
+
+```bash
+git commit -m "Add publish and archive controls"
+```
+
+Then push:
+
+```bash
+git push origin v2
+```
+
+After pushing and confirming behavior, issue #20 may likely be closed.
+
+## Anti-Stall Notes
+
+- Do not rerun `supabase db push`; it already succeeded for the new migration.
+- Do not repeat the failed browser asset `fetch` / `XMLHttpRequest` check; use normal page navigation or file-based checks.
+- If a page looks stale, hard refresh first (`Cmd + Shift + R`) because this is a static Python server.
+- If localhost commands fail in sandbox but browser works, trust the browser/server state and avoid spinning on `curl`.

@@ -36,6 +36,8 @@
             <div class="course-form-actions">
                 <button type="button" class="secondary-button" data-toggle-course-visibility>Publish course</button>
                 <button type="button" class="secondary-button" data-copy-public-course-link>Copy public course link</button>
+                <button type="button" class="secondary-button" data-archive-course>Archive course</button>
+                <button type="button" class="secondary-button destructive-button" data-delete-course>Delete course</button>
             </div>
         </section>
 
@@ -63,7 +65,7 @@
 
                 <label class="form-field form-field--wide">
                     <span>Description</span>
-                    <textarea name="description" rows="4" maxlength="600"></textarea>
+                    <textarea name="description" rows="4" maxlength="600" required></textarea>
                 </label>
 
                 <div class="course-form-actions form-field--wide">
@@ -161,7 +163,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/courses/editor.js?v=20260531-public-course-join"></script>
+    <script type="module" src="../../scripts/courses/editor.js?v=20260531-publish-controls"></script>
 </body>
 
 </html>

@@ -217,6 +217,36 @@ async function deleteClassroom(classroom) {
     setStatus("Classroom deleted.", "success");
 }
 
+async function archiveClassroom(classroom) {
+    const label = classroom.period_block
+        ? `${classroom.name} - ${classroom.period_block}`
+        : classroom.name;
+    const confirmed = window.confirm(
+        `Archive "${label}"? Students will not be able to join or submit new work, but roster, progress, and submissions will stay available for review.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus("Archiving classroom...");
+
+    const { error } = await supabase
+        .from("classrooms")
+        .update({ status: "archived", join_enabled: false })
+        .eq("id", classroom.id)
+        .eq("course_id", courseId);
+
+    if (error) {
+        setStatus(error.message || "The classroom could not be archived.", "error");
+        return;
+    }
+
+    toggleClassroomForm(false);
+    await loadClassrooms();
+    setStatus("Classroom archived. Historical records are preserved.", "success");
+}
+
 function renderClassrooms(classrooms) {
     loadedClassrooms = classrooms;
 
@@ -230,17 +260,24 @@ function renderClassrooms(classrooms) {
     const list = createElement("ul", "managed-classroom-list");
 
     classrooms.forEach((classroom) => {
+        const isArchived = classroom.status === "archived";
         const item = createElement("li", "managed-classroom-card");
         item.dataset.classroomId = classroom.id;
-        item.draggable = true;
+        item.draggable = !isArchived;
+        item.classList.toggle("managed-classroom-card--archived", isArchived);
         item.addEventListener("dragstart", (event) => {
+            if (isArchived) {
+                event.preventDefault();
+                return;
+            }
+
             draggedClassroomId = classroom.id;
             event.dataTransfer.effectAllowed = "move";
             event.dataTransfer.setData("text/plain", classroom.id);
             item.classList.add("managed-classroom-card--dragging");
         });
         item.addEventListener("dragover", (event) => {
-            if (!draggedClassroomId || draggedClassroomId === classroom.id) {
+            if (isArchived || !draggedClassroomId || draggedClassroomId === classroom.id) {
                 return;
             }
 
@@ -252,7 +289,7 @@ function renderClassrooms(classrooms) {
         item.addEventListener("drop", async (event) => {
             event.preventDefault();
 
-            if (!draggedClassroomId || draggedClassroomId === classroom.id) {
+            if (isArchived || !draggedClassroomId || draggedClassroomId === classroom.id) {
                 clearDragStyles();
                 return;
             }
@@ -298,8 +335,8 @@ function renderClassrooms(classrooms) {
         );
         const joinState = createElement(
             "p",
-            classroom.join_enabled ? "managed-classroom-join-state" : "managed-classroom-join-state managed-classroom-join-state--closed",
-            classroom.join_enabled ? "Joining is open" : "Joining is closed"
+            classroom.join_enabled && !isArchived ? "managed-classroom-join-state" : "managed-classroom-join-state managed-classroom-join-state--closed",
+            isArchived ? "Archived classrooms are view-only" : classroom.join_enabled ? "Joining is open" : "Joining is closed"
         );
         const inviteState = createElement(
             "p",
@@ -317,6 +354,7 @@ function renderClassrooms(classrooms) {
         );
         const inviteButton = createElement("button", "secondary-button lesson-action", "Copy invite link");
         const regenerateButton = createElement("button", "secondary-button lesson-action", "Regenerate code");
+        const archiveButton = createElement("button", "secondary-button lesson-action", "Archive classroom");
         const joinToggleButton = createElement(
             "button",
             "secondary-button lesson-action",
@@ -324,8 +362,10 @@ function renderClassrooms(classrooms) {
         );
         const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete classroom");
         editButton.type = "button";
+        editButton.disabled = isArchived;
         editButton.addEventListener("click", () => toggleClassroomForm(true, classroom));
         joinButton.type = "button";
+        joinButton.disabled = isArchived;
         joinButton.addEventListener("click", () => {
             if (classroom.join_code) {
                 copyJoinCode(classroom.join_code);
@@ -335,15 +375,20 @@ function renderClassrooms(classrooms) {
             generateJoinCode(classroom);
         });
         inviteButton.type = "button";
+        inviteButton.disabled = isArchived;
         inviteButton.addEventListener("click", () => copyInviteLink(classroom));
         regenerateButton.type = "button";
-        regenerateButton.hidden = !classroom.join_code;
+        regenerateButton.hidden = !classroom.join_code || isArchived;
         regenerateButton.addEventListener("click", () => generateJoinCode(classroom));
+        archiveButton.type = "button";
+        archiveButton.hidden = isArchived;
+        archiveButton.addEventListener("click", () => archiveClassroom(classroom));
         joinToggleButton.type = "button";
+        joinToggleButton.disabled = isArchived;
         joinToggleButton.addEventListener("click", () => toggleJoining(classroom));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteClassroom(classroom));
-        actions.append(dragHint, editButton, joinButton, inviteButton, regenerateButton, joinToggleButton, deleteButton);
+        actions.append(dragHint, editButton, joinButton, inviteButton, regenerateButton, archiveButton, joinToggleButton, deleteButton);
         item.append(title, details, joinCode, joinState, inviteState, badge, actions);
         list.append(item);
     });

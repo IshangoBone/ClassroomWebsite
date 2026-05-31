@@ -22,6 +22,8 @@ const courseVisibility = qs("[data-course-visibility]");
 const publicCourseCopy = qs("[data-public-course-copy]");
 const toggleCourseVisibilityButton = qs("[data-toggle-course-visibility]");
 const copyPublicCourseLinkButton = qs("[data-copy-public-course-link]");
+const archiveCourseButton = qs("[data-archive-course]");
+const deleteCourseButton = qs("[data-delete-course]");
 let loadedModules = [];
 let loadedLessons = [];
 let loadedContentBlocks = [];
@@ -54,14 +56,104 @@ function getPublicCourseUrl(course) {
     return url.href;
 }
 
+function formatCourseStatus(status) {
+    const labels = {
+        archived: "Archived",
+        deleted: "Deleted",
+        draft: "Draft",
+        private: "Private",
+        published: "Public",
+    };
+
+    return labels[status] || "Private";
+}
+
+function getPublishingBlockers() {
+    const blockers = [];
+    const visibleContentBlocks = loadedContentBlocks.filter((contentBlock) => contentBlock.is_visible);
+    const visibleQuestions = loadedQuestions.filter((question) => question.is_visible);
+    const requiredQuestionPhases = [
+        ["before", "before-lesson question"],
+        ["during", "during-lesson question"],
+        ["reflection", "reflection question"],
+    ];
+
+    if (!loadedCourse?.title?.trim()) {
+        blockers.push("Course title is required.");
+    }
+
+    if (!loadedCourse?.description?.trim()) {
+        blockers.push("Course description is required.");
+    }
+
+    if (!loadedCourse?.subject_area?.trim()) {
+        blockers.push("Subject area is required.");
+    }
+
+    if (!loadedCourse?.estimated_length?.trim()) {
+        blockers.push("Estimated course length is required.");
+    }
+
+    if (!loadedModules.length) {
+        blockers.push("Add at least one module.");
+    }
+
+    if (!loadedLessons.length) {
+        blockers.push("Add at least one lesson.");
+    }
+
+    if (!visibleContentBlocks.length) {
+        blockers.push("Add at least one visible lesson content block.");
+    }
+
+    loadedLessons.forEach((lesson) => {
+        const lessonLabel = lesson.title || "Untitled lesson";
+
+        if (!lesson.objective?.trim()) {
+            blockers.push(`${lessonLabel} needs an objective.`);
+        }
+
+        if (!lesson.summary?.trim()) {
+            blockers.push(`${lessonLabel} needs a lesson overview.`);
+        }
+
+        if (!lesson.estimated_time?.trim()) {
+            blockers.push(`${lessonLabel} needs an estimated time.`);
+        }
+
+        requiredQuestionPhases.forEach(([phase, label]) => {
+            const hasQuestion = visibleQuestions.some((question) => question.lesson_id === lesson.id && question.phase === phase);
+
+            if (!hasQuestion) {
+                blockers.push(`${lessonLabel} needs a ${label}.`);
+            }
+        });
+    });
+
+    return blockers;
+}
+
 function renderCourseAccess(course) {
     const isPublished = course.status === "published";
-    courseVisibility.textContent = isPublished ? "Public" : "Private";
-    publicCourseCopy.textContent = isPublished
-        ? "Students with the public course link can join this course without teacher approval."
-        : "Students cannot join this course from a public link while it is private.";
+    const isArchived = course.status === "archived";
+    const isDeleted = course.status === "deleted";
+    courseVisibility.textContent = formatCourseStatus(course.status);
+
+    if (isArchived) {
+        publicCourseCopy.textContent = "This archived course is hidden from discovery. Existing records are preserved for review.";
+    } else if (isDeleted) {
+        publicCourseCopy.textContent = "This course is hidden from normal app views.";
+    } else {
+        publicCourseCopy.textContent = isPublished
+            ? "Students with the public course link can join this course without teacher approval."
+            : "Students cannot join this course from a public link while it is private.";
+    }
+
     toggleCourseVisibilityButton.textContent = isPublished ? "Make private" : "Publish course";
+    toggleCourseVisibilityButton.disabled = isArchived || isDeleted;
     copyPublicCourseLinkButton.disabled = !isPublished;
+    archiveCourseButton.disabled = isArchived || isDeleted;
+    deleteCourseButton.disabled = isDeleted;
 }
 
 async function copyPublicCourseLink() {
@@ -86,11 +178,27 @@ async function toggleCourseVisibility() {
         return;
     }
 
+    if (loadedCourse.status === "archived" || loadedCourse.status === "deleted") {
+        setStatus("Archived or deleted courses cannot be published from this page.", "error");
+        renderCourseAccess(loadedCourse);
+        return;
+    }
+
     const nextStatus = loadedCourse.status === "published" ? "private" : "published";
+
+    if (nextStatus === "published") {
+        const blockers = getPublishingBlockers();
+
+        if (blockers.length) {
+            setStatus(`Course cannot be published yet. ${blockers.join(" ")}`, "error");
+            return;
+        }
+    }
+
     const confirmed = window.confirm(
         nextStatus === "published"
-            ? "Publish this course so students with the public link can join?"
-            : "Make this course private and stop new public course joins?"
+            ? "Publish this course? Students with the public link will be able to join without a classroom code."
+            : "Unpublish this course? Enrolled students and classrooms keep access, but new public course joins will stop."
     );
 
     if (!confirmed) {
@@ -119,6 +227,72 @@ async function toggleCourseVisibility() {
     fillCourseForm(course);
     renderCourseAccess(course);
     setStatus(nextStatus === "published" ? "Course published." : "Course is private.", "success");
+}
+
+async function archiveCourse() {
+    if (!loadedCourse) {
+        setStatus("Course information is still loading.", "error");
+        return;
+    }
+
+    const confirmed = window.confirm(
+        `Archive "${loadedCourse.title || "this course"}"? It will be hidden from discovery, new students cannot enroll, and existing records will be preserved.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus("Archiving course...");
+    archiveCourseButton.disabled = true;
+
+    const { data: course, error } = await supabase
+        .from("courses")
+        .update({ status: "archived" })
+        .eq("id", courseId)
+        .select("id, title, description, subject_area, estimated_length, status")
+        .single();
+
+    if (error) {
+        archiveCourseButton.disabled = false;
+        setStatus(error.message || "Course could not be archived.", "error");
+        return;
+    }
+
+    loadedCourse = course;
+    renderCourseAccess(course);
+    setStatus("Course archived. Historical records are still available to manage.", "success");
+}
+
+async function deleteCourse() {
+    if (!loadedCourse) {
+        setStatus("Course information is still loading.", "error");
+        return;
+    }
+
+    const confirmed = window.confirm(
+        `Delete "${loadedCourse.title || "this course"}"? This is a soft delete: normal app views will hide it, but database records are preserved.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus("Deleting course...");
+    deleteCourseButton.disabled = true;
+
+    const { error } = await supabase
+        .from("courses")
+        .update({ status: "deleted" })
+        .eq("id", courseId);
+
+    if (error) {
+        deleteCourseButton.disabled = false;
+        setStatus(error.message || "Course could not be deleted.", "error");
+        return;
+    }
+
+    window.location.href = "../dashboard/index.html";
 }
 
 function toggleModuleForm(isOpen, module = null) {
@@ -554,6 +728,7 @@ async function loadModules() {
     loadedContentBlocks = contentBlocks;
     loadedQuestions = questions;
     renderModules(modules, lessons, contentBlocks, questions);
+    renderCourseAccess(loadedCourse);
     moduleCount.textContent = String(modules.length);
     lessonCount.textContent = String(lessons.length);
     return modules;
@@ -626,8 +801,8 @@ editorForm.addEventListener("submit", async (event) => {
         description: String(formData.get("description") || "").trim() || null,
     };
 
-    if (!changes.title || !changes.subject_area || !changes.estimated_length) {
-        setStatus("Enter a title, subject area, and estimated length before saving.", "error");
+    if (!changes.title || !changes.subject_area || !changes.estimated_length || !changes.description) {
+        setStatus("Enter a title, description, subject area, and estimated length before saving.", "error");
         return;
     }
 
@@ -653,6 +828,8 @@ editorForm.addEventListener("submit", async (event) => {
 
 toggleCourseVisibilityButton.addEventListener("click", toggleCourseVisibility);
 copyPublicCourseLinkButton.addEventListener("click", copyPublicCourseLink);
+archiveCourseButton.addEventListener("click", archiveCourse);
+deleteCourseButton.addEventListener("click", deleteCourse);
 
 moduleForm.addEventListener("submit", async (event) => {
     event.preventDefault();
