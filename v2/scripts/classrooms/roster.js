@@ -8,6 +8,7 @@ const contextElement = qs("[data-roster-context]");
 const statusElement = qs("[data-roster-status]");
 const shellElement = qs("[data-roster-shell]");
 const summaryElement = qs("[data-roster-summary]");
+const rosterAddForm = qs("[data-roster-add-form]");
 const rosterControls = qs("[data-roster-controls]");
 const rosterListElement = qs("[data-roster-list]");
 const manageClassroomsLink = qs("[data-manage-classrooms-link]");
@@ -378,6 +379,47 @@ async function restoreStudentToRoster(student) {
     setStatus(`${studentName} was restored to this classroom.`, "success");
 }
 
+async function addStudentByEmail(event) {
+    event.preventDefault();
+
+    const formData = new FormData(rosterAddForm);
+    const email = String(formData.get("studentEmail") || "").trim();
+
+    if (!email) {
+        setStatus("Enter a student email address.", "error");
+        return;
+    }
+
+    const submitButton = rosterAddForm.querySelector("button[type='submit']");
+
+    submitButton.disabled = true;
+    setStatus(`Adding ${email}...`);
+
+    const { error } = await supabase.rpc("add_student_to_classroom_by_email", {
+        classroom_to_check: classroomId,
+        student_email_input: email,
+    });
+
+    if (error) {
+        submitButton.disabled = false;
+        setStatus(error.message || "Student could not be added to this classroom.", "error");
+        return;
+    }
+
+    loadedRoster = await loadRoster();
+
+    if (!loadedRoster) {
+        submitButton.disabled = false;
+        return;
+    }
+
+    rosterAddForm.reset();
+    renderSummary(loadedRoster);
+    renderRosterView();
+    submitButton.disabled = false;
+    setStatus(`${email} is active in this classroom.`, "success");
+}
+
 function renderSummary(roster) {
     const activeCount = roster.filter((student) => student.enrollment_status === "active").length;
     const removedCount = roster.filter((student) => student.enrollment_status === "removed").length;
@@ -502,5 +544,6 @@ async function initializePage() {
 }
 
 rosterControls.addEventListener("change", renderRosterView);
+rosterAddForm.addEventListener("submit", addStudentByEmail);
 
 await initializePage();
