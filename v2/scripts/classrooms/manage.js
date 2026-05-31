@@ -70,6 +70,23 @@ function createJoinCode() {
     return `CTC-${[...values].map((value) => alphabet[value % alphabet.length]).join("")}`;
 }
 
+function createInviteToken() {
+    const values = new Uint8Array(18);
+    window.crypto.getRandomValues(values);
+
+    return btoa(String.fromCharCode(...values))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/g, "");
+}
+
+function getInviteUrl(inviteToken) {
+    const url = new URL("../dashboard/index.html", window.location.href);
+    url.searchParams.set("classroomInvite", inviteToken);
+
+    return url.href;
+}
+
 async function copyJoinCode(joinCode) {
     try {
         await navigator.clipboard.writeText(joinCode);
@@ -105,6 +122,37 @@ async function generateJoinCode(classroom) {
 
     await loadClassrooms();
     setStatus(`Join code generated: ${joinCode}`, "success");
+}
+
+async function copyInviteLink(classroom) {
+    let inviteToken = classroom.invite_token;
+
+    if (!inviteToken) {
+        inviteToken = createInviteToken();
+        setStatus("Creating invite link...");
+
+        const { error } = await supabase
+            .from("classrooms")
+            .update({ invite_token: inviteToken })
+            .eq("id", classroom.id)
+            .eq("course_id", courseId);
+
+        if (error) {
+            setStatus(error.message || "Invite link could not be created.", "error");
+            return;
+        }
+
+        await loadClassrooms();
+    }
+
+    const inviteUrl = getInviteUrl(inviteToken);
+
+    try {
+        await navigator.clipboard.writeText(inviteUrl);
+        setStatus("Invite link copied.", "success");
+    } catch (error) {
+        setStatus(`Copy this invite link: ${inviteUrl}`, "success");
+    }
 }
 
 async function toggleJoining(classroom) {
@@ -253,6 +301,11 @@ function renderClassrooms(classrooms) {
             classroom.join_enabled ? "managed-classroom-join-state" : "managed-classroom-join-state managed-classroom-join-state--closed",
             classroom.join_enabled ? "Joining is open" : "Joining is closed"
         );
+        const inviteState = createElement(
+            "p",
+            "managed-classroom-invite-state",
+            classroom.invite_token ? "Invite link ready" : "No invite link created yet."
+        );
         const badge = createElement("span", "badge badge--quiet", classroom.status);
         const actions = createElement("div", "managed-classroom-actions");
         const dragHint = createElement("span", "managed-classroom-drag-hint", "Drag to reorder");
@@ -262,6 +315,7 @@ function renderClassrooms(classrooms) {
             "secondary-button lesson-action",
             classroom.join_code ? "Copy join code" : "Generate join code"
         );
+        const inviteButton = createElement("button", "secondary-button lesson-action", "Copy invite link");
         const regenerateButton = createElement("button", "secondary-button lesson-action", "Regenerate code");
         const joinToggleButton = createElement(
             "button",
@@ -280,6 +334,8 @@ function renderClassrooms(classrooms) {
 
             generateJoinCode(classroom);
         });
+        inviteButton.type = "button";
+        inviteButton.addEventListener("click", () => copyInviteLink(classroom));
         regenerateButton.type = "button";
         regenerateButton.hidden = !classroom.join_code;
         regenerateButton.addEventListener("click", () => generateJoinCode(classroom));
@@ -287,8 +343,8 @@ function renderClassrooms(classrooms) {
         joinToggleButton.addEventListener("click", () => toggleJoining(classroom));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteClassroom(classroom));
-        actions.append(dragHint, editButton, joinButton, regenerateButton, joinToggleButton, deleteButton);
-        item.append(title, details, joinCode, joinState, badge, actions);
+        actions.append(dragHint, editButton, joinButton, inviteButton, regenerateButton, joinToggleButton, deleteButton);
+        item.append(title, details, joinCode, joinState, inviteState, badge, actions);
         list.append(item);
     });
 
@@ -298,7 +354,7 @@ function renderClassrooms(classrooms) {
 async function loadClassrooms() {
     const { data: classrooms, error } = await supabase
         .from("classrooms")
-        .select("id, name, period_block, school_year, status, display_order, join_code, join_enabled")
+        .select("id, name, period_block, school_year, status, display_order, join_code, join_enabled, invite_token")
         .eq("course_id", courseId)
         .neq("status", "deleted")
         .order("display_order", { ascending: true })

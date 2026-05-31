@@ -23,6 +23,22 @@
 
         <p class="auth-status management-status" data-course-status aria-live="polite"></p>
 
+        <section class="management-section" data-course-content hidden aria-labelledby="course-access-heading">
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2 id="course-access-heading">Course access</h2>
+                    <p class="section-copy">Publish the course when students can join it without a classroom code.</p>
+                </div>
+                <span class="badge badge--quiet" data-course-visibility>Loading...</span>
+            </div>
+
+            <p class="course-muted" data-public-course-copy>Public course joining is unavailable until this course is published.</p>
+            <div class="course-form-actions">
+                <button type="button" class="secondary-button" data-toggle-course-visibility>Publish course</button>
+                <button type="button" class="secondary-button" data-copy-public-course-link>Copy public course link</button>
+            </div>
+        </section>
+
         <section class="management-section" data-course-content hidden aria-labelledby="course-basics-heading">
             <div class="section-header">
                 <h2 id="course-basics-heading">Course basics</h2>
@@ -145,7 +161,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/courses/editor.js"></script>
+    <script type="module" src="../../scripts/courses/editor.js?v=20260531-public-course-join"></script>
 </body>
 
 </html>

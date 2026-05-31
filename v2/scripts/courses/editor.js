@@ -18,10 +18,15 @@ const cancelModuleButton = qs("[data-cancel-module-form]");
 const lessonForm = qs("[data-lesson-form]");
 const lessonFormHeading = qs("[data-lesson-form-heading]");
 const cancelLessonButton = qs("[data-cancel-lesson-form]");
+const courseVisibility = qs("[data-course-visibility]");
+const publicCourseCopy = qs("[data-public-course-copy]");
+const toggleCourseVisibilityButton = qs("[data-toggle-course-visibility]");
+const copyPublicCourseLinkButton = qs("[data-copy-public-course-link]");
 let loadedModules = [];
 let loadedLessons = [];
 let loadedContentBlocks = [];
 let loadedQuestions = [];
+let loadedCourse = null;
 const collapsedModuleIds = new Set();
 
 function setStatus(message, tone = "info") {
@@ -40,6 +45,80 @@ function fillCourseForm(course) {
     editorForm.elements["subject-area"].value = course.subject_area || "";
     editorForm.elements["estimated-length"].value = course.estimated_length || "";
     editorForm.elements.description.value = course.description || "";
+}
+
+function getPublicCourseUrl(course) {
+    const url = new URL("../dashboard/index.html", window.location.href);
+    url.searchParams.set("courseJoin", course.id);
+
+    return url.href;
+}
+
+function renderCourseAccess(course) {
+    const isPublished = course.status === "published";
+    courseVisibility.textContent = isPublished ? "Public" : "Private";
+    publicCourseCopy.textContent = isPublished
+        ? "Students with the public course link can join this course without teacher approval."
+        : "Students cannot join this course from a public link while it is private.";
+    toggleCourseVisibilityButton.textContent = isPublished ? "Make private" : "Publish course";
+    copyPublicCourseLinkButton.disabled = !isPublished;
+}
+
+async function copyPublicCourseLink() {
+    if (!loadedCourse || loadedCourse.status !== "published") {
+        setStatus("Publish the course before copying a public course link.", "error");
+        return;
+    }
+
+    const courseUrl = getPublicCourseUrl(loadedCourse);
+
+    try {
+        await navigator.clipboard.writeText(courseUrl);
+        setStatus("Public course link copied.", "success");
+    } catch (error) {
+        setStatus(`Copy this public course link: ${courseUrl}`, "success");
+    }
+}
+
+async function toggleCourseVisibility() {
+    if (!loadedCourse) {
+        setStatus("Course information is still loading.", "error");
+        return;
+    }
+
+    const nextStatus = loadedCourse.status === "published" ? "private" : "published";
+    const confirmed = window.confirm(
+        nextStatus === "published"
+            ? "Publish this course so students with the public link can join?"
+            : "Make this course private and stop new public course joins?"
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus(nextStatus === "published" ? "Publishing course..." : "Making course private...");
+    toggleCourseVisibilityButton.disabled = true;
+
+    const { data: course, error } = await supabase
+        .from("courses")
+        .update({ status: nextStatus })
+        .eq("id", courseId)
+        .select("id, title, description, subject_area, estimated_length, status")
+        .single();
+
+    toggleCourseVisibilityButton.disabled = false;
+
+    if (error) {
+        setStatus(error.message || "Course access could not be updated.", "error");
+        return;
+    }
+
+    loadedCourse = course;
+    headingElement.textContent = course.title || "Untitled course";
+    fillCourseForm(course);
+    renderCourseAccess(course);
+    setStatus(nextStatus === "published" ? "Course published." : "Course is private.", "success");
 }
 
 function toggleModuleForm(isOpen, module = null) {
@@ -497,7 +576,7 @@ async function confirmCourseManagement() {
 
     const { data: course, error: courseError } = await supabase
         .from("courses")
-        .select("id, title, description, subject_area, estimated_length")
+        .select("id, title, description, subject_area, estimated_length, status")
         .eq("id", courseId)
         .single();
 
@@ -525,7 +604,9 @@ async function initializePage() {
     }
 
     headingElement.textContent = course.title || "Untitled course";
+    loadedCourse = course;
     fillCourseForm(course);
+    renderCourseAccess(course);
     showContent();
     const modules = await loadModules();
 
@@ -556,7 +637,7 @@ editorForm.addEventListener("submit", async (event) => {
         .from("courses")
         .update(changes)
         .eq("id", courseId)
-        .select("title")
+        .select("id, title, description, subject_area, estimated_length, status")
         .single();
 
     if (error) {
@@ -565,8 +646,13 @@ editorForm.addEventListener("submit", async (event) => {
     }
 
     headingElement.textContent = course.title;
+    loadedCourse = course;
+    renderCourseAccess(course);
     setStatus("Course basics saved.", "success");
 });
+
+toggleCourseVisibilityButton.addEventListener("click", toggleCourseVisibility);
+copyPublicCourseLinkButton.addEventListener("click", copyPublicCourseLink);
 
 moduleForm.addEventListener("submit", async (event) => {
     event.preventDefault();

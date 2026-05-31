@@ -1597,6 +1597,13 @@ h2 {
     color: #9b3c2f;
 }
 
+.managed-classroom-invite-state {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: #49617f;
+    font-weight: 700;
+}
+
 @media (min-width: 900px) {
     .auth-card {
         padding: 34px;

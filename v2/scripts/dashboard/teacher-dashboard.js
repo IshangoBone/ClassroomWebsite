@@ -30,6 +30,7 @@ const managedCoursesHeading = qs("[data-managed-courses-heading]");
 const managedCoursesCopy = qs("[data-managed-courses-copy]");
 const teacherSubmissionsSection = qs("[data-teacher-submissions-section]");
 const studentJoinSection = qs("[data-student-join-section]");
+const dashboardParams = new URLSearchParams(window.location.search);
 
 let currentProfile = null;
 let dashboardCourses = [];
@@ -99,6 +100,12 @@ function renderEmpty(container, message) {
     container.replaceChildren(createElement("p", "empty-state", message));
 }
 
+function getJoinPreviewLabel(preview) {
+    return preview.classroom_name
+        ? `${preview.course_title} / ${preview.classroom_name}`
+        : preview.course_title;
+}
+
 async function handleStudentJoinSubmit(event) {
     event.preventDefault();
 
@@ -111,70 +118,124 @@ async function handleStudentJoinSubmit(event) {
         return;
     }
 
-    setStatus("Checking join code...");
     submitButton.disabled = true;
-
-    const { data: previewData, error: previewError } = await supabase.rpc("preview_classroom_join_by_code", {
-        join_code_input: joinCode,
+    await joinClassroomFromAccess({
+        previewMessage: "Checking join code...",
+        previewRpc: "preview_classroom_join_by_code",
+        joinRpc: "join_classroom_by_code",
+        payload: { join_code_input: joinCode },
+        notFoundMessage: "That join code was not found.",
+        failureMessage: "That classroom could not be joined.",
+        onComplete: () => studentJoinForm.reset(),
     });
+    submitButton.disabled = false;
+}
+
+async function joinClassroomFromAccess(options) {
+    const {
+        previewMessage,
+        previewRpc,
+        joinRpc,
+        payload,
+        notFoundMessage,
+        failureMessage,
+        successFallback = "Classroom joined.",
+        onComplete,
+    } = options;
+
+    setStatus(previewMessage);
+
+    const { data: previewData, error: previewError } = await supabase.rpc(previewRpc, payload);
 
     if (previewError) {
-        submitButton.disabled = false;
-        setStatus(previewError.message || "That classroom could not be joined.", "error");
+        setStatus(previewError.message || failureMessage, "error");
         return;
     }
 
     const preview = previewData?.[0];
 
     if (!preview) {
-        submitButton.disabled = false;
-        setStatus("That join code was not found.", "error");
+        setStatus(notFoundMessage, "error");
         return;
     }
 
     if (preview.already_enrolled) {
-        submitButton.disabled = false;
-        studentJoinForm.reset();
-        setStatus(`You are already enrolled in ${preview.classroom_name}.`, "success");
+        onComplete?.();
+        setStatus(`You are already enrolled in ${getJoinPreviewLabel(preview)}.`, "success");
         return;
     }
 
     if (!preview.is_joining_open) {
-        submitButton.disabled = false;
         setStatus("Joining is closed for this classroom.", "error");
         return;
     }
 
-    const confirmed = window.confirm(`Join ${preview.course_title} / ${preview.classroom_name}?`);
+    const confirmed = window.confirm(`Join ${getJoinPreviewLabel(preview)}?`);
 
     if (!confirmed) {
-        submitButton.disabled = false;
         setStatus("Join canceled.");
         return;
     }
 
     setStatus("Joining classroom...");
 
-    const { data, error } = await supabase.rpc("join_classroom_by_code", {
-        join_code_input: joinCode,
-    });
-
-    submitButton.disabled = false;
+    const { data, error } = await supabase.rpc(joinRpc, payload);
 
     if (error) {
-        setStatus(error.message || "That classroom could not be joined.", "error");
+        setStatus(error.message || failureMessage, "error");
         return;
     }
 
     const joinedClassroom = data?.[0];
-    studentJoinForm.reset();
+    onComplete?.();
     await refreshDashboard();
     setStatus(
-        joinedClassroom?.classroom_name
-            ? `Joined ${joinedClassroom.classroom_name}.`
-            : "Classroom joined.",
+        joinedClassroom?.classroom_name || joinedClassroom?.course_title
+            ? `Joined ${joinedClassroom.classroom_name || joinedClassroom.course_title}.`
+            : successFallback,
         "success"
     );
+}
+
+async function handleClassroomInvite(inviteToken) {
+    if (!inviteToken) {
+        return;
+    }
+
+    await joinClassroomFromAccess({
+        previewMessage: "Checking invite link...",
+        previewRpc: "preview_classroom_join_by_invite",
+        joinRpc: "join_classroom_by_invite",
+        payload: { invite_token_input: inviteToken },
+        notFoundMessage: "That invite link was not found.",
+        failureMessage: "That invite link could not be joined.",
+        onComplete: () => {
+            const cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete("classroomInvite");
+            window.history.replaceState({}, "", cleanUrl);
+        },
+    });
+}
+
+async function handlePublicCourseJoin(courseIdToJoin) {
+    if (!courseIdToJoin) {
+        return;
+    }
+
+    await joinClassroomFromAccess({
+        previewMessage: "Checking public course link...",
+        previewRpc: "preview_public_course_join",
+        joinRpc: "join_public_course",
+        payload: { course_id_input: courseIdToJoin },
+        notFoundMessage: "That public course was not found.",
+        failureMessage: "That public course could not be joined.",
+        successFallback: "Course joined.",
+        onComplete: () => {
+            const cleanUrl = new URL(window.location.href);
+            cleanUrl.searchParams.delete("courseJoin");
+            window.history.replaceState({}, "", cleanUrl);
+        },
+    });
 }
 
 async function loadTeachingCourses(profileId) {
@@ -974,6 +1035,8 @@ async function initializeDashboard() {
     greetingElement.textContent = `Welcome, ${profile.username || "there"}. Manage teaching work and continue saved lessons.`;
     courseFormToggle.disabled = false;
     await refreshDashboard();
+    await handleClassroomInvite(dashboardParams.get("classroomInvite"));
+    await handlePublicCourseJoin(dashboardParams.get("courseJoin"));
 }
 
 courseFormToggle.addEventListener("click", () => {
