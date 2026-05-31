@@ -1610,6 +1610,17 @@ h2 {
     gap: 14px;
 }
 
+.roster-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 240px));
+    gap: 12px;
+    align-items: end;
+    padding: 16px;
+    border: 1px solid #dbe4f1;
+    border-radius: 16px;
+    background: #f7faff;
+}
+
 .roster-list {
     display: grid;
     gap: 10px;
@@ -1659,6 +1670,7 @@ h2 {
 
     .dashboard-summary,
     .course-form,
+    .roster-controls,
     .roster-item,
     .roster-summary-grid,
     .submission-filter-form {

@@ -33,6 +33,29 @@
                 <p class="empty-state">Loading roster summary...</p>
             </div>
 
+            <form class="roster-controls" data-roster-controls>
+                <label class="form-field">
+                    <span>Status</span>
+                    <select name="status">
+                        <option value="">All students</option>
+                        <option value="active">Active</option>
+                        <option value="removed">Removed</option>
+                        <option value="completed">Completed</option>
+                        <option value="dropped">Dropped</option>
+                    </select>
+                </label>
+
+                <label class="form-field">
+                    <span>Sort by</span>
+                    <select name="sort">
+                        <option value="name-asc">Name A-Z</option>
+                        <option value="joined-desc">Newest joined</option>
+                        <option value="joined-asc">Oldest joined</option>
+                        <option value="status-asc">Status</option>
+                    </select>
+                </label>
+            </form>
+
             <div data-roster-list>
                 <p class="empty-state">Loading enrolled students...</p>
             </div>

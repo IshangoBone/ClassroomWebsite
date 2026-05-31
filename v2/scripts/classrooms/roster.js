@@ -8,8 +8,10 @@ const contextElement = qs("[data-roster-context]");
 const statusElement = qs("[data-roster-status]");
 const shellElement = qs("[data-roster-shell]");
 const summaryElement = qs("[data-roster-summary]");
+const rosterControls = qs("[data-roster-controls]");
 const rosterListElement = qs("[data-roster-list]");
 const manageClassroomsLink = qs("[data-manage-classrooms-link]");
+let loadedRoster = [];
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -37,11 +39,53 @@ function formatDate(value) {
     });
 }
 
+function getStudentSortName(student) {
+    return [
+        student.legal_last_name,
+        student.legal_first_name,
+        student.username,
+        student.email,
+    ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase();
+}
+
 function createSummaryCard(label, value) {
     const card = createElement("article", "summary-card");
 
     card.append(createElement("span", "summary-label", label), createElement("strong", "summary-value summary-value--small", value));
     return card;
+}
+
+function getRosterView() {
+    const formData = new FormData(rosterControls);
+    const status = String(formData.get("status") || "");
+    const sort = String(formData.get("sort") || "name-asc");
+    const filteredRoster = status
+        ? loadedRoster.filter((student) => student.enrollment_status === status)
+        : [...loadedRoster];
+
+    return filteredRoster.sort((firstStudent, secondStudent) => {
+        if (sort === "joined-desc") {
+            return new Date(secondStudent.joined_at || 0) - new Date(firstStudent.joined_at || 0);
+        }
+
+        if (sort === "joined-asc") {
+            return new Date(firstStudent.joined_at || 0) - new Date(secondStudent.joined_at || 0);
+        }
+
+        if (sort === "status-asc") {
+            return String(firstStudent.enrollment_status || "").localeCompare(String(secondStudent.enrollment_status || ""))
+                || getStudentSortName(firstStudent).localeCompare(getStudentSortName(secondStudent));
+        }
+
+        return getStudentSortName(firstStudent).localeCompare(getStudentSortName(secondStudent));
+    });
+}
+
+function renderRosterView() {
+    renderRoster(getRosterView());
 }
 
 async function loadCurrentProfile() {
@@ -135,7 +179,11 @@ function renderSummary(roster) {
 
 function renderRoster(roster) {
     if (!roster.length) {
-        rosterListElement.replaceChildren(createElement("p", "empty-state", "No students have joined this classroom yet."));
+        const emptyMessage = loadedRoster.length
+            ? "No students match the current roster filters."
+            : "No students have joined this classroom yet.";
+
+        rosterListElement.replaceChildren(createElement("p", "empty-state", emptyMessage));
         return;
     }
 
@@ -181,15 +229,17 @@ async function initializePage() {
     manageClassroomsLink.href = `manage.html?course=${encodeURIComponent(classroom.course_id)}`;
     shellElement.hidden = false;
 
-    const roster = await loadRoster();
+    loadedRoster = await loadRoster();
 
-    if (!roster) {
+    if (!loadedRoster) {
         return;
     }
 
-    renderSummary(roster);
-    renderRoster(roster);
+    renderSummary(loadedRoster);
+    renderRosterView();
     setStatus("");
 }
+
+rosterControls.addEventListener("change", renderRosterView);
 
 await initializePage();
