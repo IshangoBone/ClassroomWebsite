@@ -1674,6 +1674,13 @@ h2 {
     justify-content: flex-end;
 }
 
+.section-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
 @media (min-width: 900px) {
     .auth-card {
         padding: 34px;
@@ -1709,6 +1716,14 @@ h2 {
 
     .dashboard-join-panel {
         display: grid;
+    }
+
+    .section-actions {
+        justify-content: stretch;
+    }
+
+    .section-actions .secondary-button {
+        width: 100%;
     }
 
     .dashboard-join-form {

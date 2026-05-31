@@ -11,7 +11,9 @@ const summaryElement = qs("[data-roster-summary]");
 const rosterAddForm = qs("[data-roster-add-form]");
 const rosterControls = qs("[data-roster-controls]");
 const rosterListElement = qs("[data-roster-list]");
+const copyInviteLinkButton = qs("[data-copy-invite-link]");
 const manageClassroomsLink = qs("[data-manage-classrooms-link]");
+let currentClassroom = null;
 let loadedRoster = [];
 let courseLessonCount = 0;
 let rosterActivityByStudent = new Map();
@@ -53,6 +55,23 @@ function formatActivityDate(value) {
         hour: "numeric",
         minute: "2-digit",
     });
+}
+
+function createInviteToken() {
+    const values = new Uint8Array(18);
+    window.crypto.getRandomValues(values);
+
+    return btoa(String.fromCharCode(...values))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/g, "");
+}
+
+function getInviteUrl(inviteToken) {
+    const url = new URL("../dashboard/index.html", window.location.href);
+    url.searchParams.set("classroomInvite", inviteToken);
+
+    return url.href;
 }
 
 function getStudentSortName(student) {
@@ -219,7 +238,7 @@ async function loadClassroomContext() {
 
     const { data: classroom, error: classroomError } = await supabase
         .from("classrooms")
-        .select("id, course_id, name, period_block, school_year, status")
+        .select("id, course_id, name, period_block, school_year, status, invite_token")
         .eq("id", classroomId)
         .single();
 
@@ -420,6 +439,47 @@ async function addStudentByEmail(event) {
     setStatus(`${email} is active in this classroom.`, "success");
 }
 
+async function copyInviteLink() {
+    if (!currentClassroom) {
+        setStatus("Classroom details are still loading.", "error");
+        return;
+    }
+
+    let inviteToken = currentClassroom.invite_token;
+
+    copyInviteLinkButton.disabled = true;
+
+    if (!inviteToken) {
+        inviteToken = createInviteToken();
+        setStatus("Creating invite link...");
+
+        const { error } = await supabase
+            .from("classrooms")
+            .update({ invite_token: inviteToken })
+            .eq("id", currentClassroom.id)
+            .eq("course_id", currentClassroom.course_id);
+
+        if (error) {
+            copyInviteLinkButton.disabled = false;
+            setStatus(error.message || "Invite link could not be created.", "error");
+            return;
+        }
+
+        currentClassroom.invite_token = inviteToken;
+    }
+
+    const inviteUrl = getInviteUrl(inviteToken);
+
+    try {
+        await navigator.clipboard.writeText(inviteUrl);
+        setStatus("Invite link copied.", "success");
+    } catch (error) {
+        setStatus(`Copy this invite link: ${inviteUrl}`, "success");
+    }
+
+    copyInviteLinkButton.disabled = false;
+}
+
 function renderSummary(roster) {
     const activeCount = roster.filter((student) => student.enrollment_status === "active").length;
     const removedCount = roster.filter((student) => student.enrollment_status === "removed").length;
@@ -515,6 +575,7 @@ async function initializePage() {
         ? `${classroom.name} - ${classroom.period_block}`
         : classroom.name;
 
+    currentClassroom = classroom;
     headingElement.textContent = `${classroomLabel} roster`;
     contextElement.textContent = `${course?.title || "Untitled course"} · ${classroom.school_year || "School year not set"} · ${classroom.status}`;
     manageClassroomsLink.href = `manage.html?course=${encodeURIComponent(classroom.course_id)}`;
@@ -545,5 +606,6 @@ async function initializePage() {
 
 rosterControls.addEventListener("change", renderRosterView);
 rosterAddForm.addEventListener("submit", addStudentByEmail);
+copyInviteLinkButton.addEventListener("click", copyInviteLink);
 
 await initializePage();
