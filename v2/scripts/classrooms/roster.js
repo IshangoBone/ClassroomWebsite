@@ -298,7 +298,7 @@ function renderRoster(roster) {
         const item = createElement("li", "roster-item");
         const identity = createElement("div", "roster-identity");
         const activityMeta = createElement("div", "roster-activity");
-        const name = createElement("strong", "roster-name", formatStudentName(student));
+        const name = createElement("a", "roster-name submission-name", formatStudentName(student));
         const username = createElement("span", "course-muted", student.username ? `@${student.username}` : "No username set");
         const email = createElement("span", "course-muted", student.email || "No email available");
         const joined = createElement("span", "course-muted", `Joined ${formatDate(student.joined_at)}`);
@@ -312,6 +312,7 @@ function renderRoster(roster) {
         const actions = createElement("div", "roster-actions");
         const removeButton = createElement("button", "secondary-button destructive-button lesson-action", "Remove student");
 
+        name.href = `student.html?classroom=${encodeURIComponent(classroomId)}&student=${encodeURIComponent(student.student_user_id)}`;
         activityMeta.append(lessonWork, lastActivity);
 
         if (activity.latestSubmissionId) {
