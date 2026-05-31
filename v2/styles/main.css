@@ -1604,6 +1604,40 @@ h2 {
     font-weight: 700;
 }
 
+.roster-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.roster-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.roster-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 16px;
+    border: 1px solid #dbe4f1;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.roster-identity {
+    display: grid;
+    gap: 4px;
+}
+
+.roster-name {
+    color: #1d3760;
+}
+
 @media (min-width: 900px) {
     .auth-card {
         padding: 34px;
@@ -1625,8 +1659,14 @@ h2 {
 
     .dashboard-summary,
     .course-form,
+    .roster-item,
+    .roster-summary-grid,
     .submission-filter-form {
         grid-template-columns: 1fr;
+    }
+
+    .roster-item {
+        justify-items: start;
     }
 
     .dashboard-join-panel {

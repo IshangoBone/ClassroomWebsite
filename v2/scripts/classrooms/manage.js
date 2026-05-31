@@ -353,6 +353,7 @@ function renderClassrooms(classrooms) {
             classroom.join_code ? "Copy join code" : "Generate join code"
         );
         const inviteButton = createElement("button", "secondary-button lesson-action", "Copy invite link");
+        const rosterLink = createElement("a", "secondary-button lesson-action", "View roster");
         const regenerateButton = createElement("button", "secondary-button lesson-action", "Regenerate code");
         const archiveButton = createElement("button", "secondary-button lesson-action", "Archive classroom");
         const joinToggleButton = createElement(
@@ -377,6 +378,7 @@ function renderClassrooms(classrooms) {
         inviteButton.type = "button";
         inviteButton.disabled = isArchived;
         inviteButton.addEventListener("click", () => copyInviteLink(classroom));
+        rosterLink.href = `roster.html?classroom=${encodeURIComponent(classroom.id)}`;
         regenerateButton.type = "button";
         regenerateButton.hidden = !classroom.join_code || isArchived;
         regenerateButton.addEventListener("click", () => generateJoinCode(classroom));
@@ -388,7 +390,7 @@ function renderClassrooms(classrooms) {
         joinToggleButton.addEventListener("click", () => toggleJoining(classroom));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteClassroom(classroom));
-        actions.append(dragHint, editButton, joinButton, inviteButton, regenerateButton, archiveButton, joinToggleButton, deleteButton);
+        actions.append(dragHint, editButton, joinButton, inviteButton, rosterLink, regenerateButton, archiveButton, joinToggleButton, deleteButton);
         item.append(title, details, joinCode, joinState, inviteState, badge, actions);
         list.append(item);
     });
