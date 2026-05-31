@@ -78,10 +78,20 @@ function getStudentActivity(studentId) {
 
 function getStudentProgress(studentId) {
     const activity = getStudentActivity(studentId);
+    const hasKnownLessonTotal = courseLessonCount > 0;
     const progressPercent = courseLessonCount ? Math.round((activity.submittedCount / courseLessonCount) * 100) : 0;
+    const incompleteCount = courseLessonCount
+        ? Math.max(courseLessonCount - activity.submittedCount, 0)
+        : activity.draftCount;
 
     return {
-        incompleteCount: Math.max(courseLessonCount - activity.submittedCount, 0),
+        incompleteCount,
+        isComplete: hasKnownLessonTotal
+            ? activity.submittedCount >= courseLessonCount
+            : activity.submittedCount > 0 && activity.draftCount === 0,
+        needsWork: hasKnownLessonTotal
+            ? Boolean(incompleteCount) || activity.draftCount > 0
+            : activity.submittedCount === 0 || activity.draftCount > 0,
         progressPercent,
         submittedCount: activity.submittedCount,
         totalLessons: courseLessonCount,
@@ -106,12 +116,43 @@ function createSummaryCard(label, value) {
 function getRosterView() {
     const formData = new FormData(rosterControls);
     const status = String(formData.get("status") || "");
+    const work = String(formData.get("work") || "");
     const sort = String(formData.get("sort") || "name-asc");
-    const filteredRoster = status
+    let filteredRoster = status
         ? loadedRoster.filter((student) => student.enrollment_status === status)
         : [...loadedRoster];
 
+    if (work) {
+        filteredRoster = filteredRoster.filter((student) => {
+            const progress = getStudentProgress(student.student_user_id);
+
+            if (work === "needs-work") {
+                return progress.needsWork;
+            }
+
+            if (work === "missing") {
+                return progress.submittedCount === 0;
+            }
+
+            if (work === "complete") {
+                return progress.isComplete;
+            }
+
+            return true;
+        });
+    }
+
     return filteredRoster.sort((firstStudent, secondStudent) => {
+        if (sort === "progress-asc" || sort === "progress-desc") {
+            const firstProgress = getStudentProgress(firstStudent.student_user_id).progressPercent;
+            const secondProgress = getStudentProgress(secondStudent.student_user_id).progressPercent;
+            const progressSort = sort === "progress-asc"
+                ? firstProgress - secondProgress
+                : secondProgress - firstProgress;
+
+            return progressSort || getStudentSortName(firstStudent).localeCompare(getStudentSortName(secondStudent));
+        }
+
         if (sort === "last-activity-desc") {
             const firstActivity = getStudentActivity(firstStudent.student_user_id).lastActivityAt || 0;
             const secondActivity = getStudentActivity(secondStudent.student_user_id).lastActivityAt || 0;
@@ -340,10 +381,12 @@ async function restoreStudentToRoster(student) {
 function renderSummary(roster) {
     const activeCount = roster.filter((student) => student.enrollment_status === "active").length;
     const removedCount = roster.filter((student) => student.enrollment_status === "removed").length;
+    const needsWorkCount = roster.filter((student) => getStudentProgress(student.student_user_id).needsWork).length;
 
     summaryElement.replaceChildren(
         createSummaryCard("Total students", String(roster.length)),
         createSummaryCard("Active", String(activeCount)),
+        createSummaryCard("Needs work", String(needsWorkCount)),
         createSummaryCard("Removed", String(removedCount))
     );
 }

@@ -24,7 +24,7 @@
             <div class="section-header section-header--actions">
                 <div>
                     <h2>Students</h2>
-                    <p class="section-copy">Read-only roster for this classroom. Removal, filters, and progress drill-downs come next.</p>
+                    <p class="section-copy">Review enrollment, progress, activity, and student work for this classroom.</p>
                 </div>
                 <a class="secondary-button" href="../dashboard/index.html" data-manage-classrooms-link>Manage classrooms</a>
             </div>
@@ -46,9 +46,21 @@
                 </label>
 
                 <label class="form-field">
+                    <span>Work</span>
+                    <select name="work">
+                        <option value="">All work statuses</option>
+                        <option value="needs-work">Missing or incomplete</option>
+                        <option value="missing">No submitted work</option>
+                        <option value="complete">Complete</option>
+                    </select>
+                </label>
+
+                <label class="form-field">
                     <span>Sort by</span>
                     <select name="sort">
                         <option value="name-asc">Name A-Z</option>
+                        <option value="progress-asc">Progress low-high</option>
+                        <option value="progress-desc">Progress high-low</option>
                         <option value="last-activity-desc">Last activity</option>
                         <option value="joined-desc">Newest joined</option>
                         <option value="joined-asc">Oldest joined</option>
