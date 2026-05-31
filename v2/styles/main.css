@@ -1631,7 +1631,7 @@ h2 {
 
 .roster-item {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 0.65fr) auto auto;
     gap: 12px;
     align-items: center;
     padding: 16px;
@@ -1641,6 +1641,11 @@ h2 {
 }
 
 .roster-identity {
+    display: grid;
+    gap: 4px;
+}
+
+.roster-activity {
     display: grid;
     gap: 4px;
 }
