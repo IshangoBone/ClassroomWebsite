@@ -1631,7 +1631,7 @@ h2 {
 
 .roster-item {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     gap: 12px;
     align-items: center;
     padding: 16px;
@@ -1647,6 +1647,11 @@ h2 {
 
 .roster-name {
     color: #1d3760;
+}
+
+.roster-actions {
+    display: flex;
+    justify-content: flex-end;
 }
 
 @media (min-width: 900px) {

@@ -166,6 +166,39 @@ async function loadRoster() {
     return data || [];
 }
 
+async function removeStudentFromRoster(student) {
+    const studentName = formatStudentName(student);
+    const confirmed = window.confirm(
+        `Remove ${studentName} from this classroom? Their existing submissions stay available for review, but they will lose active classroom access.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus(`Removing ${studentName}...`);
+
+    const { error } = await supabase.rpc("remove_student_from_classroom", {
+        classroom_to_check: classroomId,
+        enrollment_to_remove: student.enrollment_id,
+    });
+
+    if (error) {
+        setStatus(error.message || "Student could not be removed from the classroom.", "error");
+        return;
+    }
+
+    loadedRoster = await loadRoster();
+
+    if (!loadedRoster) {
+        return;
+    }
+
+    renderSummary(loadedRoster);
+    renderRosterView();
+    setStatus(`${studentName} was removed from this classroom.`, "success");
+}
+
 function renderSummary(roster) {
     const activeCount = roster.filter((student) => student.enrollment_status === "active").length;
     const removedCount = roster.filter((student) => student.enrollment_status === "removed").length;
@@ -197,9 +230,16 @@ function renderRoster(roster) {
         const email = createElement("span", "course-muted", student.email || "No email available");
         const joined = createElement("span", "course-muted", `Joined ${formatDate(student.joined_at)}`);
         const badge = createElement("span", "badge badge--quiet", student.enrollment_status);
+        const actions = createElement("div", "roster-actions");
+        const removeButton = createElement("button", "secondary-button destructive-button lesson-action", "Remove student");
+
+        removeButton.type = "button";
+        removeButton.disabled = student.enrollment_status === "removed";
+        removeButton.addEventListener("click", () => removeStudentFromRoster(student));
+        actions.append(removeButton);
 
         identity.append(name, username, email);
-        item.append(identity, joined, badge);
+        item.append(identity, joined, badge, actions);
         list.append(item);
     });
 
