@@ -12,6 +12,7 @@ const rosterControls = qs("[data-roster-controls]");
 const rosterListElement = qs("[data-roster-list]");
 const manageClassroomsLink = qs("[data-manage-classrooms-link]");
 let loadedRoster = [];
+let courseLessonCount = 0;
 let rosterActivityByStudent = new Map();
 
 function setStatus(message, tone = "info") {
@@ -73,6 +74,26 @@ function getStudentActivity(studentId) {
         submittedCount: 0,
         totalCount: 0,
     };
+}
+
+function getStudentProgress(studentId) {
+    const activity = getStudentActivity(studentId);
+    const progressPercent = courseLessonCount ? Math.round((activity.submittedCount / courseLessonCount) * 100) : 0;
+
+    return {
+        incompleteCount: Math.max(courseLessonCount - activity.submittedCount, 0),
+        progressPercent,
+        submittedCount: activity.submittedCount,
+        totalLessons: courseLessonCount,
+    };
+}
+
+function formatProgress(progress) {
+    if (!progress.totalLessons && progress.submittedCount) {
+        return `${progress.submittedCount} submitted`;
+    }
+
+    return `${progress.progressPercent}% (${progress.submittedCount}/${progress.totalLessons || 0} lessons)`;
 }
 
 function createSummaryCard(label, value) {
@@ -237,6 +258,19 @@ async function loadRosterActivity() {
     return activityByStudent;
 }
 
+async function loadCourseLessonCount() {
+    const { data, error } = await supabase.rpc("classroom_course_lesson_count", {
+        classroom_to_check: classroomId,
+    });
+
+    if (error) {
+        setStatus(error.message || "Course lesson count could not be loaded.", "error");
+        return null;
+    }
+
+    return Number(data || 0);
+}
+
 async function removeStudentFromRoster(student) {
     const studentName = formatStudentName(student);
     const confirmed = window.confirm(
@@ -328,6 +362,7 @@ function renderRoster(roster) {
 
     roster.forEach((student) => {
         const activity = getStudentActivity(student.student_user_id);
+        const progress = getStudentProgress(student.student_user_id);
         const item = createElement("li", "roster-item");
         const identity = createElement("div", "roster-identity");
         const activityMeta = createElement("div", "roster-activity");
@@ -341,13 +376,18 @@ function renderRoster(roster) {
             `Lesson work: ${activity.totalCount} total, ${activity.submittedCount} submitted`
         );
         const lastActivity = createElement("span", "course-muted", `Last activity: ${formatActivityDate(activity.lastActivityAt)}`);
+        const progressMeta = createElement(
+            "span",
+            "course-muted",
+            `Progress: ${formatProgress(progress)}`
+        );
         const badge = createElement("span", "badge badge--quiet", student.enrollment_status);
         const actions = createElement("div", "roster-actions");
         const removeButton = createElement("button", "secondary-button destructive-button lesson-action", "Remove student");
         const restoreButton = createElement("button", "secondary-button lesson-action", "Restore student");
 
         name.href = `student.html?classroom=${encodeURIComponent(classroomId)}&student=${encodeURIComponent(student.student_user_id)}`;
-        activityMeta.append(lessonWork, lastActivity);
+        activityMeta.append(lessonWork, progressMeta, lastActivity);
 
         if (activity.latestSubmissionId) {
             const latestWorkLink = createElement("a", "submission-name", "Open latest work");
@@ -398,6 +438,12 @@ async function initializePage() {
     loadedRoster = await loadRoster();
 
     if (!loadedRoster) {
+        return;
+    }
+
+    courseLessonCount = await loadCourseLessonCount();
+
+    if (courseLessonCount === null) {
         return;
     }
 

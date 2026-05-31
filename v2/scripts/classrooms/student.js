@@ -50,6 +50,14 @@ function createSummaryCard(label, value) {
     return card;
 }
 
+function formatProgress(submittedCount, lessonCount) {
+    if (!lessonCount && submittedCount) {
+        return `${submittedCount} submitted`;
+    }
+
+    return `${lessonCount ? Math.round((submittedCount / lessonCount) * 100) : 0}%`;
+}
+
 function getSubmissionLink(submission) {
     if (submission.status === "submitted") {
         return `../submissions/view.html?submission=${encodeURIComponent(submission.id)}`;
@@ -161,6 +169,19 @@ async function loadStudentWork() {
     return data || [];
 }
 
+async function loadCourseLessonCount() {
+    const { data, error } = await supabase.rpc("classroom_course_lesson_count", {
+        classroom_to_check: classroomId,
+    });
+
+    if (error) {
+        setStatus(error.message || "Course lesson count could not be loaded.", "error");
+        return null;
+    }
+
+    return Number(data || 0);
+}
+
 async function loadLessons(submissions) {
     const lessonIds = [...new Set(submissions.map((submission) => submission.lesson_id).filter(Boolean))];
 
@@ -181,7 +202,7 @@ async function loadLessons(submissions) {
     return new Map((data || []).map((lesson) => [lesson.id, lesson.title || "Untitled lesson"]));
 }
 
-function renderSummary(student, submissions) {
+function renderSummary(student, submissions, lessonCount) {
     const submittedCount = submissions.filter((submission) => submission.status === "submitted").length;
     const draftCount = submissions.filter((submission) => submission.status === "draft").length;
     const lastActivity = submissions
@@ -194,6 +215,7 @@ function renderSummary(student, submissions) {
         createSummaryCard("Lesson work", String(submissions.length)),
         createSummaryCard("Submitted", String(submittedCount)),
         createSummaryCard("Drafts", String(draftCount)),
+        createSummaryCard("Progress", formatProgress(submittedCount, lessonCount)),
         createSummaryCard("Last activity", formatDateTime(lastActivity))
     );
 }
@@ -251,6 +273,12 @@ async function initializePage() {
         return;
     }
 
+    const lessonCount = await loadCourseLessonCount();
+
+    if (lessonCount === null) {
+        return;
+    }
+
     const lessonNames = await loadLessons(submissions);
     const { classroom, course } = context;
     const classroomLabel = classroom.period_block
@@ -264,7 +292,7 @@ async function initializePage() {
         element.hidden = false;
     });
 
-    renderSummary(student, submissions);
+    renderSummary(student, submissions, lessonCount);
     renderStudentWork(submissions, lessonNames);
     setStatus("");
 }
