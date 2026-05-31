@@ -270,6 +270,39 @@ async function removeStudentFromRoster(student) {
     setStatus(`${studentName} was removed from this classroom.`, "success");
 }
 
+async function restoreStudentToRoster(student) {
+    const studentName = formatStudentName(student);
+    const confirmed = window.confirm(
+        `Restore ${studentName} to this classroom? They will regain active classroom access.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus(`Restoring ${studentName}...`);
+
+    const { error } = await supabase.rpc("restore_student_to_classroom", {
+        classroom_to_check: classroomId,
+        enrollment_to_restore: student.enrollment_id,
+    });
+
+    if (error) {
+        setStatus(error.message || "Student could not be restored to the classroom.", "error");
+        return;
+    }
+
+    loadedRoster = await loadRoster();
+
+    if (!loadedRoster) {
+        return;
+    }
+
+    renderSummary(loadedRoster);
+    renderRosterView();
+    setStatus(`${studentName} was restored to this classroom.`, "success");
+}
+
 function renderSummary(roster) {
     const activeCount = roster.filter((student) => student.enrollment_status === "active").length;
     const removedCount = roster.filter((student) => student.enrollment_status === "removed").length;
@@ -311,6 +344,7 @@ function renderRoster(roster) {
         const badge = createElement("span", "badge badge--quiet", student.enrollment_status);
         const actions = createElement("div", "roster-actions");
         const removeButton = createElement("button", "secondary-button destructive-button lesson-action", "Remove student");
+        const restoreButton = createElement("button", "secondary-button lesson-action", "Restore student");
 
         name.href = `student.html?classroom=${encodeURIComponent(classroomId)}&student=${encodeURIComponent(student.student_user_id)}`;
         activityMeta.append(lessonWork, lastActivity);
@@ -323,9 +357,12 @@ function renderRoster(roster) {
         }
 
         removeButton.type = "button";
-        removeButton.disabled = student.enrollment_status === "removed";
+        removeButton.hidden = student.enrollment_status === "removed";
         removeButton.addEventListener("click", () => removeStudentFromRoster(student));
-        actions.append(removeButton);
+        restoreButton.type = "button";
+        restoreButton.hidden = student.enrollment_status !== "removed";
+        restoreButton.addEventListener("click", () => restoreStudentToRoster(student));
+        actions.append(removeButton, restoreButton);
 
         identity.append(name, username, email, joined);
         item.append(identity, activityMeta, badge, actions);
