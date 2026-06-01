@@ -29,6 +29,16 @@ function setStatus(message, tone = "info") {
     statusElement.dataset.tone = tone;
 }
 
+function setAccessStatus(message) {
+    const discoveryLink = createElement("a", "status-link", "Browse public courses");
+    const dashboardLink = createElement("a", "status-link", "Back to dashboard");
+
+    discoveryLink.href = "discover.html";
+    dashboardLink.href = "../dashboard/index.html";
+    statusElement.replaceChildren(message, " ", discoveryLink, " ", dashboardLink);
+    statusElement.dataset.tone = "error";
+}
+
 function formatStatus(status) {
     return status
         .split("_")
@@ -174,7 +184,7 @@ async function loadEnrollment() {
         : data?.find((row) => row.enrollment_type === "course" && !row.classroom_id) || data?.[0];
 
     if (!enrollment) {
-        setStatus("This course is not in your active enrollments.", "error");
+        setAccessStatus("This course is not in your active enrollments. Join it from public discovery or use a classroom invite from your teacher.");
         return null;
     }
 

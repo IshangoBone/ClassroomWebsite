@@ -45,6 +45,27 @@ function setStatus(message, tone = "info") {
     statusElement.dataset.tone = tone;
 }
 
+function setAccessStatus(courseId) {
+    const courseHref = courseId
+        ? `../courses/student.html?course=${encodeURIComponent(courseId)}`
+        : "../dashboard/index.html";
+    const courseLink = createElement("a", "status-link", "Open course");
+    const dashboardLink = createElement("a", "status-link", "Back to dashboard");
+
+    courseLink.href = courseHref;
+    dashboardLink.href = "../dashboard/index.html";
+    headingElement.textContent = "Lesson unavailable";
+    contextElement.textContent = "This lesson needs an active course or classroom enrollment.";
+    statusElement.replaceChildren(
+        "You are not enrolled in this lesson context. Open the course, join from public discovery, or use a classroom invite from your teacher.",
+        " ",
+        courseLink,
+        " ",
+        dashboardLink
+    );
+    statusElement.dataset.tone = "error";
+}
+
 function setSubmitStatus(message, tone = "info") {
     submitStatusElement.textContent = message;
     submitStatusElement.dataset.tone = tone;
@@ -643,6 +664,25 @@ async function loadLessonContext() {
     return { lesson, module, course };
 }
 
+async function canAccessLessonContext(context) {
+    const { data, error } = await supabase.rpc("can_submit_draft_for_context", {
+        course_to_check: context.course.id,
+        classroom_to_check: classroomId || null,
+    });
+
+    if (error) {
+        setStatus(error.message || "Lesson access could not be checked.", "error");
+        return false;
+    }
+
+    if (!data) {
+        setAccessStatus(context.course.id);
+        return false;
+    }
+
+    return true;
+}
+
 async function loadContentBlocks() {
     const { data, error } = await supabase
         .from("lesson_content_blocks")
@@ -998,6 +1038,8 @@ async function initializePage() {
     currentLessonContext = context;
     if (isTeacherPreview) {
         updateTeacherPreviewBackLink(course.id);
+    } else if (!(await canAccessLessonContext(context))) {
+        return;
     }
     headingElement.textContent = lesson.title || "Untitled lesson";
     contextElement.textContent = isTeacherPreview
