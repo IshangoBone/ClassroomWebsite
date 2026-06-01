@@ -12,6 +12,7 @@ const rosterAddForm = qs("[data-roster-add-form]");
 const rosterControls = qs("[data-roster-controls]");
 const rosterListElement = qs("[data-roster-list]");
 const copyInviteLinkButton = qs("[data-copy-invite-link]");
+const reviewClassroomLink = qs("[data-review-classroom-link]");
 const manageClassroomsLink = qs("[data-manage-classrooms-link]");
 let currentClassroom = null;
 let loadedRoster = [];
@@ -579,6 +580,7 @@ async function initializePage() {
     headingElement.textContent = `${classroomLabel} roster`;
     contextElement.textContent = `${course?.title || "Untitled course"} · ${classroom.school_year || "School year not set"} · ${classroom.status}`;
     manageClassroomsLink.href = `manage.html?course=${encodeURIComponent(classroom.course_id)}`;
+    reviewClassroomLink.href = `../submissions/index.html?classroom=${encodeURIComponent(classroom.id)}`;
     shellElement.hidden = false;
 
     loadedRoster = await loadRoster();

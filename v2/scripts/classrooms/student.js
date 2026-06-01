@@ -10,6 +10,7 @@ const contextElement = qs("[data-student-context]");
 const statusElement = qs("[data-student-status]");
 const shellElements = [...document.querySelectorAll("[data-student-shell]")];
 const summaryElement = qs("[data-student-summary]");
+const reviewStudentLink = qs("[data-review-student-link]");
 const workListElement = qs("[data-student-work-list]");
 
 function setStatus(message, tone = "info") {
@@ -288,6 +289,7 @@ async function initializePage() {
     headingElement.textContent = formatStudentName(student);
     contextElement.textContent = `${classroomLabel} · ${course?.title || "Untitled course"} · ${student.email || "No email available"}`;
     backLink.href = `roster.html?classroom=${encodeURIComponent(classroom.id)}`;
+    reviewStudentLink.href = `../submissions/index.html?classroom=${encodeURIComponent(classroom.id)}&student=${encodeURIComponent(student.student_user_id)}`;
     shellElements.forEach((element) => {
         element.hidden = false;
     });
