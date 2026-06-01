@@ -34,6 +34,7 @@ const managedCoursesCopy = qs("[data-managed-courses-copy]");
 const teacherSubmissionsSection = qs("[data-teacher-submissions-section]");
 const studentJoinSection = qs("[data-student-join-section]");
 const teacherAnalyticsEntry = qs("[data-teacher-analytics-entry]");
+const adminActivityEntry = qs("[data-admin-activity-entry]");
 const dashboardParams = new URLSearchParams(window.location.search);
 
 let currentProfile = null;
@@ -979,6 +980,7 @@ async function refreshDashboard() {
         courseFormPanel.hidden = true;
         teacherSubmissionsSection.hidden = isStudentOnly;
         teacherAnalyticsEntry.hidden = isStudentOnly;
+        adminActivityEntry.hidden = currentProfile.platform_role !== "admin" || currentProfile.account_status !== "active";
         studentActivitySection.hidden = !isStudentOnly;
         studentJoinSection.hidden = !isStudentOnly;
         studentProgressEntry.hidden = !hasStudentEnrollments;
@@ -1043,7 +1045,7 @@ async function initializeDashboard() {
 
     const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("id, username, profile_completed")
+        .select("id, username, profile_completed, platform_role, account_status")
         .eq("auth_user_id", authData.user.id)
         .maybeSingle();
 
