@@ -87,6 +87,7 @@ function getFilterValues() {
         classroomId: String(formData.get("classroom") || ""),
         courseId: String(formData.get("course") || ""),
         lessonId: String(formData.get("lesson") || ""),
+        sort: String(formData.get("sort") || "latest"),
         status: String(formData.get("status") || ""),
         studentId: String(formData.get("student") || ""),
     };
@@ -407,12 +408,50 @@ function renderFilters() {
 function getFilteredSubmissions() {
     const filters = getFilterValues();
 
-    return loadedReviewItems.filter((submission) => (
+    const filteredItems = loadedReviewItems.filter((submission) => (
         (!filters.courseId || submission.course_id === filters.courseId)
         && (!filters.classroomId || submission.classroom_id === filters.classroomId)
         && (!filters.lessonId || submission.lesson_id === filters.lessonId)
         && (!filters.status || submission.status === filters.status)
         && (!filters.studentId || submission.student_user_id === filters.studentId)
+    ));
+
+    return sortReviewItems(filteredItems, filters.sort);
+}
+
+function sortReviewItems(items, sort) {
+    const lessonNames = new Map(loadedLessons.map((lesson) => [lesson.id, lesson.title || "Untitled lesson"]));
+    const getActivityDate = (item) => new Date(item.submitted_at || item.updated_at || 0);
+    const getPointsRatio = (item) => Number(item.points_earned || 0) / Math.max(Number(item.points_possible || 0), 1);
+    const sortedItems = [...items];
+
+    if (sort === "student-asc") {
+        return sortedItems.sort((firstItem, secondItem) => (
+            getStudentName(firstItem.student_user_id).localeCompare(getStudentName(secondItem.student_user_id))
+            || lessonNames.get(firstItem.lesson_id).localeCompare(lessonNames.get(secondItem.lesson_id))
+        ));
+    }
+
+    if (sort === "lesson-asc") {
+        return sortedItems.sort((firstItem, secondItem) => (
+            lessonNames.get(firstItem.lesson_id).localeCompare(lessonNames.get(secondItem.lesson_id))
+            || getStudentName(firstItem.student_user_id).localeCompare(getStudentName(secondItem.student_user_id))
+        ));
+    }
+
+    if (sort === "points-asc" || sort === "points-desc") {
+        return sortedItems.sort((firstItem, secondItem) => {
+            const pointsSort = sort === "points-asc"
+                ? getPointsRatio(firstItem) - getPointsRatio(secondItem)
+                : getPointsRatio(secondItem) - getPointsRatio(firstItem);
+
+            return pointsSort || getActivityDate(secondItem) - getActivityDate(firstItem);
+        });
+    }
+
+    return sortedItems.sort((firstItem, secondItem) => (
+        getActivityDate(secondItem) - getActivityDate(firstItem)
+        || getStudentName(firstItem.student_user_id).localeCompare(getStudentName(secondItem.student_user_id))
     ));
 }
 

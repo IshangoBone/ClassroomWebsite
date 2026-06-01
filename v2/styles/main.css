@@ -742,7 +742,7 @@ h2 {
 }
 
 .submission-filter-form--review {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .submission-filter-form .form-field {

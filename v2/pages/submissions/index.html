@@ -66,6 +66,16 @@
                         <option value="missing">Missing</option>
                     </select>
                 </label>
+                <label class="form-field">
+                    <span>Sort by</span>
+                    <select name="sort" data-review-sort>
+                        <option value="latest">Latest activity</option>
+                        <option value="student-asc">Student A-Z</option>
+                        <option value="lesson-asc">Lesson A-Z</option>
+                        <option value="points-asc">Points low-high</option>
+                        <option value="points-desc">Points high-low</option>
+                    </select>
+                </label>
             </form>
 
             <div data-review-list>
@@ -74,7 +84,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/submissions/index.js?v=20260531-review-list"></script>
+    <script type="module" src="../../scripts/submissions/index.js?v=20260531-review-sort"></script>
 </body>
 
 </html>
