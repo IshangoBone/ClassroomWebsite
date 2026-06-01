@@ -1616,6 +1616,18 @@ h2 {
     max-width: 1180px;
 }
 
+.admin-layout {
+    max-width: 1180px;
+}
+
+.admin-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-activity-list .submission-item {
+    grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr) minmax(180px, 0.8fr) auto;
+}
+
 .dashboard-summary--activity {
     grid-template-columns: repeat(6, minmax(0, 1fr));
 }
@@ -1711,6 +1723,10 @@ h2 {
     }
 
     .analytics-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .admin-summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -1966,6 +1982,10 @@ h2 {
     .submission-item {
         grid-template-columns: 1fr;
         justify-items: start;
+    }
+
+    .admin-activity-list .submission-item {
+        grid-template-columns: 1fr;
     }
 
     .management-action {

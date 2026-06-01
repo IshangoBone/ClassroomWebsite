@@ -35,6 +35,7 @@ const managedCoursesCopy = qs("[data-managed-courses-copy]");
 const teacherSubmissionsSection = qs("[data-teacher-submissions-section]");
 const studentJoinSection = qs("[data-student-join-section]");
 const teacherAnalyticsEntry = qs("[data-teacher-analytics-entry]");
+const adminDashboardEntry = qs("[data-admin-dashboard-entry]");
 const adminActivityEntry = qs("[data-admin-activity-entry]");
 const dashboardParams = new URLSearchParams(window.location.search);
 
@@ -1017,7 +1018,9 @@ async function refreshDashboard() {
         courseFormPanel.hidden = true;
         teacherSubmissionsSection.hidden = isStudentOnly;
         teacherAnalyticsEntry.hidden = isStudentOnly;
-        adminActivityEntry.hidden = currentProfile.platform_role !== "admin" || currentProfile.account_status !== "active";
+        const isActiveAdmin = currentProfile.platform_role === "admin" && currentProfile.account_status === "active";
+        adminDashboardEntry.hidden = !isActiveAdmin;
+        adminActivityEntry.hidden = !isActiveAdmin;
         studentActivitySection.hidden = !isStudentOnly;
         studentJoinSection.hidden = !isStudentOnly;
         studentProgressEntry.hidden = !hasStudentEnrollments;
