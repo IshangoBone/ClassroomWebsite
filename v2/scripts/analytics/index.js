@@ -11,6 +11,7 @@ const reviewLink = qs("[data-analytics-review-link]");
 const courseAnalyticsElement = qs("[data-course-analytics]");
 const classroomAnalyticsElement = qs("[data-classroom-analytics]");
 const studentRiskElement = qs("[data-student-risk-analytics]");
+const lessonAnalyticsElement = qs("[data-lesson-analytics]");
 const activityElement = qs("[data-analytics-activity]");
 
 let currentProfile = null;
@@ -708,6 +709,118 @@ function renderStudentRiskAnalytics(filters = getFilterValues()) {
     ], rows.slice(0, 12), "No students are currently below the attention threshold for this view."));
 }
 
+function getLessonCompletionRows(filters = getFilterValues()) {
+    const courseNames = new Map(loadedCourses.map((course) => [course.id, course.title || "Untitled course"]));
+    const lessons = getFilteredLessons(filters);
+    const enrollmentsByCourse = getFilteredEnrollments(filters).reduce((enrollmentMap, enrollment) => {
+        const courseEnrollments = enrollmentMap.get(enrollment.course_id) || [];
+
+        courseEnrollments.push(enrollment);
+        enrollmentMap.set(enrollment.course_id, courseEnrollments);
+        return enrollmentMap;
+    }, new Map());
+    const submissionsByContext = getFilteredSubmissions(filters).reduce((submissionMap, submission) => {
+        const key = [
+            submission.student_user_id,
+            submission.classroom_id || "",
+            submission.lesson_id,
+        ].join(":");
+        const existing = submissionMap.get(key);
+        const existingDate = new Date(existing?.submitted_at || existing?.updated_at || 0);
+        const submissionDate = new Date(submission.submitted_at || submission.updated_at || 0);
+
+        if (!existing || submissionDate > existingDate) {
+            submissionMap.set(key, submission);
+        }
+
+        return submissionMap;
+    }, new Map());
+
+    return lessons.map((lesson) => {
+        const enrollments = enrollmentsByCourse.get(lesson.course_id) || [];
+        const lessonStats = enrollments.map((enrollment) => {
+            const submission = submissionsByContext.get([
+                enrollment.user_id,
+                enrollment.classroom_id || "",
+                lesson.id,
+            ].join(":"));
+
+            return {
+                isDraft: submission?.status === "draft",
+                isSubmitted: submission?.status === "submitted",
+                submission,
+            };
+        });
+        const submittedCount = lessonStats.filter((stat) => stat.isSubmitted).length;
+        const draftCount = lessonStats.filter((stat) => stat.isDraft).length;
+        const missingCount = Math.max(enrollments.length - submittedCount, 0);
+        const submissions = lessonStats.map((stat) => stat.submission).filter(Boolean);
+        const pointsEarned = submissions.reduce((total, submission) => total + Number(submission.points_earned || 0), 0);
+        const pointsPossible = submissions.reduce((total, submission) => total + Number(submission.points_possible || 0), 0);
+        const completionPercent = enrollments.length ? (submittedCount / enrollments.length) * 100 : 0;
+
+        return {
+            completionPercent,
+            courseId: lesson.course_id,
+            courseName: courseNames.get(lesson.course_id) || "Course",
+            draftCount,
+            expectedCount: enrollments.length,
+            lesson,
+            missingCount,
+            name: lesson.title || "Untitled lesson",
+            pointsEarned,
+            pointsPossible,
+            submittedCount,
+        };
+    }).sort((first, second) => (
+        first.completionPercent - second.completionPercent
+        || second.missingCount - first.missingCount
+        || first.courseName.localeCompare(second.courseName)
+        || first.lesson.order_index - second.lesson.order_index
+    ));
+}
+
+function createLessonCompletionCell(row) {
+    const cell = createElement("div", "analytics-progress-cell");
+
+    cell.append(
+        createElement("strong", "", formatPercent(row.completionPercent)),
+        createProgressBar(row.completionPercent, `${row.name} completion`),
+        createElement("span", "course-muted", `${row.submittedCount} of ${row.expectedCount} students`)
+    );
+    return cell;
+}
+
+function getLessonReviewHref(row, filters = getFilterValues()) {
+    const params = new URLSearchParams();
+
+    params.set("course", row.courseId);
+    params.set("lesson", row.lesson.id);
+
+    if (filters.classroomId) {
+        params.set("classroom", filters.classroomId);
+    }
+
+    return `../submissions/index.html?${params.toString()}`;
+}
+
+function renderLessonAnalytics(filters = getFilterValues()) {
+    const rows = getLessonCompletionRows(filters);
+
+    lessonAnalyticsElement.replaceChildren(createAnalyticsTable([
+        { label: "Lesson", key: "name" },
+        { label: "Course", key: "courseName" },
+        { label: "Completion", render: createLessonCompletionCell },
+        { label: "Missing", render: (row) => formatNumber(row.missingCount) },
+        { label: "Incomplete", render: (row) => formatNumber(row.draftCount) },
+        { label: "Points", render: (row) => `${row.pointsEarned} / ${row.pointsPossible}` },
+        {
+            label: "Actions",
+            render: (row) => createActionLink("Review lesson", getLessonReviewHref(row, filters)),
+        },
+    ], rows, "Lessons with active classroom enrollments will appear here."));
+}
+
 function renderRecentActivity(filters = getFilterValues()) {
     const filteredSubmissions = getFilteredSubmissions(filters);
 
@@ -765,6 +878,7 @@ function renderAnalyticsView() {
     renderCourseAnalytics(filters);
     renderClassroomAnalytics(filters);
     renderStudentRiskAnalytics(filters);
+    renderLessonAnalytics(filters);
     renderRecentActivity(filters);
 }
 
@@ -786,6 +900,7 @@ async function initializePage() {
             courseAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Managed courses are required before teacher analytics are available."));
             classroomAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Create a course and classroom before analytics are available."));
             studentRiskElement.replaceChildren(createElement("p", "empty-state", "Student progress will appear after students join a classroom."));
+            lessonAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Lesson completion will appear after students join a classroom."));
             activityElement.replaceChildren(createElement("p", "empty-state", "No student activity is available yet."));
             setStatus("");
             return;
