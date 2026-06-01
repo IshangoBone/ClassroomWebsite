@@ -22,6 +22,7 @@ const courseVisibility = qs("[data-course-visibility]");
 const publicCourseCopy = qs("[data-public-course-copy]");
 const toggleCourseVisibilityButton = qs("[data-toggle-course-visibility]");
 const copyPublicCourseLinkButton = qs("[data-copy-public-course-link]");
+const coursePreviewLink = qs("[data-course-preview-link]");
 const archiveCourseButton = qs("[data-archive-course]");
 const deleteCourseButton = qs("[data-delete-course]");
 let loadedModules = [];
@@ -152,6 +153,7 @@ function renderCourseAccess(course) {
     toggleCourseVisibilityButton.textContent = isPublished ? "Make private" : "Publish course";
     toggleCourseVisibilityButton.disabled = isArchived || isDeleted;
     copyPublicCourseLinkButton.disabled = !isPublished;
+    coursePreviewLink.href = `preview.html?course=${encodeURIComponent(course.id)}`;
     archiveCourseButton.disabled = isArchived || isDeleted;
     deleteCourseButton.disabled = isDeleted;
 }
