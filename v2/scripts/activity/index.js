@@ -9,6 +9,7 @@ const actionFilter = qs("[data-activity-filter-action]");
 const targetFilter = qs("[data-activity-filter-target]");
 const activityList = qs("[data-activity-list]");
 const refreshButton = qs("[data-activity-refresh]");
+const activityParams = new URLSearchParams(window.location.search);
 
 let activityLogs = [];
 
@@ -246,6 +247,11 @@ async function loadActivityLogs() {
     activityLogs = data || [];
     populateSelect(actionFilter, [...new Set(activityLogs.map((log) => log.action_type).filter(Boolean))].sort(), "All actions");
     populateSelect(targetFilter, [...new Set(activityLogs.map((log) => log.target_type).filter(Boolean))].sort(), "All targets");
+
+    if (activityParams.has("query")) {
+        filterForm.elements.query.value = activityParams.get("query") || "";
+    }
+
     renderLogs();
     setStatus("");
 }

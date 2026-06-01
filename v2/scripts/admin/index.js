@@ -58,6 +58,13 @@ function formatStatus(status = "") {
     return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+function getActivityUrlForRecord(result) {
+    const url = new URL("../activity/index.html", window.location.href);
+
+    url.searchParams.set("query", result.record_id);
+    return url.href;
+}
+
 function renderSummary(summary) {
     summaryElement.replaceChildren(
         createSummaryCard("Total users", summary.total_users),
@@ -118,8 +125,10 @@ function renderSearchResults(results, query) {
         const type = createElement("span", "badge", formatStatus(result.record_type));
         const details = createElement("span", "course-muted", result.secondary_label || `${result.record_type} ${formatShortId(result.record_id)}`);
         const status = createElement("span", "badge badge--quiet", formatStatus(result.status_label));
+        const activityLink = createElement("a", "secondary-button admin-result-action", "View activity");
 
-        item.append(title, type, details, status);
+        activityLink.href = getActivityUrlForRecord(result);
+        item.append(title, type, details, status, activityLink);
         list.append(item);
     });
 
