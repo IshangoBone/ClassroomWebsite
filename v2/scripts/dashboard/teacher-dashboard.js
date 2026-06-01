@@ -16,6 +16,7 @@ const studentJoinForm = qs("[data-student-join-form]");
 const submissionFilterForm = qs("[data-submission-filter-form]");
 const studentActivitySection = qs("[data-student-activity-section]");
 const studentActivityList = qs("[data-student-activity-list]");
+const studentProgressEntry = qs("[data-student-progress-entry]");
 const submissionFilterCourse = qs("[data-submission-filter-course]");
 const submissionFilterClassroom = qs("[data-submission-filter-classroom]");
 const submissionFilterLesson = qs("[data-submission-filter-lesson]");
@@ -976,6 +977,7 @@ async function refreshDashboard() {
         teacherAnalyticsEntry.hidden = isStudentOnly;
         studentActivitySection.hidden = !isStudentOnly;
         studentJoinSection.hidden = !isStudentOnly;
+        studentProgressEntry.hidden = !hasStudentEnrollments;
         if (enrolledCoursesSection) {
             enrolledCoursesSection.hidden = isStudentOnly || !hasStudentEnrollments;
         }
