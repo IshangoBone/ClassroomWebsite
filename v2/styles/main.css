@@ -716,6 +716,11 @@ h2 {
     color: #49617f;
 }
 
+.course-discovery-toggle {
+    max-width: 360px;
+    margin-top: 12px;
+}
+
 .course-classrooms {
     display: grid;
     gap: 8px;

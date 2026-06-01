@@ -33,6 +33,13 @@
             </div>
 
             <p class="course-muted" data-public-course-copy>Public course joining is unavailable until this course is published.</p>
+            <label class="form-field course-discovery-toggle">
+                <span>Discovery listing</span>
+                <select name="discovery-listing" data-course-discovery-select disabled>
+                    <option value="hidden">Hidden from public discovery</option>
+                    <option value="listed">Listed in public discovery</option>
+                </select>
+            </label>
             <div class="course-form-actions">
                 <button type="button" class="secondary-button" data-toggle-course-visibility>Publish course</button>
                 <button type="button" class="secondary-button" data-copy-public-course-link>Copy public course link</button>
@@ -164,7 +171,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/courses/editor.js?v=20260601-course-preview"></script>
+    <script type="module" src="../../scripts/courses/editor.js?v=20260601-discovery-visibility"></script>
 </body>
 
 </html>

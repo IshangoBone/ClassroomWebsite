@@ -20,6 +20,7 @@ const lessonFormHeading = qs("[data-lesson-form-heading]");
 const cancelLessonButton = qs("[data-cancel-lesson-form]");
 const courseVisibility = qs("[data-course-visibility]");
 const publicCourseCopy = qs("[data-public-course-copy]");
+const courseDiscoverySelect = qs("[data-course-discovery-select]");
 const toggleCourseVisibilityButton = qs("[data-toggle-course-visibility]");
 const copyPublicCourseLinkButton = qs("[data-copy-public-course-link]");
 const coursePreviewLink = qs("[data-course-preview-link]");
@@ -138,6 +139,7 @@ function renderCourseAccess(course) {
     const isPublished = course.status === "published";
     const isArchived = course.status === "archived";
     const isDeleted = course.status === "deleted";
+    const isDiscoverable = Boolean(course.is_publicly_discoverable);
     courseVisibility.textContent = formatCourseStatus(course.status);
 
     if (isArchived) {
@@ -145,11 +147,17 @@ function renderCourseAccess(course) {
     } else if (isDeleted) {
         publicCourseCopy.textContent = "This course is hidden from normal app views.";
     } else {
-        publicCourseCopy.textContent = isPublished
-            ? "Students with the public course link can join this course without teacher approval."
-            : "Students cannot join this course from a public link while it is private.";
+        if (isPublished && isDiscoverable) {
+            publicCourseCopy.textContent = "Students can find this course in discovery and join from the public course link.";
+        } else if (isPublished) {
+            publicCourseCopy.textContent = "Students can join from the public course link, but this course is hidden from public discovery.";
+        } else {
+            publicCourseCopy.textContent = "Students cannot join this course from a public link while it is private.";
+        }
     }
 
+    courseDiscoverySelect.value = isDiscoverable ? "listed" : "hidden";
+    courseDiscoverySelect.disabled = !isPublished || isArchived || isDeleted;
     toggleCourseVisibilityButton.textContent = isPublished ? "Make private" : "Publish course";
     toggleCourseVisibilityButton.disabled = isArchived || isDeleted;
     copyPublicCourseLinkButton.disabled = !isPublished;
@@ -199,7 +207,7 @@ async function toggleCourseVisibility() {
 
     const confirmed = window.confirm(
         nextStatus === "published"
-            ? "Publish this course? Students with the public link will be able to join without a classroom code."
+            ? "Publish this course? Students with the public link will be able to join without a classroom code. You can choose whether it appears in public discovery."
             : "Unpublish this course? Enrolled students and classrooms keep access, but new public course joins will stop."
     );
 
@@ -214,7 +222,7 @@ async function toggleCourseVisibility() {
         .from("courses")
         .update({ status: nextStatus })
         .eq("id", courseId)
-        .select("id, title, description, subject_area, estimated_length, status")
+        .select("id, title, description, subject_area, estimated_length, status, is_publicly_discoverable")
         .single();
 
     toggleCourseVisibilityButton.disabled = false;
@@ -229,6 +237,41 @@ async function toggleCourseVisibility() {
     fillCourseForm(course);
     renderCourseAccess(course);
     setStatus(nextStatus === "published" ? "Course published." : "Course is private.", "success");
+}
+
+async function updateDiscoveryListing() {
+    if (!loadedCourse) {
+        setStatus("Course information is still loading.", "error");
+        return;
+    }
+
+    if (loadedCourse.status !== "published") {
+        setStatus("Publish the course before changing public discovery.", "error");
+        renderCourseAccess(loadedCourse);
+        return;
+    }
+
+    const shouldList = courseDiscoverySelect.value === "listed";
+    setStatus(shouldList ? "Listing course in discovery..." : "Hiding course from discovery...");
+    courseDiscoverySelect.disabled = true;
+
+    const { data: course, error } = await supabase
+        .from("courses")
+        .update({ is_publicly_discoverable: shouldList })
+        .eq("id", courseId)
+        .select("id, title, description, subject_area, estimated_length, status, is_publicly_discoverable")
+        .single();
+
+    if (error) {
+        setStatus(error.message || "Discovery listing could not be updated.", "error");
+        renderCourseAccess(loadedCourse);
+        return;
+    }
+
+    loadedCourse = course;
+    fillCourseForm(course);
+    renderCourseAccess(course);
+    setStatus(shouldList ? "Course is listed in discovery." : "Course is hidden from discovery.", "success");
 }
 
 async function archiveCourse() {
@@ -252,7 +295,7 @@ async function archiveCourse() {
         .from("courses")
         .update({ status: "archived" })
         .eq("id", courseId)
-        .select("id, title, description, subject_area, estimated_length, status")
+        .select("id, title, description, subject_area, estimated_length, status, is_publicly_discoverable")
         .single();
 
     if (error) {
@@ -753,7 +796,7 @@ async function confirmCourseManagement() {
 
     const { data: course, error: courseError } = await supabase
         .from("courses")
-        .select("id, title, description, subject_area, estimated_length, status")
+        .select("id, title, description, subject_area, estimated_length, status, is_publicly_discoverable")
         .eq("id", courseId)
         .single();
 
@@ -814,7 +857,7 @@ editorForm.addEventListener("submit", async (event) => {
         .from("courses")
         .update(changes)
         .eq("id", courseId)
-        .select("id, title, description, subject_area, estimated_length, status")
+        .select("id, title, description, subject_area, estimated_length, status, is_publicly_discoverable")
         .single();
 
     if (error) {
@@ -829,6 +872,7 @@ editorForm.addEventListener("submit", async (event) => {
 });
 
 toggleCourseVisibilityButton.addEventListener("click", toggleCourseVisibility);
+courseDiscoverySelect.addEventListener("change", updateDiscoveryListing);
 copyPublicCourseLinkButton.addEventListener("click", copyPublicCourseLink);
 archiveCourseButton.addEventListener("click", archiveCourse);
 deleteCourseButton.addEventListener("click", deleteCourse);
