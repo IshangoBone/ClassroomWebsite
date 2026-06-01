@@ -160,7 +160,7 @@ async function loadEnrollment() {
         .eq("course_id", courseId)
         .neq("enrollment_status", "removed");
 
-    query = classroomId ? query.eq("classroom_id", classroomId) : query.limit(1);
+    query = classroomId ? query.eq("classroom_id", classroomId) : query;
 
     const { data, error } = await query;
 
@@ -169,7 +169,9 @@ async function loadEnrollment() {
         return null;
     }
 
-    const enrollment = data?.[0];
+    const enrollment = classroomId
+        ? data?.[0]
+        : data?.find((row) => row.enrollment_type === "course" && !row.classroom_id) || data?.[0];
 
     if (!enrollment) {
         setStatus("This course is not in your active enrollments.", "error");
