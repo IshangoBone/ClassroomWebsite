@@ -1628,6 +1628,17 @@ h2 {
     grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr) minmax(180px, 0.8fr) auto;
 }
 
+.admin-search-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.admin-search-results .submission-item {
+    grid-template-columns: minmax(180px, 1fr) auto minmax(260px, 1.2fr) auto;
+}
+
 .dashboard-summary--activity {
     grid-template-columns: repeat(6, minmax(0, 1fr));
 }
@@ -1985,6 +1996,11 @@ h2 {
     }
 
     .admin-activity-list .submission-item {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-search-form,
+    .admin-search-results .submission-item {
         grid-template-columns: 1fr;
     }
 

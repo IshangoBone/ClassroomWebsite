@@ -5,6 +5,8 @@ const statusElement = qs("[data-admin-status]");
 const shellElements = [...document.querySelectorAll("[data-admin-shell]")];
 const summaryElement = qs("[data-admin-summary]");
 const recentActivityElement = qs("[data-admin-recent-activity]");
+const searchForm = qs("[data-admin-search-form]");
+const searchResultsElement = qs("[data-admin-search-results]");
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -52,6 +54,10 @@ function formatEntityLabel(label, id) {
     return label || formatShortId(id);
 }
 
+function formatStatus(status = "") {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
 function renderSummary(summary) {
     summaryElement.replaceChildren(
         createSummaryCard("Total users", summary.total_users),
@@ -91,6 +97,61 @@ function renderRecentActivity(logs) {
     });
 
     recentActivityElement.replaceChildren(list);
+}
+
+function renderSearchResults(results, query) {
+    if (!query) {
+        searchResultsElement.replaceChildren(createElement("p", "empty-state", "Search results will appear here."));
+        return;
+    }
+
+    if (!results.length) {
+        searchResultsElement.replaceChildren(createElement("p", "empty-state", "No users, courses, or classrooms matched that search."));
+        return;
+    }
+
+    const list = createElement("ul", "submission-list admin-search-results");
+
+    results.forEach((result) => {
+        const item = createElement("li", "submission-item");
+        const title = createElement("strong", "submission-name", result.primary_label || formatShortId(result.record_id));
+        const type = createElement("span", "badge", formatStatus(result.record_type));
+        const details = createElement("span", "course-muted", result.secondary_label || `${result.record_type} ${formatShortId(result.record_id)}`);
+        const status = createElement("span", "badge badge--quiet", formatStatus(result.status_label));
+
+        item.append(title, type, details, status);
+        list.append(item);
+    });
+
+    searchResultsElement.replaceChildren(list);
+}
+
+async function handleSearchSubmit(event) {
+    event.preventDefault();
+
+    const formData = new FormData(searchForm);
+    const query = String(formData.get("query") || "").trim();
+
+    if (query.length < 2) {
+        renderSearchResults([], "");
+        setStatus("Enter at least 2 characters to search.", "error");
+        return;
+    }
+
+    setStatus("Searching platform records...");
+
+    const { data, error } = await supabase.rpc("search_admin_records", {
+        search_input: query,
+        limit_input: 20,
+    });
+
+    if (error) {
+        setStatus(error.message || "Search could not be completed.", "error");
+        return;
+    }
+
+    renderSearchResults(data || [], query);
+    setStatus("");
 }
 
 async function loadCurrentProfile() {
@@ -160,5 +221,7 @@ async function initializeAdminDashboard() {
     });
     await loadAdminDashboard();
 }
+
+searchForm.addEventListener("submit", handleSearchSubmit);
 
 await initializeAdminDashboard();

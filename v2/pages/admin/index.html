@@ -37,6 +37,27 @@
         <section class="management-section" data-admin-shell hidden>
             <div class="section-header">
                 <div>
+                    <h2>Global search</h2>
+                    <p class="section-copy">Find users, courses, and classrooms by name, email, subject, or ID.</p>
+                </div>
+            </div>
+
+            <form class="admin-search-form" data-admin-search-form>
+                <label class="form-field">
+                    <span>Search platform records</span>
+                    <input type="search" name="query" placeholder="Type at least 2 characters" autocomplete="off" />
+                </label>
+                <button type="submit" class="secondary-button">Search</button>
+            </form>
+
+            <div data-admin-search-results>
+                <p class="empty-state">Search results will appear here.</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-admin-shell hidden>
+            <div class="section-header">
+                <div>
                     <h2>Recent activity</h2>
                     <p class="section-copy">Latest platform events. Open the activity logs for filters and JSON snapshots.</p>
                 </div>
@@ -48,7 +69,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/admin/index.js?v=20260601-admin-dashboard"></script>
+    <script type="module" src="../../scripts/admin/index.js?v=20260601-admin-search"></script>
 </body>
 
 </html>
