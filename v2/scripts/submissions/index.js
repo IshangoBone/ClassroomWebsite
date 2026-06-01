@@ -16,6 +16,7 @@ let loadedCourses = [];
 let loadedClassrooms = [];
 let loadedLessons = [];
 let loadedSubmissions = [];
+let loadedReviewItems = [];
 let studentNames = new Map();
 
 function setStatus(message, tone = "info") {
@@ -274,6 +275,25 @@ async function loadSubmissions(courseIds) {
     return data;
 }
 
+async function loadActiveClassroomEnrollments(classroomIds) {
+    if (!classroomIds.length) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from("enrollments")
+        .select("id, user_id, course_id, classroom_id, joined_at")
+        .in("classroom_id", classroomIds)
+        .eq("enrollment_type", "classroom")
+        .eq("enrollment_status", "active");
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}
+
 async function loadStudentNames() {
     const { data, error } = await supabase.rpc("reviewable_student_profiles");
 
@@ -282,6 +302,56 @@ async function loadStudentNames() {
     }
 
     return new Map(data.map((profile) => [profile.id, formatStudentName(profile)]));
+}
+
+function createMissingWorkItems(enrollments) {
+    const submissionsByContext = new Set(loadedSubmissions.map((submission) => [
+        submission.student_user_id,
+        submission.classroom_id || "",
+        submission.lesson_id,
+    ].join(":")));
+    const lessonsByCourse = loadedLessons.reduce((lessonMap, lesson) => {
+        const courseLessons = lessonMap.get(lesson.course_id) || [];
+
+        courseLessons.push(lesson);
+        lessonMap.set(lesson.course_id, courseLessons);
+        return lessonMap;
+    }, new Map());
+
+    return enrollments.flatMap((enrollment) => {
+        const courseLessons = lessonsByCourse.get(enrollment.course_id) || [];
+
+        return courseLessons
+            .filter((lesson) => !submissionsByContext.has([
+                enrollment.user_id,
+                enrollment.classroom_id || "",
+                lesson.id,
+            ].join(":")))
+            .map((lesson) => ({
+                classroom_id: enrollment.classroom_id,
+                course_id: enrollment.course_id,
+                id: `missing:${enrollment.id}:${lesson.id}`,
+                isMissing: true,
+                lesson_id: lesson.id,
+                points_earned: 0,
+                points_possible: 0,
+                status: "missing",
+                student_user_id: enrollment.user_id,
+                submitted_at: "",
+                updated_at: enrollment.joined_at,
+            }));
+    });
+}
+
+function buildReviewItems(enrollments) {
+    const missingWorkItems = createMissingWorkItems(enrollments);
+
+    return [...loadedSubmissions, ...missingWorkItems].sort((firstItem, secondItem) => {
+        const firstDate = new Date(firstItem.submitted_at || firstItem.updated_at || 0);
+        const secondDate = new Date(secondItem.submitted_at || secondItem.updated_at || 0);
+
+        return secondDate - firstDate || getStudentName(firstItem.student_user_id).localeCompare(getStudentName(secondItem.student_user_id));
+    });
 }
 
 function renderFilters() {
@@ -297,7 +367,7 @@ function renderFilters() {
         label: lesson.title || "Untitled lesson",
         value: lesson.id,
     }));
-    const studentOptions = [...new Set(loadedSubmissions.map((submission) => submission.student_user_id).filter(Boolean))]
+    const studentOptions = [...new Set(loadedReviewItems.map((submission) => submission.student_user_id).filter(Boolean))]
         .sort((firstId, secondId) => getStudentName(firstId).localeCompare(getStudentName(secondId)))
         .map((studentId) => ({
             label: getStudentName(studentId),
@@ -313,7 +383,7 @@ function renderFilters() {
 function getFilteredSubmissions() {
     const filters = getFilterValues();
 
-    return loadedSubmissions.filter((submission) => (
+    return loadedReviewItems.filter((submission) => (
         (!filters.courseId || submission.course_id === filters.courseId)
         && (!filters.classroomId || submission.classroom_id === filters.classroomId)
         && (!filters.lessonId || submission.lesson_id === filters.lessonId)
@@ -325,13 +395,16 @@ function getFilteredSubmissions() {
 function renderSummary(submissions) {
     const submittedCount = submissions.filter((submission) => submission.status === "submitted").length;
     const draftCount = submissions.filter((submission) => submission.status === "draft").length;
-    const pointsEarned = submissions.reduce((total, submission) => total + Number(submission.points_earned || 0), 0);
-    const pointsPossible = submissions.reduce((total, submission) => total + Number(submission.points_possible || 0), 0);
+    const missingCount = submissions.filter((submission) => submission.status === "missing").length;
+    const scorableSubmissions = submissions.filter((submission) => !submission.isMissing);
+    const pointsEarned = scorableSubmissions.reduce((total, submission) => total + Number(submission.points_earned || 0), 0);
+    const pointsPossible = scorableSubmissions.reduce((total, submission) => total + Number(submission.points_possible || 0), 0);
 
     summaryElement.replaceChildren(
         createSummaryCard("Visible work", String(submissions.length)),
         createSummaryCard("Submitted", String(submittedCount)),
         createSummaryCard("Incomplete drafts", String(draftCount)),
+        createSummaryCard("Missing", String(missingCount)),
         createSummaryCard("Points", `${pointsEarned} / ${pointsPossible}`)
     );
 }
@@ -359,11 +432,21 @@ function renderSubmissions(submissions) {
             classroomNames.get(submission.classroom_id),
         ].filter(Boolean);
         const context = createElement("span", "course-muted", contextParts.join(" / "));
-        const submittedAt = createElement("span", "course-muted", formatDate(submission.submitted_at || submission.updated_at));
-        const points = createElement("span", "course-muted", `${Number(submission.points_earned || 0)} / ${Number(submission.points_possible || 0)} pts`);
+        const submittedAt = createElement(
+            "span",
+            "course-muted",
+            submission.isMissing ? "No submission yet" : formatDate(submission.submitted_at || submission.updated_at)
+        );
+        const points = createElement(
+            "span",
+            "course-muted",
+            submission.isMissing ? "No points yet" : `${Number(submission.points_earned || 0)} / ${Number(submission.points_possible || 0)} pts`
+        );
         const status = createElement("span", "badge badge--quiet", formatStatus(submission.status));
 
-        link.href = `view.html?submission=${encodeURIComponent(submission.id)}`;
+        link.href = submission.isMissing
+            ? `../classrooms/student.html?classroom=${encodeURIComponent(submission.classroom_id)}&student=${encodeURIComponent(submission.student_user_id)}`
+            : `view.html?submission=${encodeURIComponent(submission.id)}`;
         item.append(link, student, context, submittedAt, points, status);
         list.append(item);
     });
@@ -407,6 +490,10 @@ async function initializePage() {
             loadStudentNames(),
         ]);
 
+        const classroomIds = loadedClassrooms.map((classroom) => classroom.id);
+        const activeEnrollments = await loadActiveClassroomEnrollments(classroomIds);
+
+        loadedReviewItems = buildReviewItems(activeEnrollments);
         renderFilters();
         renderReviewView();
         shellElement.hidden = false;
