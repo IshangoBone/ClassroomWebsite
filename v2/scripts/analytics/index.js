@@ -1,0 +1,574 @@
+import { supabase } from "../../services/supabase/client.js";
+import { createElement, qs } from "../utils/dom.js";
+
+const statusElement = qs("[data-analytics-status]");
+const shellElements = [...document.querySelectorAll("[data-analytics-shell]")];
+const summaryElement = qs("[data-analytics-summary]");
+const courseAnalyticsElement = qs("[data-course-analytics]");
+const classroomAnalyticsElement = qs("[data-classroom-analytics]");
+const activityElement = qs("[data-analytics-activity]");
+
+let currentProfile = null;
+let loadedCourses = [];
+let loadedClassrooms = [];
+let loadedLessons = [];
+let loadedSubmissions = [];
+let loadedEnrollments = [];
+let studentNames = new Map();
+
+function setStatus(message, tone = "info") {
+    statusElement.textContent = message;
+    statusElement.dataset.tone = tone;
+}
+
+function formatShortId(id) {
+    return id ? id.slice(0, 8) : "unknown";
+}
+
+function formatStudentName(profile) {
+    const fullName = [profile.legal_first_name, profile.legal_last_name]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+    return fullName || profile.username || `Student ${formatShortId(profile.id)}`;
+}
+
+function getStudentName(studentId) {
+    return studentNames.get(studentId) || `Student ${formatShortId(studentId)}`;
+}
+
+function formatNumber(value) {
+    return new Intl.NumberFormat().format(value);
+}
+
+function formatPercent(value) {
+    return `${Math.round(value)}%`;
+}
+
+function formatDate(value) {
+    if (!value) {
+        return "No activity";
+    }
+
+    return new Date(value).toLocaleString([], {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    });
+}
+
+function createSummaryCard(label, value, detail = "") {
+    const card = createElement("article", "summary-card");
+
+    card.append(createElement("span", "summary-label", label), createElement("strong", "summary-value summary-value--small", value));
+
+    if (detail) {
+        card.append(createElement("span", "course-muted", detail));
+    }
+
+    return card;
+}
+
+function createProgressBar(percent, label) {
+    const progress = createElement("div", "dashboard-progress");
+    const value = createElement("span", "dashboard-progress-value");
+
+    progress.setAttribute("role", "progressbar");
+    progress.setAttribute("aria-label", label);
+    progress.setAttribute("aria-valuemin", "0");
+    progress.setAttribute("aria-valuemax", "100");
+    progress.setAttribute("aria-valuenow", String(Math.round(percent)));
+    value.style.width = `${Math.min(Math.max(percent, 0), 100)}%`;
+    progress.append(value);
+
+    return progress;
+}
+
+function showShell() {
+    shellElements.forEach((element) => {
+        element.hidden = false;
+    });
+}
+
+async function loadCurrentProfile() {
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !authData.user) {
+        window.location.href = "../auth/login.html";
+        return null;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, profile_completed")
+        .eq("auth_user_id", authData.user.id)
+        .maybeSingle();
+
+    if (profileError || !profile) {
+        setStatus("Your profile could not be loaded. Please sign in again.", "error");
+        return null;
+    }
+
+    if (!profile.profile_completed) {
+        window.location.href = "../auth/onboarding.html";
+        return null;
+    }
+
+    return profile;
+}
+
+async function loadTeachingCourses(profileId) {
+    const { data: ownedCourses, error: ownedError } = await supabase
+        .from("courses")
+        .select("id, title, status, updated_at")
+        .eq("owner_user_id", profileId)
+        .neq("status", "deleted")
+        .order("updated_at", { ascending: false });
+
+    if (ownedError) {
+        throw ownedError;
+    }
+
+    const { data: collaboratorRows, error: collaboratorError } = await supabase
+        .from("course_collaborators")
+        .select("course_id")
+        .eq("user_id", profileId)
+        .in("permission_level", ["teacher", "editor", "co_owner"]);
+
+    if (collaboratorError) {
+        throw collaboratorError;
+    }
+
+    let collaborativeCourses = [];
+    const collaborativeCourseIds = collaboratorRows.map((row) => row.course_id);
+
+    if (collaborativeCourseIds.length) {
+        const { data, error } = await supabase
+            .from("courses")
+            .select("id, title, status, updated_at")
+            .in("id", collaborativeCourseIds)
+            .neq("status", "deleted");
+
+        if (error) {
+            throw error;
+        }
+
+        collaborativeCourses = data;
+    }
+
+    const courseMap = new Map();
+
+    ownedCourses.forEach((course) => courseMap.set(course.id, course));
+    collaborativeCourses.forEach((course) => courseMap.set(course.id, course));
+
+    return [...courseMap.values()].sort((first, second) => new Date(second.updated_at) - new Date(first.updated_at));
+}
+
+async function loadManagedClassrooms(profileId, courseIds) {
+    if (!courseIds.length) {
+        return [];
+    }
+
+    const { data: ownedClassrooms, error: ownedError } = await supabase
+        .from("classrooms")
+        .select("id, course_id, name, period_block, status, display_order")
+        .eq("owner_teacher_id", profileId)
+        .in("course_id", courseIds)
+        .neq("status", "deleted");
+
+    if (ownedError) {
+        throw ownedError;
+    }
+
+    const { data: teacherAssignments, error: assignmentError } = await supabase
+        .from("classroom_teachers")
+        .select("classroom_id")
+        .eq("user_id", profileId);
+
+    if (assignmentError) {
+        throw assignmentError;
+    }
+
+    let assignedClassrooms = [];
+    const assignedClassroomIds = teacherAssignments.map((assignment) => assignment.classroom_id);
+
+    if (assignedClassroomIds.length) {
+        const { data, error } = await supabase
+            .from("classrooms")
+            .select("id, course_id, name, period_block, status, display_order")
+            .in("id", assignedClassroomIds)
+            .in("course_id", courseIds)
+            .neq("status", "deleted");
+
+        if (error) {
+            throw error;
+        }
+
+        assignedClassrooms = data;
+    }
+
+    const classroomMap = new Map();
+    [...ownedClassrooms, ...assignedClassrooms].forEach((classroom) => classroomMap.set(classroom.id, classroom));
+
+    return [...classroomMap.values()].sort((first, second) => first.display_order - second.display_order);
+}
+
+async function loadLessons(courseIds) {
+    if (!courseIds.length) {
+        return [];
+    }
+
+    const { data: modules, error: moduleError } = await supabase
+        .from("modules")
+        .select("id, course_id")
+        .in("course_id", courseIds)
+        .is("archived_at", null);
+
+    if (moduleError) {
+        throw moduleError;
+    }
+
+    const moduleIds = modules.map((module) => module.id);
+
+    if (!moduleIds.length) {
+        return [];
+    }
+
+    const { data: lessons, error: lessonError } = await supabase
+        .from("lessons")
+        .select("id, module_id, title, order_index")
+        .in("module_id", moduleIds)
+        .is("archived_at", null)
+        .order("order_index", { ascending: true });
+
+    if (lessonError) {
+        throw lessonError;
+    }
+
+    const courseByModuleId = new Map(modules.map((module) => [module.id, module.course_id]));
+
+    return lessons.map((lesson) => ({
+        ...lesson,
+        course_id: courseByModuleId.get(lesson.module_id),
+    }));
+}
+
+async function loadSubmissions(courseIds) {
+    if (!courseIds.length) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from("lesson_submissions")
+        .select("id, student_user_id, course_id, classroom_id, lesson_id, status, submitted_at, updated_at, points_earned, points_possible")
+        .in("course_id", courseIds)
+        .order("updated_at", { ascending: false })
+        .limit(500);
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}
+
+async function loadActiveClassroomEnrollments(classroomIds) {
+    if (!classroomIds.length) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from("enrollments")
+        .select("id, user_id, course_id, classroom_id, joined_at")
+        .in("classroom_id", classroomIds)
+        .eq("enrollment_type", "classroom")
+        .eq("enrollment_status", "active");
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}
+
+async function loadStudentNames() {
+    const { data, error } = await supabase.rpc("reviewable_student_profiles");
+
+    if (error || !data) {
+        return new Map();
+    }
+
+    return new Map(data.map((profile) => [profile.id, formatStudentName(profile)]));
+}
+
+function getClassroomLabel(classroom) {
+    return classroom.period_block ? `${classroom.name} - ${classroom.period_block}` : classroom.name;
+}
+
+function getContextAnalytics({ courseId = "", classroomId = "" } = {}) {
+    const lessons = loadedLessons.filter((lesson) => (
+        (!courseId || lesson.course_id === courseId)
+    ));
+    const enrollments = loadedEnrollments.filter((enrollment) => (
+        (!courseId || enrollment.course_id === courseId)
+        && (!classroomId || enrollment.classroom_id === classroomId)
+    ));
+    const submissions = loadedSubmissions.filter((submission) => (
+        (!courseId || submission.course_id === courseId)
+        && (!classroomId || submission.classroom_id === classroomId)
+    ));
+    const submittedSubmissions = submissions.filter((submission) => submission.status === "submitted");
+    const draftSubmissions = submissions.filter((submission) => submission.status === "draft");
+    const submittedContextKeys = new Set(submittedSubmissions.map((submission) => [
+        submission.student_user_id,
+        submission.classroom_id || "",
+        submission.lesson_id,
+    ].join(":")));
+    const expectedWork = enrollments.flatMap((enrollment) => (
+        lessons
+            .filter((lesson) => lesson.course_id === enrollment.course_id)
+            .map((lesson) => ({
+                isSubmitted: submittedContextKeys.has([
+                    enrollment.user_id,
+                    enrollment.classroom_id || "",
+                    lesson.id,
+                ].join(":")),
+            }))
+    ));
+    const expectedWorkCount = expectedWork.length;
+    const completedExpectedCount = expectedWork.filter((item) => item.isSubmitted).length;
+    const missingCount = expectedWorkCount - completedExpectedCount;
+    const draftContextKeys = new Set(draftSubmissions.map((submission) => [
+        submission.student_user_id,
+        submission.classroom_id || "",
+        submission.lesson_id,
+    ].join(":")));
+    const draftCount = enrollments.reduce((total, enrollment) => (
+        total + lessons.filter((lesson) => draftContextKeys.has([
+            enrollment.user_id,
+            enrollment.classroom_id || "",
+            lesson.id,
+        ].join(":"))).length
+    ), 0);
+    const pointsEarned = submissions.reduce((total, submission) => total + Number(submission.points_earned || 0), 0);
+    const pointsPossible = submissions.reduce((total, submission) => total + Number(submission.points_possible || 0), 0);
+    const lastActivityAt = submissions.reduce((latest, submission) => {
+        const activityDate = new Date(submission.submitted_at || submission.updated_at || 0);
+
+        return activityDate > latest ? activityDate : latest;
+    }, new Date(0));
+
+    return {
+        averagePoints: submittedSubmissions.length ? pointsEarned / submittedSubmissions.length : 0,
+        completionPercent: expectedWorkCount ? (completedExpectedCount / expectedWorkCount) * 100 : 0,
+        draftCount,
+        enrollmentCount: enrollments.length,
+        expectedWorkCount,
+        lastActivityAt: lastActivityAt.getTime() ? lastActivityAt.toISOString() : "",
+        lessonCount: lessons.length,
+        missingCount,
+        pointsEarned,
+        pointsPossible,
+        submissionCount: completedExpectedCount,
+    };
+}
+
+function renderSummary() {
+    const analytics = getContextAnalytics();
+    const submissionsToday = loadedSubmissions.filter((submission) => {
+        const activityDate = new Date(submission.submitted_at || submission.updated_at || 0);
+        const today = new Date();
+
+        return activityDate.toDateString() === today.toDateString();
+    }).length;
+
+    summaryElement.replaceChildren(
+        createSummaryCard("Active students", formatNumber(new Set(loadedEnrollments.map((enrollment) => enrollment.user_id)).size)),
+        createSummaryCard("Average progress", formatPercent(analytics.completionPercent), `${analytics.submissionCount} of ${analytics.expectedWorkCount} expected submissions`),
+        createSummaryCard("Missing work", formatNumber(analytics.missingCount)),
+        createSummaryCard("Incomplete drafts", formatNumber(analytics.draftCount)),
+        createSummaryCard("Participation points", `${analytics.pointsEarned} / ${analytics.pointsPossible}`),
+        createSummaryCard("Activity today", formatNumber(submissionsToday))
+    );
+}
+
+function createAnalyticsTable(columns, rows, emptyMessage) {
+    if (!rows.length) {
+        return createElement("p", "empty-state", emptyMessage);
+    }
+
+    const wrapper = createElement("div", "analytics-table-shell");
+    const table = createElement("table", "analytics-table");
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    const tbody = document.createElement("tbody");
+
+    columns.forEach((column) => {
+        headerRow.append(createElement("th", "", column.label));
+    });
+    thead.append(headerRow);
+
+    rows.forEach((row) => {
+        const tr = document.createElement("tr");
+
+        columns.forEach((column) => {
+            const cell = document.createElement("td");
+            const value = column.render ? column.render(row) : row[column.key];
+
+            if (value instanceof Node) {
+                cell.append(value);
+            } else {
+                cell.textContent = String(value ?? "");
+            }
+
+            tr.append(cell);
+        });
+        tbody.append(tr);
+    });
+
+    table.append(thead, tbody);
+    wrapper.append(table);
+    return wrapper;
+}
+
+function createProgressCell(row) {
+    const cell = createElement("div", "analytics-progress-cell");
+
+    cell.append(createElement("strong", "", formatPercent(row.analytics.completionPercent)));
+    cell.append(createProgressBar(row.analytics.completionPercent, `${row.name} completion`));
+    return cell;
+}
+
+function createActionLink(label, href) {
+    const link = createElement("a", "secondary-button analytics-table-action", label);
+
+    link.href = href;
+    return link;
+}
+
+function renderCourseAnalytics() {
+    const rows = loadedCourses.map((course) => ({
+        analytics: getContextAnalytics({ courseId: course.id }),
+        course,
+        name: course.title || "Untitled course",
+    }));
+
+    courseAnalyticsElement.replaceChildren(createAnalyticsTable([
+        { label: "Course", key: "name" },
+        { label: "Students", render: (row) => formatNumber(row.analytics.enrollmentCount) },
+        { label: "Progress", render: createProgressCell },
+        { label: "Missing", render: (row) => formatNumber(row.analytics.missingCount) },
+        { label: "Incomplete", render: (row) => formatNumber(row.analytics.draftCount) },
+        { label: "Points", render: (row) => `${row.analytics.pointsEarned} / ${row.analytics.pointsPossible}` },
+        {
+            label: "Actions",
+            render: (row) => createActionLink("Review", `../submissions/index.html?course=${encodeURIComponent(row.course.id)}`),
+        },
+    ], rows, "Managed courses are required before teacher analytics are available."));
+}
+
+function renderClassroomAnalytics() {
+    const courseNames = new Map(loadedCourses.map((course) => [course.id, course.title || "Untitled course"]));
+    const rows = loadedClassrooms.map((classroom) => ({
+        analytics: getContextAnalytics({ courseId: classroom.course_id, classroomId: classroom.id }),
+        classroom,
+        courseName: courseNames.get(classroom.course_id) || "Course",
+        name: getClassroomLabel(classroom),
+    }));
+
+    classroomAnalyticsElement.replaceChildren(createAnalyticsTable([
+        { label: "Classroom", key: "name" },
+        { label: "Course", key: "courseName" },
+        { label: "Students", render: (row) => formatNumber(row.analytics.enrollmentCount) },
+        { label: "Progress", render: createProgressCell },
+        { label: "Missing", render: (row) => formatNumber(row.analytics.missingCount) },
+        { label: "Last activity", render: (row) => formatDate(row.analytics.lastActivityAt) },
+        {
+            label: "Actions",
+            render: (row) => createActionLink("Roster", `../classrooms/roster.html?classroom=${encodeURIComponent(row.classroom.id)}`),
+        },
+    ], rows, "Create or manage a classroom before classroom analytics are available."));
+}
+
+function renderRecentActivity() {
+    if (!loadedSubmissions.length) {
+        activityElement.replaceChildren(createElement("p", "empty-state", "No student activity is available yet."));
+        return;
+    }
+
+    const courseNames = new Map(loadedCourses.map((course) => [course.id, course.title || "Untitled course"]));
+    const classroomNames = new Map(loadedClassrooms.map((classroom) => [classroom.id, getClassroomLabel(classroom)]));
+    const lessonNames = new Map(loadedLessons.map((lesson) => [lesson.id, lesson.title || "Untitled lesson"]));
+    const list = createElement("ul", "submission-list analytics-activity-list");
+    const recentSubmissions = [...loadedSubmissions].sort((first, second) => (
+        new Date(second.submitted_at || second.updated_at || 0) - new Date(first.submitted_at || first.updated_at || 0)
+    ));
+
+    recentSubmissions.slice(0, 8).forEach((submission) => {
+        const item = createElement("li", "submission-item submission-item--review-page");
+        const link = createElement("a", "submission-name", lessonNames.get(submission.lesson_id) || "Untitled lesson");
+        const contextParts = [
+            getStudentName(submission.student_user_id),
+            courseNames.get(submission.course_id) || "Course",
+            classroomNames.get(submission.classroom_id),
+        ].filter(Boolean);
+        const context = createElement("span", "course-muted", contextParts.join(" / "));
+        const activityDate = createElement("span", "course-muted", formatDate(submission.submitted_at || submission.updated_at));
+        const points = createElement("span", "course-muted", `${Number(submission.points_earned || 0)} / ${Number(submission.points_possible || 0)} pts`);
+        const status = createElement("span", "badge badge--quiet", submission.status.charAt(0).toUpperCase() + submission.status.slice(1));
+
+        link.href = `../submissions/view.html?submission=${encodeURIComponent(submission.id)}&returnTo=${encodeURIComponent("/pages/analytics/index.html")}`;
+        item.append(link, context, activityDate, points, status);
+        list.append(item);
+    });
+
+    activityElement.replaceChildren(list);
+}
+
+async function initializePage() {
+    setStatus("Loading teacher analytics...");
+
+    currentProfile = await loadCurrentProfile();
+
+    if (!currentProfile) {
+        return;
+    }
+
+    try {
+        loadedCourses = await loadTeachingCourses(currentProfile.id);
+
+        if (!loadedCourses.length) {
+            showShell();
+            renderSummary();
+            courseAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Managed courses are required before teacher analytics are available."));
+            classroomAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Create a course and classroom before analytics are available."));
+            activityElement.replaceChildren(createElement("p", "empty-state", "No student activity is available yet."));
+            setStatus("");
+            return;
+        }
+
+        const courseIds = loadedCourses.map((course) => course.id);
+
+        [loadedClassrooms, loadedLessons, loadedSubmissions, studentNames] = await Promise.all([
+            loadManagedClassrooms(currentProfile.id, courseIds),
+            loadLessons(courseIds),
+            loadSubmissions(courseIds),
+            loadStudentNames(),
+        ]);
+
+        loadedEnrollments = await loadActiveClassroomEnrollments(loadedClassrooms.map((classroom) => classroom.id));
+
+        renderSummary();
+        renderCourseAnalytics();
+        renderClassroomAnalytics();
+        renderRecentActivity();
+        showShell();
+        setStatus("");
+    } catch (error) {
+        setStatus(error.message || "Teacher analytics could not be loaded.", "error");
+    }
+}
+
+await initializePage();

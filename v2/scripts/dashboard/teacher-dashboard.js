@@ -30,6 +30,7 @@ const managedCoursesHeading = qs("[data-managed-courses-heading]");
 const managedCoursesCopy = qs("[data-managed-courses-copy]");
 const teacherSubmissionsSection = qs("[data-teacher-submissions-section]");
 const studentJoinSection = qs("[data-student-join-section]");
+const teacherAnalyticsEntry = qs("[data-teacher-analytics-entry]");
 const dashboardParams = new URLSearchParams(window.location.search);
 
 let currentProfile = null;
@@ -961,6 +962,7 @@ async function refreshDashboard() {
         courseFormToggle.hidden = isStudentOnly;
         courseFormPanel.hidden = true;
         teacherSubmissionsSection.hidden = isStudentOnly;
+        teacherAnalyticsEntry.hidden = isStudentOnly;
         studentActivitySection.hidden = !isStudentOnly;
         studentJoinSection.hidden = !isStudentOnly;
 
