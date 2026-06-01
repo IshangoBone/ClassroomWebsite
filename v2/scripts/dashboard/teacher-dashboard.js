@@ -144,6 +144,8 @@ async function joinClassroomFromAccess(options) {
         notFoundMessage,
         failureMessage,
         successFallback = "Classroom joined.",
+        closedMessage = "Joining is closed for this classroom.",
+        joiningMessage = "Joining classroom...",
         onComplete,
     } = options;
 
@@ -170,7 +172,7 @@ async function joinClassroomFromAccess(options) {
     }
 
     if (!preview.is_joining_open) {
-        setStatus("Joining is closed for this classroom.", "error");
+        setStatus(closedMessage, "error");
         return;
     }
 
@@ -181,7 +183,7 @@ async function joinClassroomFromAccess(options) {
         return;
     }
 
-    setStatus("Joining classroom...");
+    setStatus(joiningMessage);
 
     const { data, error } = await supabase.rpc(joinRpc, payload);
 
@@ -234,6 +236,8 @@ async function handlePublicCourseJoin(courseIdToJoin) {
         notFoundMessage: "That public course was not found.",
         failureMessage: "That public course could not be joined.",
         successFallback: "Course joined.",
+        closedMessage: "Joining is closed for this course.",
+        joiningMessage: "Joining course...",
         onComplete: () => {
             const cleanUrl = new URL(window.location.href);
             cleanUrl.searchParams.delete("courseJoin");
