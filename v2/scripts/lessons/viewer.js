@@ -5,6 +5,8 @@ const params = new URLSearchParams(window.location.search);
 const lessonId = params.get("lesson");
 const classroomId = params.get("classroom");
 const isTeacherPreview = params.get("preview") === "teacher";
+const previewCourseId = params.get("course");
+const backLink = qs("[data-lesson-back-link]");
 const headingElement = qs("[data-lesson-heading]");
 const contextElement = qs("[data-lesson-context]");
 const statusElement = qs("[data-lesson-status]");
@@ -218,6 +220,17 @@ function showTeacherPreviewState() {
     turnInButton.hidden = true;
     nextLessonLink.hidden = true;
     setQuestionInputsDisabled(true);
+}
+
+function updateTeacherPreviewBackLink(courseId) {
+    const targetCourseId = previewCourseId || courseId;
+
+    if (!targetCourseId) {
+        return;
+    }
+
+    backLink.href = `../courses/preview.html?course=${encodeURIComponent(targetCourseId)}`;
+    backLink.textContent = "Back to course preview";
 }
 
 function isAudioUrl(url) {
@@ -983,6 +996,9 @@ async function initializePage() {
     const { lesson, module, course } = context;
 
     currentLessonContext = context;
+    if (isTeacherPreview) {
+        updateTeacherPreviewBackLink(course.id);
+    }
     headingElement.textContent = lesson.title || "Untitled lesson";
     contextElement.textContent = isTeacherPreview
         ? `Teacher preview / ${course.title || "Untitled course"} / ${module.title || "Untitled module"}`

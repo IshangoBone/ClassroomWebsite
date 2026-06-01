@@ -175,7 +175,13 @@ function createLessonCard(lesson, contentBlocks, questions) {
     const timeText = lesson.estimated_time ? lesson.estimated_time : "No time estimate";
     const previewLink = createElement("a", "secondary-button lesson-action", "Preview lesson");
 
-    previewLink.href = `../lessons/view.html?lesson=${encodeURIComponent(lesson.id)}&preview=teacher`;
+    const previewParams = new URLSearchParams({
+        lesson: lesson.id,
+        preview: "teacher",
+        course: courseId,
+    });
+
+    previewLink.href = `../lessons/view.html?${previewParams.toString()}`;
     metaRow.append(
         createElement("span", "badge badge--quiet", `Lesson ${lesson.order_index + 1}`),
         createElement("span", "badge badge--quiet", timeText),
