@@ -119,6 +119,19 @@
             </div>
         </section>
 
+        <section class="dashboard-section" aria-labelledby="enrolled-courses-heading" data-enrolled-courses-section hidden>
+            <div class="section-header">
+                <div>
+                    <h2 id="enrolled-courses-heading">My enrolled courses</h2>
+                    <p class="section-copy">Courses and classrooms where you are learning appear here.</p>
+                </div>
+            </div>
+
+            <div class="course-grid" data-enrolled-course-list>
+                <p class="empty-state">Loading enrolled courses...</p>
+            </div>
+        </section>
+
         <section class="dashboard-section dashboard-section--muted" aria-labelledby="activity-heading" data-teacher-submissions-section>
             <div class="section-header section-header--actions">
                 <div>
@@ -185,7 +198,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260601-student-course-view"></script>
+    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260601-hybrid-student-courses"></script>
 </body>
 
 </html>

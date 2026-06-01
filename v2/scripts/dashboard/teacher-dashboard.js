@@ -6,6 +6,8 @@ const greetingElement = qs("[data-dashboard-greeting]");
 const courseList = qs("[data-course-list]");
 const submissionList = qs("[data-submission-list]");
 const studentSubmissionList = qs("[data-student-submission-list]");
+const enrolledCoursesSection = qs("[data-enrolled-courses-section]");
+const enrolledCourseList = qs("[data-enrolled-course-list]");
 const courseFormPanel = qs("[data-course-form-panel]");
 const courseForm = qs("[data-course-form]");
 const courseFormToggle = qs("[data-course-form-toggle]");
@@ -647,9 +649,9 @@ function getContinueLesson(enrollment, lessons, submissions) {
     };
 }
 
-function renderStudentEnrollments(enrollments, courses, classrooms, lessons, submissions) {
+function renderStudentEnrollments(enrollments, courses, classrooms, lessons, submissions, targetList = courseList) {
     if (!enrollments.length) {
-        renderEmpty(courseList, "You are not enrolled in any courses yet.");
+        renderEmpty(targetList, "You are not enrolled in any courses yet.");
         return;
     }
 
@@ -735,7 +737,7 @@ function renderStudentEnrollments(enrollments, courses, classrooms, lessons, sub
         return card;
     });
 
-    courseList.replaceChildren(...cards);
+    targetList.replaceChildren(...cards);
 }
 
 function populateSelect(select, options, placeholder) {
@@ -947,6 +949,7 @@ async function refreshDashboard() {
         ]);
         const displayStudentEnrollments = getDisplayStudentEnrollments(studentEnrollments);
         const isStudentOnly = !courses.length;
+        const hasStudentEnrollments = Boolean(displayStudentEnrollments.length);
         const submittedStudentWork = studentSubmissions.filter((submission) => submission.status === "submitted");
         const studentPoints = submittedStudentWork.reduce((total, submission) => total + Number(submission.points_earned || 0), 0);
         const progressTotals = displayStudentEnrollments.reduce((totals, enrollment) => {
@@ -973,6 +976,9 @@ async function refreshDashboard() {
         teacherAnalyticsEntry.hidden = isStudentOnly;
         studentActivitySection.hidden = !isStudentOnly;
         studentJoinSection.hidden = !isStudentOnly;
+        if (enrolledCoursesSection) {
+            enrolledCoursesSection.hidden = isStudentOnly || !hasStudentEnrollments;
+        }
 
         if (isStudentOnly) {
             greetingElement.textContent = `Welcome, ${currentProfile.username || "there"}. Continue your courses and review lesson work.`;
@@ -1002,6 +1008,10 @@ async function refreshDashboard() {
             submissionsSummary.textContent = String(submissions.length);
             studentSubmissionsSummary.textContent = String(studentSubmissions.length);
             renderCourses(courses, classrooms);
+
+            if (hasStudentEnrollments && enrolledCourseList) {
+                renderStudentEnrollments(displayStudentEnrollments, visibleCourses, studentClassrooms, lessons, studentSubmissions, enrolledCourseList);
+            }
         }
 
         renderSubmissionFilters(courses, classrooms, lessons.filter((lesson) => courseIds.includes(lesson.course_id)), submissions);
