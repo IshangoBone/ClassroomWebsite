@@ -706,7 +706,15 @@ function renderStudentEnrollments(enrollments, courses, classrooms, lessons, sub
             )
             : null;
         const actions = createElement("div", "course-actions");
+        const courseParams = new URLSearchParams({ course: enrollment.course_id });
+        const openCourseAction = createElement("a", "secondary-button", "Open course");
 
+        if (enrollment.classroom_id) {
+            courseParams.set("classroom", enrollment.classroom_id);
+        }
+
+        openCourseAction.href = `../courses/student.html?${courseParams.toString()}`;
+        actions.append(openCourseAction);
         if (continueLesson) {
             const continueAction = createElement("a", "primary-button", continueLesson.label);
             continueAction.href = continueLesson.href;

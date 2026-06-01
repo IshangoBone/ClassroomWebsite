@@ -456,6 +456,11 @@ h2 {
     background: #20395f;
 }
 
+.student-course-next {
+    font-size: 1rem;
+    line-height: 1.25;
+}
+
 .course-create-panel {
     padding: 22px;
     border: 1px solid #dbe4f1;
@@ -920,6 +925,15 @@ h2 {
     border: 1px solid #dbe4f1;
     border-radius: 16px;
     background: #f7faff;
+}
+
+.student-module-card > summary {
+    cursor: pointer;
+    list-style-position: inside;
+}
+
+.student-module-card > summary::-webkit-details-marker {
+    color: #49617f;
 }
 
 .module-card[draggable="true"] {
