@@ -1643,14 +1643,34 @@ h2 {
     border-bottom: 0;
 }
 
-.activity-metadata {
-    display: block;
-    max-width: 320px;
-    overflow: hidden;
+.activity-details-stack {
+    display: grid;
+    gap: 8px;
+    min-width: 280px;
+}
+
+.activity-json-details {
     color: #334766;
-    font-size: 0.82rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+}
+
+.activity-json-details summary {
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.activity-json-value {
+    max-width: 420px;
+    max-height: 220px;
+    margin: 8px 0 0;
+    overflow: auto;
+    padding: 10px;
+    border: 1px solid #e6edf8;
+    border-radius: 8px;
+    background: #f7faff;
+    color: #334766;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
 }
 
 .analytics-progress-cell {

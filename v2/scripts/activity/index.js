@@ -87,6 +87,8 @@ function getSearchText(log) {
         log.course_id,
         log.classroom_id,
         JSON.stringify(log.metadata_json || {}),
+        JSON.stringify(log.old_value_json || {}),
+        JSON.stringify(log.new_value_json || {}),
     ].filter(Boolean).join(" ").toLowerCase();
 }
 
@@ -118,6 +120,29 @@ function renderSummary(logs) {
     );
 }
 
+function createJsonDetails(label, value, isOpen = false) {
+    const details = createElement("details", "activity-json-details");
+    const summary = createElement("summary", "", label);
+    const content = createElement("pre", "activity-json-value", JSON.stringify(value || {}, null, 2));
+
+    details.open = isOpen;
+    details.append(summary, content);
+    return details;
+}
+
+function createDetailsCell(log) {
+    const cell = document.createElement("td");
+    const detailsWrap = createElement("div", "activity-details-stack");
+
+    detailsWrap.append(
+        createJsonDetails("Metadata", log.metadata_json, true),
+        createJsonDetails("Old value", log.old_value_json),
+        createJsonDetails("New value", log.new_value_json)
+    );
+    cell.append(detailsWrap);
+    return cell;
+}
+
 function renderLogs() {
     const logs = getFilteredLogs();
 
@@ -140,7 +165,6 @@ function renderLogs() {
 
     logs.forEach((log) => {
         const row = document.createElement("tr");
-        const metadata = createElement("code", "activity-metadata", JSON.stringify(log.metadata_json || {}));
 
         row.append(
             createElement("td", "", formatDate(log.created_at)),
@@ -149,9 +173,8 @@ function renderLogs() {
             createElement("td", "", formatShortId(log.actor_user_id)),
             createElement("td", "", formatShortId(log.course_id)),
             createElement("td", "", formatShortId(log.classroom_id)),
-            createElement("td", "", "")
+            createDetailsCell(log)
         );
-        row.lastElementChild.append(metadata);
         body.append(row);
     });
 
@@ -197,7 +220,7 @@ async function loadActivityLogs() {
 
     const { data, error } = await supabase
         .from("activity_logs")
-        .select("id, actor_user_id, action_type, target_type, target_id, course_id, classroom_id, metadata_json, created_at")
+        .select("id, actor_user_id, action_type, target_type, target_id, course_id, classroom_id, old_value_json, new_value_json, metadata_json, created_at")
         .order("created_at", { ascending: false })
         .limit(200);
 
