@@ -12,12 +12,14 @@ const courseAnalyticsElement = qs("[data-course-analytics]");
 const classroomAnalyticsElement = qs("[data-classroom-analytics]");
 const studentRiskElement = qs("[data-student-risk-analytics]");
 const lessonAnalyticsElement = qs("[data-lesson-analytics]");
+const questionAnalyticsElement = qs("[data-question-analytics]");
 const activityElement = qs("[data-analytics-activity]");
 
 let currentProfile = null;
 let loadedCourses = [];
 let loadedClassrooms = [];
 let loadedLessons = [];
+let loadedQuestions = [];
 let loadedSubmissions = [];
 let loadedEnrollments = [];
 let studentNames = new Map();
@@ -293,10 +295,30 @@ async function loadSubmissions(courseIds) {
 
     const { data, error } = await supabase
         .from("lesson_submissions")
-        .select("id, student_user_id, course_id, classroom_id, lesson_id, status, submitted_at, updated_at, points_earned, points_possible")
+        .select("id, student_user_id, course_id, classroom_id, lesson_id, answers_json, status, submitted_at, updated_at, points_earned, points_possible")
         .in("course_id", courseIds)
         .order("updated_at", { ascending: false })
         .limit(500);
+
+    if (error) {
+        throw error;
+    }
+
+    return data;
+}
+
+async function loadQuestions(lessonIds) {
+    if (!lessonIds.length) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from("questions")
+        .select("id, lesson_id, phase, question_type, prompt, points, order_index")
+        .in("lesson_id", lessonIds)
+        .eq("is_visible", true)
+        .is("archived_at", null)
+        .order("order_index", { ascending: true });
 
     if (error) {
         throw error;
@@ -363,6 +385,12 @@ function getFilteredLessons(filters = getFilterValues()) {
         (!filters.courseId || lesson.course_id === filters.courseId)
         && (!courseIds.size || courseIds.has(lesson.course_id))
     ));
+}
+
+function getFilteredQuestions(filters = getFilterValues()) {
+    const lessonIds = new Set(getFilteredLessons(filters).map((lesson) => lesson.id));
+
+    return loadedQuestions.filter((question) => lessonIds.has(question.lesson_id));
 }
 
 function renderFilters() {
@@ -821,6 +849,127 @@ function renderLessonAnalytics(filters = getFilterValues()) {
     ], rows, "Lessons with active classroom enrollments will appear here."));
 }
 
+function hasAnswerValue(value) {
+    if (value === undefined || value === null || value === "") {
+        return false;
+    }
+
+    if (Array.isArray(value)) {
+        return value.length > 0;
+    }
+
+    if (typeof value === "object") {
+        return Object.values(value).some((entry) => hasAnswerValue(entry));
+    }
+
+    return String(value).trim().length > 0;
+}
+
+function getQuestionTrendRows(filters = getFilterValues()) {
+    const courseNames = new Map(loadedCourses.map((course) => [course.id, course.title || "Untitled course"]));
+    const lessonById = new Map(loadedLessons.map((lesson) => [lesson.id, lesson]));
+    const enrollmentsByCourse = getFilteredEnrollments(filters).reduce((enrollmentMap, enrollment) => {
+        const courseEnrollments = enrollmentMap.get(enrollment.course_id) || [];
+
+        courseEnrollments.push(enrollment);
+        enrollmentMap.set(enrollment.course_id, courseEnrollments);
+        return enrollmentMap;
+    }, new Map());
+    const submissionsByLesson = getFilteredSubmissions(filters).reduce((submissionMap, submission) => {
+        const lessonSubmissions = submissionMap.get(submission.lesson_id) || [];
+
+        lessonSubmissions.push(submission);
+        submissionMap.set(submission.lesson_id, lessonSubmissions);
+        return submissionMap;
+    }, new Map());
+
+    return getFilteredQuestions(filters).map((question) => {
+        const lesson = lessonById.get(question.lesson_id);
+        const expectedCount = (enrollmentsByCourse.get(lesson?.course_id) || []).length;
+        const submissions = submissionsByLesson.get(question.lesson_id) || [];
+        const answeredCount = submissions.filter((submission) => hasAnswerValue(submission.answers_json?.[question.id])).length;
+        const missingCount = Math.max(expectedCount - answeredCount, 0);
+        const pointsEarned = submissions.reduce((total, submission) => total + Number(submission.points_earned || 0), 0);
+        const pointsPossible = submissions.reduce((total, submission) => total + Number(submission.points_possible || 0), 0);
+        const averagePointsPercent = pointsPossible ? (pointsEarned / pointsPossible) * 100 : 0;
+        const answerRate = expectedCount ? (answeredCount / expectedCount) * 100 : 0;
+
+        return {
+            answerRate,
+            answeredCount,
+            averagePointsPercent,
+            courseId: lesson?.course_id || "",
+            courseName: courseNames.get(lesson?.course_id) || "Course",
+            expectedCount,
+            lessonName: lesson?.title || "Untitled lesson",
+            missingCount,
+            pointsEarned,
+            pointsPossible,
+            prompt: question.prompt,
+            question,
+            type: question.question_type.replaceAll("_", " "),
+        };
+    }).sort((first, second) => (
+        first.answerRate - second.answerRate
+        || second.missingCount - first.missingCount
+        || first.averagePointsPercent - second.averagePointsPercent
+        || first.courseName.localeCompare(second.courseName)
+        || first.lessonName.localeCompare(second.lessonName)
+        || first.question.order_index - second.question.order_index
+    ));
+}
+
+function createQuestionPromptCell(row) {
+    const cell = createElement("div", "analytics-question-cell");
+    const prompt = row.prompt.length > 90 ? `${row.prompt.slice(0, 87)}...` : row.prompt;
+
+    cell.append(
+        createElement("strong", "", prompt),
+        createElement("span", "course-muted", `${row.lessonName} / ${row.type}`)
+    );
+    return cell;
+}
+
+function createAnswerRateCell(row) {
+    const cell = createElement("div", "analytics-progress-cell");
+
+    cell.append(
+        createElement("strong", "", formatPercent(row.answerRate)),
+        createProgressBar(row.answerRate, `${row.prompt} answer rate`),
+        createElement("span", "course-muted", `${row.answeredCount} of ${row.expectedCount} students`)
+    );
+    return cell;
+}
+
+function getQuestionReviewHref(row, filters = getFilterValues()) {
+    const params = new URLSearchParams();
+
+    params.set("course", row.courseId);
+    params.set("lesson", row.question.lesson_id);
+
+    if (filters.classroomId) {
+        params.set("classroom", filters.classroomId);
+    }
+
+    return `../submissions/index.html?${params.toString()}`;
+}
+
+function renderQuestionAnalytics(filters = getFilterValues()) {
+    const rows = getQuestionTrendRows(filters).filter((row) => row.expectedCount > 0);
+
+    questionAnalyticsElement.replaceChildren(createAnalyticsTable([
+        { label: "Question", render: createQuestionPromptCell },
+        { label: "Course", key: "courseName" },
+        { label: "Answer rate", render: createAnswerRateCell },
+        { label: "Missing", render: (row) => formatNumber(row.missingCount) },
+        { label: "Lesson avg points", render: (row) => `${row.pointsEarned} / ${row.pointsPossible}` },
+        {
+            label: "Actions",
+            render: (row) => createActionLink("Review", getQuestionReviewHref(row, filters)),
+        },
+    ], rows.slice(0, 12), "Question trends will appear after lessons have visible questions and active classroom enrollments."));
+}
+
 function renderRecentActivity(filters = getFilterValues()) {
     const filteredSubmissions = getFilteredSubmissions(filters);
 
@@ -879,6 +1028,7 @@ function renderAnalyticsView() {
     renderClassroomAnalytics(filters);
     renderStudentRiskAnalytics(filters);
     renderLessonAnalytics(filters);
+    renderQuestionAnalytics(filters);
     renderRecentActivity(filters);
 }
 
@@ -901,6 +1051,7 @@ async function initializePage() {
             classroomAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Create a course and classroom before analytics are available."));
             studentRiskElement.replaceChildren(createElement("p", "empty-state", "Student progress will appear after students join a classroom."));
             lessonAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Lesson completion will appear after students join a classroom."));
+            questionAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Question trends will appear after students answer visible questions."));
             activityElement.replaceChildren(createElement("p", "empty-state", "No student activity is available yet."));
             setStatus("");
             return;
@@ -914,6 +1065,7 @@ async function initializePage() {
             loadSubmissions(courseIds),
             loadStudentNames(),
         ]);
+        loadedQuestions = await loadQuestions(loadedLessons.map((lesson) => lesson.id));
 
         loadedEnrollments = await loadActiveClassroomEnrollments(loadedClassrooms.map((classroom) => classroom.id));
 
