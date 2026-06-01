@@ -65,6 +65,22 @@ function createSummaryCard(label, value) {
     return card;
 }
 
+function createCoverageCard(submittedCount, draftCount, missingCount, totalCount) {
+    const card = createElement("article", "summary-card submission-coverage-card");
+    const completionPercent = totalCount ? Math.round((submittedCount / totalCount) * 100) : 0;
+    const progress = document.createElement("progress");
+
+    progress.max = 100;
+    progress.value = completionPercent;
+    card.append(
+        createElement("span", "summary-label", "Review coverage"),
+        createElement("strong", "summary-value summary-value--small", `${completionPercent}% submitted`),
+        progress,
+        createElement("span", "course-muted", `${submittedCount} submitted / ${draftCount} incomplete / ${missingCount} missing`)
+    );
+    return card;
+}
+
 function populateSelect(select, options, placeholder) {
     const currentValue = select.value;
     const optionElements = [createElement("option", "", placeholder)];
@@ -464,6 +480,7 @@ function renderSummary(submissions) {
     const pointsPossible = scorableSubmissions.reduce((total, submission) => total + Number(submission.points_possible || 0), 0);
 
     summaryElement.replaceChildren(
+        createCoverageCard(submittedCount, draftCount, missingCount, submissions.length),
         createSummaryCard("Visible work", String(submissions.length)),
         createSummaryCard("Submitted", String(submittedCount)),
         createSummaryCard("Incomplete drafts", String(draftCount)),

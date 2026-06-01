@@ -1524,6 +1524,15 @@ h2 {
     gap: 14px;
 }
 
+.submission-coverage-card {
+    grid-column: span 2;
+}
+
+.submission-coverage-card progress {
+    width: 100%;
+    accent-color: #365a9b;
+}
+
 @media (max-width: 900px) {
     .lesson-view-shell {
         grid-template-columns: 1fr;
