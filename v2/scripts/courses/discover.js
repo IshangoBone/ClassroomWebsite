@@ -96,16 +96,30 @@ function createCourseCard(course) {
         createElement("span", "badge", "Public"),
         createElement("span", "badge badge--quiet", formatLessonCount(course.lesson_count))
     );
+
+    if (course.has_classroom_access && !course.already_enrolled) {
+        badges.append(createElement("span", "badge badge--quiet", "Classroom access"));
+    }
+
     heading.append(title, badges);
 
     if (course.already_enrolled) {
         primaryAction.href = `student.html?course=${courseId}`;
     } else {
         primaryAction.type = "button";
+        primaryAction.textContent = course.has_classroom_access ? "Join independent course" : "Join course";
         primaryAction.addEventListener("click", () => joinCourse(course, primaryAction));
     }
 
     actions.append(primaryAction);
+
+    if (course.has_classroom_access && !course.already_enrolled) {
+        const accessNote = createElement("p", "course-muted", "You already have classroom access. Join here only if you also want independent course access.");
+
+        card.append(heading, details, teacher, description, accessNote, actions);
+        return card;
+    }
+
     card.append(heading, details, teacher, description, actions);
     return card;
 }
@@ -134,7 +148,11 @@ async function refreshDiscovery() {
 }
 
 async function joinCourse(course, button) {
-    const confirmed = window.confirm(`Join ${course.title || "this public course"}?`);
+    const confirmed = window.confirm(
+        course.has_classroom_access
+            ? `Join ${course.title || "this public course"} as an independent course too?`
+            : `Join ${course.title || "this public course"}?`
+    );
 
     if (!confirmed) {
         return;
