@@ -26,8 +26,23 @@
                     <h2>Overview</h2>
                     <p class="section-copy">Summary metrics combine active classroom enrollments with current lessons and student submissions.</p>
                 </div>
-                <a class="secondary-button" href="../submissions/index.html">Review submissions</a>
+                <a class="secondary-button" href="../submissions/index.html" data-analytics-review-link>Review submissions</a>
             </div>
+
+            <form class="submission-filter-form analytics-filter-form" data-analytics-filter-form>
+                <label class="form-field">
+                    <span>Course</span>
+                    <select name="course" data-analytics-filter-course>
+                        <option value="">All courses</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Classroom</span>
+                    <select name="classroom" data-analytics-filter-classroom>
+                        <option value="">All classrooms</option>
+                    </select>
+                </label>
+            </form>
 
             <div class="analytics-summary-grid" data-analytics-summary>
                 <p class="empty-state">Loading analytics summary...</p>
@@ -74,7 +89,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/analytics/index.js?v=20260531-teacher-overview"></script>
+    <script type="module" src="../../scripts/analytics/index.js?v=20260531-analytics-filters"></script>
 </body>
 
 </html>

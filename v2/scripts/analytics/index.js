@@ -4,6 +4,10 @@ import { createElement, qs } from "../utils/dom.js";
 const statusElement = qs("[data-analytics-status]");
 const shellElements = [...document.querySelectorAll("[data-analytics-shell]")];
 const summaryElement = qs("[data-analytics-summary]");
+const filterForm = qs("[data-analytics-filter-form]");
+const courseFilter = qs("[data-analytics-filter-course]");
+const classroomFilter = qs("[data-analytics-filter-classroom]");
+const reviewLink = qs("[data-analytics-review-link]");
 const courseAnalyticsElement = qs("[data-course-analytics]");
 const classroomAnalyticsElement = qs("[data-classroom-analytics]");
 const activityElement = qs("[data-analytics-activity]");
@@ -90,6 +94,31 @@ function showShell() {
     shellElements.forEach((element) => {
         element.hidden = false;
     });
+}
+
+function populateSelect(select, options, placeholder) {
+    const currentValue = select.value;
+    const optionElements = [createElement("option", "", placeholder)];
+
+    optionElements[0].value = "";
+    options.forEach((option) => {
+        const element = createElement("option", "", option.label);
+
+        element.value = option.value;
+        optionElements.push(element);
+    });
+
+    select.replaceChildren(...optionElements);
+    select.value = options.some((option) => option.value === currentValue) ? currentValue : "";
+}
+
+function getFilterValues() {
+    const formData = new FormData(filterForm);
+
+    return {
+        classroomId: String(formData.get("classroom") || ""),
+        courseId: String(formData.get("course") || ""),
+    };
 }
 
 async function loadCurrentProfile() {
@@ -307,6 +336,64 @@ function getClassroomLabel(classroom) {
     return classroom.period_block ? `${classroom.name} - ${classroom.period_block}` : classroom.name;
 }
 
+function getFilteredClassrooms(courseId = "") {
+    return loadedClassrooms.filter((classroom) => !courseId || classroom.course_id === courseId);
+}
+
+function getFilteredSubmissions(filters = getFilterValues()) {
+    return loadedSubmissions.filter((submission) => (
+        (!filters.courseId || submission.course_id === filters.courseId)
+        && (!filters.classroomId || submission.classroom_id === filters.classroomId)
+    ));
+}
+
+function getFilteredEnrollments(filters = getFilterValues()) {
+    return loadedEnrollments.filter((enrollment) => (
+        (!filters.courseId || enrollment.course_id === filters.courseId)
+        && (!filters.classroomId || enrollment.classroom_id === filters.classroomId)
+    ));
+}
+
+function renderFilters() {
+    const params = new URLSearchParams(window.location.search);
+    const initialCourseId = params.get("course") || "";
+    const courseOptions = loadedCourses.map((course) => ({
+        label: course.title || "Untitled course",
+        value: course.id,
+    }));
+    const classroomOptions = getFilteredClassrooms(initialCourseId).map((classroom) => ({
+        label: getClassroomLabel(classroom),
+        value: classroom.id,
+    }));
+
+    populateSelect(courseFilter, courseOptions, "All courses");
+    populateSelect(classroomFilter, classroomOptions, "All classrooms");
+
+    params.forEach((value, key) => {
+        const field = filterForm.elements[key];
+
+        if (field && [...field.options].some((option) => option.value === value)) {
+            field.value = value;
+        }
+    });
+}
+
+function updateReviewLink(filters = getFilterValues()) {
+    const params = new URLSearchParams();
+
+    if (filters.courseId) {
+        params.set("course", filters.courseId);
+    }
+
+    if (filters.classroomId) {
+        params.set("classroom", filters.classroomId);
+    }
+
+    reviewLink.href = params.toString()
+        ? `../submissions/index.html?${params.toString()}`
+        : "../submissions/index.html";
+}
+
 function getContextAnalytics({ courseId = "", classroomId = "" } = {}) {
     const lessons = loadedLessons.filter((lesson) => (
         (!courseId || lesson.course_id === courseId)
@@ -375,9 +462,11 @@ function getContextAnalytics({ courseId = "", classroomId = "" } = {}) {
     };
 }
 
-function renderSummary() {
-    const analytics = getContextAnalytics();
-    const submissionsToday = loadedSubmissions.filter((submission) => {
+function renderSummary(filters = getFilterValues()) {
+    const analytics = getContextAnalytics(filters);
+    const filteredEnrollments = getFilteredEnrollments(filters);
+    const filteredSubmissions = getFilteredSubmissions(filters);
+    const submissionsToday = filteredSubmissions.filter((submission) => {
         const activityDate = new Date(submission.submitted_at || submission.updated_at || 0);
         const today = new Date();
 
@@ -385,7 +474,7 @@ function renderSummary() {
     }).length;
 
     summaryElement.replaceChildren(
-        createSummaryCard("Active students", formatNumber(new Set(loadedEnrollments.map((enrollment) => enrollment.user_id)).size)),
+        createSummaryCard("Active students", formatNumber(new Set(filteredEnrollments.map((enrollment) => enrollment.user_id)).size)),
         createSummaryCard("Average progress", formatPercent(analytics.completionPercent), `${analytics.submissionCount} of ${analytics.expectedWorkCount} expected submissions`),
         createSummaryCard("Missing work", formatNumber(analytics.missingCount)),
         createSummaryCard("Incomplete drafts", formatNumber(analytics.draftCount)),
@@ -448,8 +537,11 @@ function createActionLink(label, href) {
     return link;
 }
 
-function renderCourseAnalytics() {
-    const rows = loadedCourses.map((course) => ({
+function renderCourseAnalytics(filters = getFilterValues()) {
+    const courses = filters.courseId
+        ? loadedCourses.filter((course) => course.id === filters.courseId)
+        : loadedCourses;
+    const rows = courses.map((course) => ({
         analytics: getContextAnalytics({ courseId: course.id }),
         course,
         name: course.title || "Untitled course",
@@ -469,9 +561,13 @@ function renderCourseAnalytics() {
     ], rows, "Managed courses are required before teacher analytics are available."));
 }
 
-function renderClassroomAnalytics() {
+function renderClassroomAnalytics(filters = getFilterValues()) {
     const courseNames = new Map(loadedCourses.map((course) => [course.id, course.title || "Untitled course"]));
-    const rows = loadedClassrooms.map((classroom) => ({
+    const classrooms = loadedClassrooms.filter((classroom) => (
+        (!filters.courseId || classroom.course_id === filters.courseId)
+        && (!filters.classroomId || classroom.id === filters.classroomId)
+    ));
+    const rows = classrooms.map((classroom) => ({
         analytics: getContextAnalytics({ courseId: classroom.course_id, classroomId: classroom.id }),
         classroom,
         courseName: courseNames.get(classroom.course_id) || "Course",
@@ -492,8 +588,10 @@ function renderClassroomAnalytics() {
     ], rows, "Create or manage a classroom before classroom analytics are available."));
 }
 
-function renderRecentActivity() {
-    if (!loadedSubmissions.length) {
+function renderRecentActivity(filters = getFilterValues()) {
+    const filteredSubmissions = getFilteredSubmissions(filters);
+
+    if (!filteredSubmissions.length) {
         activityElement.replaceChildren(createElement("p", "empty-state", "No student activity is available yet."));
         return;
     }
@@ -502,7 +600,7 @@ function renderRecentActivity() {
     const classroomNames = new Map(loadedClassrooms.map((classroom) => [classroom.id, getClassroomLabel(classroom)]));
     const lessonNames = new Map(loadedLessons.map((lesson) => [lesson.id, lesson.title || "Untitled lesson"]));
     const list = createElement("ul", "submission-list analytics-activity-list");
-    const recentSubmissions = [...loadedSubmissions].sort((first, second) => (
+    const recentSubmissions = [...filteredSubmissions].sort((first, second) => (
         new Date(second.submitted_at || second.updated_at || 0) - new Date(first.submitted_at || first.updated_at || 0)
     ));
 
@@ -525,6 +623,28 @@ function renderRecentActivity() {
     });
 
     activityElement.replaceChildren(list);
+}
+
+function renderAnalyticsView() {
+    const filters = getFilterValues();
+    const url = new URL(window.location.href);
+
+    updateReviewLink(filters);
+    Object.entries({
+        classroom: filters.classroomId,
+        course: filters.courseId,
+    }).forEach(([key, value]) => {
+        if (value) {
+            url.searchParams.set(key, value);
+        } else {
+            url.searchParams.delete(key);
+        }
+    });
+    window.history.replaceState({}, "", url);
+    renderSummary(filters);
+    renderCourseAnalytics(filters);
+    renderClassroomAnalytics(filters);
+    renderRecentActivity(filters);
 }
 
 async function initializePage() {
@@ -560,15 +680,29 @@ async function initializePage() {
 
         loadedEnrollments = await loadActiveClassroomEnrollments(loadedClassrooms.map((classroom) => classroom.id));
 
-        renderSummary();
-        renderCourseAnalytics();
-        renderClassroomAnalytics();
-        renderRecentActivity();
+        renderFilters();
+        renderAnalyticsView();
         showShell();
         setStatus("");
     } catch (error) {
         setStatus(error.message || "Teacher analytics could not be loaded.", "error");
     }
 }
+
+filterForm.addEventListener("change", (event) => {
+    if (event.target === courseFilter) {
+        classroomFilter.value = "";
+        populateSelect(
+            classroomFilter,
+            getFilteredClassrooms(courseFilter.value).map((classroom) => ({
+                label: getClassroomLabel(classroom),
+                value: classroom.id,
+            })),
+            "All classrooms"
+        );
+    }
+
+    renderAnalyticsView();
+});
 
 await initializePage();
