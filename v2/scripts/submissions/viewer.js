@@ -58,6 +58,23 @@ function formatDate(value) {
     });
 }
 
+function formatShortId(id) {
+    return id ? id.slice(0, 8) : "unknown";
+}
+
+function formatStudentName(profile) {
+    if (!profile) {
+        return "Unknown student";
+    }
+
+    const fullName = [profile.legal_first_name, profile.legal_last_name]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+    return fullName || profile.username || profile.email || `Student ${formatShortId(profile.id)}`;
+}
+
 function showShell() {
     shellElements.forEach((element) => {
         element.hidden = false;
@@ -146,19 +163,42 @@ async function loadContext(submission) {
 
     let classroom = null;
 
-    if (submission.classroom_id) {
-        const { data, error } = await supabase
-            .from("classrooms")
-            .select("id, name, period_block")
-            .eq("id", submission.classroom_id)
-            .single();
+    const contextRequests = [loadStudentProfile(submission.student_user_id)];
 
-        if (!error) {
-            classroom = data;
-        }
+    if (submission.classroom_id) {
+        contextRequests.push(
+            supabase
+                .from("classrooms")
+                .select("id, name, period_block")
+                .eq("id", submission.classroom_id)
+                .single()
+        );
     }
 
-    return { course, lesson, classroom };
+    const [student, classroomResult] = await Promise.all(contextRequests);
+
+    if (classroomResult && !classroomResult.error) {
+        classroom = classroomResult.data;
+    }
+
+    return { course, lesson, classroom, student };
+}
+
+async function loadStudentProfile(studentId) {
+    const { data: reviewableProfiles } = await supabase.rpc("reviewable_student_profiles");
+    const reviewableProfile = (reviewableProfiles || []).find((profile) => profile.id === studentId);
+
+    if (reviewableProfile) {
+        return reviewableProfile;
+    }
+
+    const { data, error } = await supabase
+        .from("profiles")
+        .select("id, username, legal_first_name, legal_last_name, email")
+        .eq("id", studentId)
+        .maybeSingle();
+
+    return error ? null : data;
 }
 
 async function loadQuestions(lessonId) {
@@ -245,6 +285,7 @@ function renderSummary(submission, context) {
     summaryElement.replaceChildren(
         createSummaryCard("Status", formatStatus(submission.status)),
         createSummaryCard("Submitted", formatDate(submission.submitted_at)),
+        createSummaryCard("Student", formatStudentName(context.student)),
         createSummaryCard("Course", context.course.title || "Untitled course"),
         createSummaryCard("Lesson", context.lesson.title || "Untitled lesson"),
         createSummaryCard("Classroom", classroomName),
@@ -413,7 +454,7 @@ async function initializePage() {
     const questions = await loadQuestions(submission.lesson_id);
     const optionLabels = await loadOptionLabels(questions.map((question) => question.id));
 
-    headingElement.textContent = context.lesson.title || "Submitted lesson";
+    headingElement.textContent = `${formatStudentName(context.student)} - ${context.lesson.title || "Submitted lesson"}`;
     contextElement.textContent = `${context.course.title || "Untitled course"} submission`;
     renderSummary(submission, context);
     renderAnswers(questions, submission.answers_json || {}, optionLabels);
