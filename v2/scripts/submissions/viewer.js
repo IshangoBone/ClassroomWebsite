@@ -98,6 +98,33 @@ function createFeedbackMeta(submission) {
     return createElement("p", "course-muted", updatedAt);
 }
 
+function getFeedbackFormValues(form) {
+    const formData = new FormData(form);
+
+    return {
+        feedback: String(formData.get("teacher-feedback") || "").trim(),
+        pointsEarned: Number(formData.get("points-earned") || 0),
+    };
+}
+
+function hasFeedbackChanges(form, submission) {
+    const values = getFeedbackFormValues(form);
+
+    return values.pointsEarned !== Number(submission.points_earned || 0)
+        || values.feedback !== String(submission.teacher_feedback || "").trim();
+}
+
+function updateFeedbackFormState(form, submission) {
+    const saveButton = form.querySelector("[data-save-feedback]");
+    const resetButton = form.querySelector("[data-reset-feedback]");
+    const formStatus = form.querySelector("[data-feedback-form-status]");
+    const hasChanges = hasFeedbackChanges(form, submission);
+
+    saveButton.disabled = !hasChanges;
+    resetButton.disabled = !hasChanges;
+    formStatus.textContent = hasChanges ? "Unsaved changes" : "No unsaved changes";
+}
+
 function getAnswerValue(question, answers, optionLabels) {
     const rawAnswer = answers?.[question.id];
 
@@ -356,6 +383,8 @@ function renderFeedback(submission) {
     const feedbackInput = document.createElement("textarea");
     const actions = createElement("div", "course-form-actions");
     const saveButton = createElement("button", "primary-button", "Save feedback");
+    const resetButton = createElement("button", "secondary-button", "Reset changes");
+    const formStatus = createElement("p", "course-muted submission-feedback-state", "No unsaved changes");
 
     pointsInput.type = "number";
     pointsInput.name = "points-earned";
@@ -368,22 +397,36 @@ function renderFeedback(submission) {
     feedbackInput.maxLength = 2000;
     feedbackInput.value = submission.teacher_feedback || "";
     saveButton.type = "submit";
+    saveButton.dataset.saveFeedback = "true";
+    resetButton.type = "button";
+    resetButton.dataset.resetFeedback = "true";
+    formStatus.dataset.feedbackFormStatus = "true";
     pointsLabel.append(createElement("span", "", "Points earned"), pointsInput);
     feedbackLabel.append(createElement("span", "", "Feedback"), feedbackInput);
-    actions.append(saveButton);
+    actions.append(saveButton, resetButton, formStatus);
     form.append(pointsLabel, feedbackLabel, actions, createFeedbackMeta(submission));
+    form.addEventListener("input", () => updateFeedbackFormState(form, submission));
+    resetButton.addEventListener("click", () => {
+        pointsInput.value = String(submission.points_earned || 0);
+        feedbackInput.value = submission.teacher_feedback || "";
+        updateFeedbackFormState(form, submission);
+    });
     form.addEventListener("submit", saveFeedback);
     feedbackPanel.replaceChildren(form);
+    updateFeedbackFormState(form, submission);
 }
 
 async function saveFeedback(event) {
     event.preventDefault();
 
     const form = event.currentTarget;
-    const formData = new FormData(form);
-    const pointsEarned = Number(formData.get("points-earned") || 0);
-    const teacherFeedback = String(formData.get("teacher-feedback") || "").trim();
+    const { feedback: teacherFeedback, pointsEarned } = getFeedbackFormValues(form);
     const saveButton = form.querySelector("button[type='submit']");
+
+    if (!hasFeedbackChanges(form, currentSubmission)) {
+        setStatus("Make a feedback or point change before saving.", "error");
+        return;
+    }
 
     if (!Number.isFinite(pointsEarned) || pointsEarned < 0 || pointsEarned > Number(currentSubmission.points_possible || 0)) {
         setStatus("Enter points within the possible score range.", "error");

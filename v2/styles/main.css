@@ -1513,6 +1513,11 @@ h2 {
     gap: 14px;
 }
 
+.submission-feedback-state {
+    align-self: center;
+    font-weight: 700;
+}
+
 .submission-review-summary-grid {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
