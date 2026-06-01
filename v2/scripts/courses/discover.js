@@ -5,9 +5,10 @@ const statusElement = qs("[data-discovery-status]");
 const shellElements = [...document.querySelectorAll("[data-discovery-shell]")];
 const searchForm = qs("[data-discovery-search-form]");
 const courseListElement = qs("[data-discovery-course-list]");
+const discoveryParams = new URLSearchParams(window.location.search);
 
 let currentProfileId = "";
-let searchText = "";
+let searchText = discoveryParams.get("q")?.trim() || "";
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -164,6 +165,7 @@ async function initializePage() {
     }
 
     currentProfileId = profile.id;
+    searchForm.elements.search.value = searchText;
     shellElements.forEach((element) => {
         element.hidden = false;
     });
@@ -175,6 +177,15 @@ searchForm.addEventListener("submit", async (event) => {
     const formData = new FormData(searchForm);
 
     searchText = String(formData.get("search") || "").trim();
+    const nextUrl = new URL(window.location.href);
+
+    if (searchText) {
+        nextUrl.searchParams.set("q", searchText);
+    } else {
+        nextUrl.searchParams.delete("q");
+    }
+
+    window.history.replaceState({}, "", nextUrl);
     await refreshDiscovery();
 });
 
