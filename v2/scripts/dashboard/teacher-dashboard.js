@@ -12,6 +12,7 @@ const courseFormPanel = qs("[data-course-form-panel]");
 const courseForm = qs("[data-course-form]");
 const courseFormToggle = qs("[data-course-form-toggle]");
 const courseFormCancel = qs("[data-course-form-cancel]");
+const logoutButton = qs("[data-logout-button]");
 const studentJoinForm = qs("[data-student-join-form]");
 const submissionFilterForm = qs("[data-submission-filter-form]");
 const studentActivitySection = qs("[data-student-activity-section]");
@@ -88,6 +89,42 @@ function setCourseFormVisible(isVisible) {
     if (isVisible) {
         courseForm.elements.title.focus();
     }
+}
+
+async function logDashboardActivity(actionType) {
+    if (!currentProfile) {
+        return;
+    }
+
+    const { error } = await supabase.rpc("log_activity", {
+        action_type_input: actionType,
+        target_type_input: "user",
+        target_id_input: currentProfile.id,
+        metadata_json_input: {
+            source: "dashboard",
+        },
+    });
+
+    if (error) {
+        console.warn("Activity logging failed:", error.message);
+    }
+}
+
+async function handleLogout() {
+    logoutButton.disabled = true;
+    setStatus("Logging out...");
+
+    await logDashboardActivity("user_logout");
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+        logoutButton.disabled = false;
+        setStatus(error.message || "Logout failed. Please try again.", "error");
+        return;
+    }
+
+    window.location.href = "../auth/login.html";
 }
 
 function getSubmissionFilters() {
@@ -1062,6 +1099,7 @@ async function initializeDashboard() {
     currentProfile = profile;
     greetingElement.textContent = `Welcome, ${profile.username || "there"}. Manage teaching work and continue saved lessons.`;
     courseFormToggle.disabled = false;
+    logoutButton.disabled = false;
     await refreshDashboard();
     await handleClassroomInvite(dashboardParams.get("classroomInvite"));
     await handlePublicCourseJoin(dashboardParams.get("courseJoin"));
@@ -1078,6 +1116,7 @@ courseFormCancel.addEventListener("click", () => {
 
 submissionFilterForm.addEventListener("change", refreshSubmissionList);
 studentJoinForm.addEventListener("submit", handleStudentJoinSubmit);
+logoutButton.addEventListener("click", handleLogout);
 
 courseForm.addEventListener("submit", async (event) => {
     event.preventDefault();

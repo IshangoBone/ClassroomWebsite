@@ -394,6 +394,17 @@ h2 {
     min-width: 150px;
 }
 
+.dashboard-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.dashboard-logout-button {
+    min-width: 110px;
+}
+
 .dashboard-status {
     min-height: 0;
     margin: -12px 0 0;
@@ -1890,6 +1901,15 @@ h2 {
     }
 
     .dashboard-new-course-button {
+        width: 100%;
+    }
+
+    .dashboard-header-actions {
+        display: grid;
+        justify-content: stretch;
+    }
+
+    .dashboard-logout-button {
         width: 100%;
     }
 

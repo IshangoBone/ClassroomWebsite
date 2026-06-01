@@ -19,9 +19,14 @@
                 </p>
             </div>
 
-            <button type="button" class="primary-button dashboard-new-course-button" data-course-form-toggle disabled>
-                New course
-            </button>
+            <div class="dashboard-header-actions">
+                <button type="button" class="primary-button dashboard-new-course-button" data-course-form-toggle disabled>
+                    New course
+                </button>
+                <button type="button" class="secondary-button dashboard-logout-button" data-logout-button disabled>
+                    Log out
+                </button>
+            </div>
         </header>
 
         <p class="auth-status dashboard-status" data-dashboard-status aria-live="polite"></p>
@@ -228,7 +233,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260601-admin-activity"></script>
+    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260601-logout-activity"></script>
 </body>
 
 </html>
