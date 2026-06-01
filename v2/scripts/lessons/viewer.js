@@ -4,6 +4,7 @@ import { createElement, qs } from "../utils/dom.js";
 const params = new URLSearchParams(window.location.search);
 const lessonId = params.get("lesson");
 const classroomId = params.get("classroom");
+const isTeacherPreview = params.get("preview") === "teacher";
 const headingElement = qs("[data-lesson-heading]");
 const contextElement = qs("[data-lesson-context]");
 const statusElement = qs("[data-lesson-status]");
@@ -12,6 +13,7 @@ const objectiveElement = qs("[data-lesson-objective]");
 const contentRenderer = qs("[data-content-renderer]");
 const questionFlow = qs("[data-question-flow]");
 const submitPanel = qs("[data-submit-panel]");
+const submitPanelHeading = qs("[data-submit-panel-heading]");
 const saveStatusElement = qs("[data-save-status]");
 const submitStatusElement = qs("[data-submit-status]");
 const saveDraftButton = qs("[data-save-draft-button]");
@@ -92,6 +94,10 @@ function getAnswer(questionId) {
 }
 
 function setAnswer(questionId, value) {
+    if (isTeacherPreview) {
+        return;
+    }
+
     answerState = {
         ...answerState,
         [questionId]: value,
@@ -200,6 +206,17 @@ function showCompletionState(date = new Date()) {
     setSubmitStatus("Lesson turned in successfully. Your answers are locked.", "success");
     turnInButton.hidden = true;
     setDraftControlsDisabled(true);
+    setQuestionInputsDisabled(true);
+}
+
+function showTeacherPreviewState() {
+    submitPanelHeading.textContent = "Teacher preview";
+    saveStatusElement.textContent = "Read-only preview. Student responses are disabled and no draft will be saved.";
+    setSubmitStatus("Preview mode is for checking the student experience before assigning the lesson.", "info");
+    saveDraftButton.hidden = true;
+    resetDraftButton.hidden = true;
+    turnInButton.hidden = true;
+    nextLessonLink.hidden = true;
     setQuestionInputsDisabled(true);
 }
 
@@ -559,7 +576,7 @@ function renderQuestionFlow(questions) {
     });
 
     questionFlow.replaceChildren(...sections);
-    setQuestionInputsDisabled(isSubmitted);
+    setQuestionInputsDisabled(isSubmitted || isTeacherPreview);
 }
 
 async function loadLessonContext() {
@@ -756,7 +773,7 @@ async function createSubmissionDraft() {
 }
 
 async function saveDraftAnswers() {
-    if (isSubmitted) {
+    if (isTeacherPreview || isSubmitted) {
         return true;
     }
 
@@ -791,7 +808,7 @@ async function saveDraftAnswers() {
 }
 
 function scheduleDraftSave() {
-    if (isSubmitted) {
+    if (isTeacherPreview || isSubmitted) {
         return;
     }
 
@@ -801,6 +818,10 @@ function scheduleDraftSave() {
 }
 
 async function manuallySaveDraft() {
+    if (isTeacherPreview) {
+        return;
+    }
+
     window.clearTimeout(autoSaveTimer);
     saveDraftButton.disabled = true;
     await saveDraftAnswers();
@@ -808,7 +829,7 @@ async function manuallySaveDraft() {
 }
 
 async function resetDraft() {
-    if (isSubmitted) {
+    if (isTeacherPreview || isSubmitted) {
         return;
     }
 
@@ -872,6 +893,9 @@ async function loadNextLesson() {
     if (classroomId) {
         nextParams.set("classroom", classroomId);
     }
+    if (isTeacherPreview) {
+        nextParams.set("preview", "teacher");
+    }
 
     nextLessonLink.href = `view.html?${nextParams.toString()}`;
     nextLessonLink.textContent = `Next lesson: ${data.title || "Continue"}`;
@@ -879,6 +903,10 @@ async function loadNextLesson() {
 }
 
 async function turnInLesson() {
+    if (isTeacherPreview) {
+        return;
+    }
+
     const missingRequiredQuestions = getMissingRequiredQuestions();
 
     if (missingRequiredQuestions.length) {
@@ -956,10 +984,21 @@ async function initializePage() {
 
     currentLessonContext = context;
     headingElement.textContent = lesson.title || "Untitled lesson";
-    contextElement.textContent = `${course.title || "Untitled course"} / ${module.title || "Untitled module"}`;
+    contextElement.textContent = isTeacherPreview
+        ? `Teacher preview / ${course.title || "Untitled course"} / ${module.title || "Untitled module"}`
+        : `${course.title || "Untitled course"} / ${module.title || "Untitled module"}`;
     objectiveElement.textContent = lesson.objective || lesson.summary || "No objective has been added for this lesson yet.";
     shellElement.hidden = false;
     submitPanel.hidden = false;
+
+    if (isTeacherPreview) {
+        await loadQuestionFlow();
+        showTeacherPreviewState();
+        if (await loadContentBlocks()) {
+            setStatus("");
+        }
+        return;
+    }
 
     await loadSubmissionDraft();
     await loadQuestionFlow();
