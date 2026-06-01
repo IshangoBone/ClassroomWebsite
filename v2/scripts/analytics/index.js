@@ -10,6 +10,7 @@ const classroomFilter = qs("[data-analytics-filter-classroom]");
 const reviewLink = qs("[data-analytics-review-link]");
 const courseAnalyticsElement = qs("[data-course-analytics]");
 const classroomAnalyticsElement = qs("[data-classroom-analytics]");
+const studentRiskElement = qs("[data-student-risk-analytics]");
 const activityElement = qs("[data-analytics-activity]");
 
 let currentProfile = null;
@@ -354,6 +355,15 @@ function getFilteredEnrollments(filters = getFilterValues()) {
     ));
 }
 
+function getFilteredLessons(filters = getFilterValues()) {
+    const courseIds = new Set(getFilteredEnrollments(filters).map((enrollment) => enrollment.course_id));
+
+    return loadedLessons.filter((lesson) => (
+        (!filters.courseId || lesson.course_id === filters.courseId)
+        && (!courseIds.size || courseIds.has(lesson.course_id))
+    ));
+}
+
 function renderFilters() {
     const params = new URLSearchParams(window.location.search);
     const initialCourseId = params.get("course") || "";
@@ -588,6 +598,116 @@ function renderClassroomAnalytics(filters = getFilterValues()) {
     ], rows, "Create or manage a classroom before classroom analytics are available."));
 }
 
+function getStudentProgressRows(filters = getFilterValues()) {
+    const courseNames = new Map(loadedCourses.map((course) => [course.id, course.title || "Untitled course"]));
+    const classroomNames = new Map(loadedClassrooms.map((classroom) => [classroom.id, getClassroomLabel(classroom)]));
+    const lessonsByCourse = getFilteredLessons(filters).reduce((lessonMap, lesson) => {
+        const courseLessons = lessonMap.get(lesson.course_id) || [];
+
+        courseLessons.push(lesson);
+        lessonMap.set(lesson.course_id, courseLessons);
+        return lessonMap;
+    }, new Map());
+    const submissionsByContext = getFilteredSubmissions(filters).reduce((submissionMap, submission) => {
+        const key = [
+            submission.student_user_id,
+            submission.classroom_id || "",
+            submission.lesson_id,
+        ].join(":");
+        const existing = submissionMap.get(key);
+        const existingDate = new Date(existing?.submitted_at || existing?.updated_at || 0);
+        const submissionDate = new Date(submission.submitted_at || submission.updated_at || 0);
+
+        if (!existing || submissionDate > existingDate) {
+            submissionMap.set(key, submission);
+        }
+
+        return submissionMap;
+    }, new Map());
+
+    return getFilteredEnrollments(filters).map((enrollment) => {
+        const lessons = lessonsByCourse.get(enrollment.course_id) || [];
+        const lessonStats = lessons.map((lesson) => {
+            const submission = submissionsByContext.get([
+                enrollment.user_id,
+                enrollment.classroom_id || "",
+                lesson.id,
+            ].join(":"));
+
+            return {
+                isDraft: submission?.status === "draft",
+                isSubmitted: submission?.status === "submitted",
+                submission,
+            };
+        });
+        const submittedCount = lessonStats.filter((stat) => stat.isSubmitted).length;
+        const draftCount = lessonStats.filter((stat) => stat.isDraft).length;
+        const missingCount = Math.max(lessons.length - submittedCount, 0);
+        const studentSubmissions = lessonStats.map((stat) => stat.submission).filter(Boolean);
+        const pointsEarned = studentSubmissions.reduce((total, submission) => total + Number(submission.points_earned || 0), 0);
+        const pointsPossible = studentSubmissions.reduce((total, submission) => total + Number(submission.points_possible || 0), 0);
+        const lastActivityAt = studentSubmissions.reduce((latest, submission) => {
+            const activityDate = new Date(submission.submitted_at || submission.updated_at || 0);
+
+            return activityDate > latest ? activityDate : latest;
+        }, new Date(0));
+        const progressPercent = lessons.length ? (submittedCount / lessons.length) * 100 : 0;
+
+        return {
+            classroomId: enrollment.classroom_id,
+            classroomName: classroomNames.get(enrollment.classroom_id) || "Classroom",
+            courseName: courseNames.get(enrollment.course_id) || "Course",
+            draftCount,
+            lastActivityAt: lastActivityAt.getTime() ? lastActivityAt.toISOString() : "",
+            lessonCount: lessons.length,
+            missingCount,
+            pointsEarned,
+            pointsPossible,
+            progressPercent,
+            studentId: enrollment.user_id,
+            studentName: getStudentName(enrollment.user_id),
+            submittedCount,
+        };
+    }).sort((first, second) => (
+        first.progressPercent - second.progressPercent
+        || second.missingCount - first.missingCount
+        || new Date(first.lastActivityAt || 0) - new Date(second.lastActivityAt || 0)
+        || first.studentName.localeCompare(second.studentName)
+    ));
+}
+
+function createStudentProgressCell(row) {
+    const cell = createElement("div", "analytics-progress-cell");
+
+    cell.append(
+        createElement("strong", "", formatPercent(row.progressPercent)),
+        createProgressBar(row.progressPercent, `${row.studentName} progress`),
+        createElement("span", "course-muted", `${row.submittedCount} of ${row.lessonCount} lessons`)
+    );
+    return cell;
+}
+
+function renderStudentRiskAnalytics(filters = getFilterValues()) {
+    const rows = getStudentProgressRows(filters).filter((row) => (
+        row.progressPercent < 80 || row.missingCount > 0 || row.draftCount > 0
+    ));
+
+    studentRiskElement.replaceChildren(createAnalyticsTable([
+        { label: "Student", key: "studentName" },
+        { label: "Course", key: "courseName" },
+        { label: "Classroom", key: "classroomName" },
+        { label: "Progress", render: createStudentProgressCell },
+        { label: "Missing", render: (row) => formatNumber(row.missingCount) },
+        { label: "Incomplete", render: (row) => formatNumber(row.draftCount) },
+        { label: "Points", render: (row) => `${row.pointsEarned} / ${row.pointsPossible}` },
+        { label: "Last activity", render: (row) => formatDate(row.lastActivityAt) },
+        {
+            label: "Actions",
+            render: (row) => createActionLink("Open student", `../classrooms/student.html?classroom=${encodeURIComponent(row.classroomId)}&student=${encodeURIComponent(row.studentId)}`),
+        },
+    ], rows.slice(0, 12), "No students are currently below the attention threshold for this view."));
+}
+
 function renderRecentActivity(filters = getFilterValues()) {
     const filteredSubmissions = getFilteredSubmissions(filters);
 
@@ -644,6 +764,7 @@ function renderAnalyticsView() {
     renderSummary(filters);
     renderCourseAnalytics(filters);
     renderClassroomAnalytics(filters);
+    renderStudentRiskAnalytics(filters);
     renderRecentActivity(filters);
 }
 
@@ -664,6 +785,7 @@ async function initializePage() {
             renderSummary();
             courseAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Managed courses are required before teacher analytics are available."));
             classroomAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Create a course and classroom before analytics are available."));
+            studentRiskElement.replaceChildren(createElement("p", "empty-state", "Student progress will appear after students join a classroom."));
             activityElement.replaceChildren(createElement("p", "empty-state", "No student activity is available yet."));
             setStatus("");
             return;
