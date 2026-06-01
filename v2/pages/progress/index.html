@@ -51,6 +51,29 @@
             </div>
         </section>
 
+        <section class="dashboard-section dashboard-section--muted" data-progress-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Filter progress</h2>
+                    <p class="section-copy">Narrow this view by course or classroom context.</p>
+                </div>
+            </div>
+            <form class="submission-filter-form student-progress-filter-form" data-progress-filter-form>
+                <label class="form-field">
+                    <span>Course</span>
+                    <select name="course" data-progress-filter-course>
+                        <option value="">All courses</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Classroom</span>
+                    <select name="classroom" data-progress-filter-classroom>
+                        <option value="">All classrooms</option>
+                    </select>
+                </label>
+            </form>
+        </section>
+
         <section class="dashboard-section" data-progress-shell hidden>
             <div class="section-header">
                 <div>
@@ -76,7 +99,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/progress/index.js?v=20260601-progress-overview"></script>
+    <script type="module" src="../../scripts/progress/index.js?v=20260601-progress-filters"></script>
 </body>
 
 </html>

@@ -11,10 +11,18 @@ const pointsElement = qs("[data-progress-points]");
 const progressCopyElement = qs("[data-progress-copy]");
 const progressBarElement = qs("[data-progress-bar]");
 const progressValueElement = qs("[data-progress-value]");
+const filterForm = qs("[data-progress-filter-form]");
+const courseFilter = qs("[data-progress-filter-course]");
+const classroomFilter = qs("[data-progress-filter-classroom]");
 const courseListElement = qs("[data-progress-course-list]");
 const historyListElement = qs("[data-progress-history-list]");
 
 let currentProfileId = "";
+let loadedEnrollments = [];
+let loadedCourses = [];
+let loadedClassrooms = [];
+let loadedLessons = [];
+let loadedSubmissions = [];
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -43,6 +51,21 @@ function formatDateTime(dateValue) {
 
 function renderEmpty(container, message) {
     container.replaceChildren(createElement("p", "empty-state", message));
+}
+
+function populateSelect(select, options, placeholder) {
+    const currentValue = select.value;
+    const optionElements = [createElement("option", "", placeholder)];
+
+    optionElements[0].value = "";
+    options.forEach((option) => {
+        const element = createElement("option", "", option.label);
+
+        element.value = option.value;
+        optionElements.push(element);
+    });
+    select.replaceChildren(...optionElements);
+    select.value = options.some((option) => option.value === currentValue) ? currentValue : "";
 }
 
 function getDisplayStudentEnrollments(enrollments) {
@@ -93,6 +116,32 @@ function getCourseProgress(enrollment, lessons, submissions) {
         submittedCount,
         totalLessons: courseLessons.length,
     };
+}
+
+function getFilters() {
+    const formData = new FormData(filterForm);
+
+    return {
+        classroomId: String(formData.get("classroom") || ""),
+        courseId: String(formData.get("course") || ""),
+    };
+}
+
+function getFilteredEnrollments() {
+    const filters = getFilters();
+
+    return loadedEnrollments.filter((enrollment) => (
+        (!filters.courseId || enrollment.course_id === filters.courseId)
+        && (!filters.classroomId || enrollment.classroom_id === filters.classroomId)
+    ));
+}
+
+function getFilteredSubmissions(enrollments) {
+    const enrollmentKeys = new Set(enrollments.map((enrollment) => `${enrollment.course_id}:${enrollment.classroom_id || "course"}`));
+
+    return loadedSubmissions.filter((submission) => (
+        enrollmentKeys.has(`${submission.course_id}:${submission.classroom_id || "course"}`)
+    ));
 }
 
 async function loadCurrentProfile() {
@@ -245,11 +294,39 @@ function renderSummary(enrollments, lessons, submissions) {
     remainingElement.textContent = String(remaining);
     pointsElement.textContent = String(totals.points);
     progressCopyElement.textContent = totals.total
-        ? `${totals.completed} of ${totals.total} lessons submitted across ${enrollments.length} enrolled course${enrollments.length === 1 ? "" : "s"}.`
+        ? `${totals.completed} of ${totals.total} lessons submitted across ${enrollments.length} selected enrollment${enrollments.length === 1 ? "" : "s"}.`
         : "Lessons will appear here once your enrolled courses are ready.";
     progressBarElement.setAttribute("aria-valuenow", String(percent));
     progressValueElement.style.width = `${percent}%`;
     summaryElement.hidden = false;
+}
+
+function renderFilters(enrollments, courses, classrooms) {
+    const courseNames = new Map(courses.map((course) => [course.id, course.title || "Untitled course"]));
+    const selectedCourseId = courseFilter.value;
+    const activeCourseIds = [...new Set(enrollments.map((enrollment) => enrollment.course_id))];
+    const activeClassrooms = classrooms
+        .filter((classroom) => enrollments.some((enrollment) => (
+            enrollment.classroom_id === classroom.id
+            && (!selectedCourseId || enrollment.course_id === selectedCourseId)
+        )))
+        .map((classroom) => ({
+            label: classroom.period_block
+                ? `${courseNames.get(classroom.course_id) || "Course"} / ${classroom.name} - ${classroom.period_block}`
+                : `${courseNames.get(classroom.course_id) || "Course"} / ${classroom.name}`,
+            value: classroom.id,
+        }));
+
+    populateSelect(
+        courseFilter,
+        activeCourseIds.map((courseId) => ({
+            label: courseNames.get(courseId) || "Untitled course",
+            value: courseId,
+        })),
+        "All courses"
+    );
+    courseFilter.value = activeCourseIds.includes(selectedCourseId) ? selectedCourseId : "";
+    populateSelect(classroomFilter, activeClassrooms, "All classrooms");
 }
 
 function renderCourseProgress(enrollments, courses, classrooms, lessons, submissions) {
@@ -335,6 +412,15 @@ function renderSubmittedHistory(submissions, courses, lessons) {
     historyListElement.replaceChildren(list);
 }
 
+function renderProgressView() {
+    const enrollments = getFilteredEnrollments();
+    const submissions = getFilteredSubmissions(enrollments);
+
+    renderSummary(enrollments, loadedLessons, submissions);
+    renderCourseProgress(enrollments, loadedCourses, loadedClassrooms, loadedLessons, submissions);
+    renderSubmittedHistory(submissions, loadedCourses, loadedLessons);
+}
+
 async function initializePage() {
     setStatus("Loading progress...");
     const profile = await loadCurrentProfile();
@@ -346,9 +432,9 @@ async function initializePage() {
     currentProfileId = profile.id;
 
     try {
-        const enrollments = getDisplayStudentEnrollments(await loadStudentEnrollments(currentProfileId));
-        const courseIds = [...new Set(enrollments.map((enrollment) => enrollment.course_id))];
-        const classroomIds = [...new Set(enrollments.map((enrollment) => enrollment.classroom_id).filter(Boolean))];
+        loadedEnrollments = getDisplayStudentEnrollments(await loadStudentEnrollments(currentProfileId));
+        const courseIds = [...new Set(loadedEnrollments.map((enrollment) => enrollment.course_id))];
+        const classroomIds = [...new Set(loadedEnrollments.map((enrollment) => enrollment.classroom_id).filter(Boolean))];
         const [courses, classrooms, lessons, submissions] = await Promise.all([
             loadVisibleCourses(courseIds),
             loadVisibleClassrooms(classroomIds),
@@ -356,9 +442,12 @@ async function initializePage() {
             loadStudentSubmissions(currentProfileId),
         ]);
 
-        renderSummary(enrollments, lessons, submissions);
-        renderCourseProgress(enrollments, courses, classrooms, lessons, submissions);
-        renderSubmittedHistory(submissions, courses, lessons);
+        loadedCourses = courses;
+        loadedClassrooms = classrooms;
+        loadedLessons = lessons;
+        loadedSubmissions = submissions;
+        renderFilters(loadedEnrollments, loadedCourses, loadedClassrooms);
+        renderProgressView();
         shellElements.forEach((element) => {
             element.hidden = false;
         });
@@ -369,5 +458,14 @@ async function initializePage() {
         renderEmpty(historyListElement, "Submitted work could not be loaded right now.");
     }
 }
+
+filterForm.addEventListener("change", (event) => {
+    if (event.target === courseFilter) {
+        classroomFilter.value = "";
+        renderFilters(loadedEnrollments, loadedCourses, loadedClassrooms);
+    }
+
+    renderProgressView();
+});
 
 await initializePage();
