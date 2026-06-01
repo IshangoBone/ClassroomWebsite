@@ -38,6 +38,18 @@
             </article>
         </section>
 
+        <section class="dashboard-section student-course-progress-section" data-student-course-progress-section hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Course progress</h2>
+                    <p class="section-copy" data-student-course-progress-copy>Your completion progress will appear here.</p>
+                </div>
+            </div>
+            <div class="dashboard-progress student-course-progress-bar" role="progressbar" aria-label="Course completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-student-course-progress-bar>
+                <span class="dashboard-progress-value" data-student-course-progress-value></span>
+            </div>
+        </section>
+
         <section class="dashboard-section dashboard-section--muted" data-student-course-next-section hidden>
             <div class="section-header section-header--actions">
                 <div>
@@ -62,7 +74,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/courses/student.js?v=20260601-student-course"></script>
+    <script type="module" src="../../scripts/courses/student.js?v=20260601-student-course-polish"></script>
 </body>
 
 </html>

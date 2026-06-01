@@ -9,6 +9,10 @@ const contextElement = qs("[data-student-course-context]");
 const statusElement = qs("[data-student-course-status]");
 const summaryElement = qs("[data-student-course-summary]");
 const shellElement = qs("[data-student-course-shell]");
+const progressSection = qs("[data-student-course-progress-section]");
+const progressCopyElement = qs("[data-student-course-progress-copy]");
+const progressBarElement = qs("[data-student-course-progress-bar]");
+const progressValueElement = qs("[data-student-course-progress-value]");
 const nextSection = qs("[data-student-course-next-section]");
 const progressElement = qs("[data-student-course-progress]");
 const submittedElement = qs("[data-student-course-submitted]");
@@ -103,6 +107,16 @@ function getProgress(lessons, submissions) {
         progressPercent: lessons.length ? Math.round((submittedCount / lessons.length) * 100) : 0,
         submittedCount,
         totalLessons: lessons.length,
+    };
+}
+
+function getModuleProgress(moduleLessons, submissions) {
+    const submittedCount = moduleLessons.filter((lesson) => getLessonStatus(lesson, submissions) === "submitted").length;
+
+    return {
+        isComplete: Boolean(moduleLessons.length) && submittedCount === moduleLessons.length,
+        submittedCount,
+        totalLessons: moduleLessons.length,
     };
 }
 
@@ -269,14 +283,22 @@ async function loadTeacherName(enrollment) {
 function renderSummary(enrollment, lessons, submissions) {
     const { points, progressPercent, submittedCount, totalLessons } = getProgress(lessons, submissions);
     const nextLesson = getNextLesson(lessons, submissions);
+    const isComplete = Boolean(totalLessons) && submittedCount === totalLessons;
 
     progressElement.textContent = `${progressPercent}%`;
     submittedElement.textContent = `${submittedCount}/${totalLessons}`;
     pointsElement.textContent = String(points);
-    nextElement.textContent = nextLesson?.lesson?.title || "Ready";
+    nextElement.textContent = isComplete ? "Complete" : nextLesson?.lesson?.title || "Ready";
+    progressCopyElement.textContent = totalLessons
+        ? `${submittedCount} of ${totalLessons} lessons submitted.`
+        : "Lessons will appear once this course is ready.";
+    progressBarElement.setAttribute("aria-valuenow", String(progressPercent));
+    progressValueElement.style.width = `${progressPercent}%`;
 
     if (nextLesson) {
-        nextCopyElement.textContent = `${nextLesson.label}: ${nextLesson.lesson.title || "Untitled lesson"}`;
+        nextCopyElement.textContent = isComplete
+            ? "All lessons are submitted. You can still review the latest lesson and feedback."
+            : `${nextLesson.label}: ${nextLesson.lesson.title || "Untitled lesson"}`;
         nextLinkElement.textContent = nextLesson.label;
         nextLinkElement.href = getLessonHref(nextLesson.lesson, enrollment);
         nextSection.hidden = false;
@@ -285,6 +307,7 @@ function renderSummary(enrollment, lessons, submissions) {
     }
 
     summaryElement.hidden = false;
+    progressSection.hidden = false;
 }
 
 function renderModules(modules, lessons, submissions, enrollment) {
@@ -295,18 +318,31 @@ function renderModules(modules, lessons, submissions, enrollment) {
 
     const list = createElement("ol", "module-list");
 
+    const firstIncompleteModuleId = modules.find((module) => {
+        const moduleLessons = lessons.filter((lesson) => lesson.module_id === module.id);
+
+        return moduleLessons.some((lesson) => getLessonStatus(lesson, submissions) !== "submitted");
+    })?.id;
+
     modules.forEach((module, moduleIndex) => {
         const moduleLessons = lessons.filter((lesson) => lesson.module_id === module.id);
+        const moduleProgress = getModuleProgress(moduleLessons, submissions);
         const item = document.createElement("details");
         const summary = createElement("summary", "module-card-header");
         const titleGroup = createElement("div");
         const title = createElement("h3", "course-title", module.title || "Untitled module");
         const description = createElement("p", "course-muted", module.description || "No module description added yet.");
-        const label = createElement("span", "badge badge--quiet", `Module ${module.order_index + 1}`);
+        const label = createElement(
+            "span",
+            moduleProgress.isComplete ? "badge" : "badge badge--quiet",
+            moduleProgress.totalLessons
+                ? `Module ${module.order_index + 1} / ${moduleProgress.submittedCount} of ${moduleProgress.totalLessons}`
+                : `Module ${module.order_index + 1}`
+        );
         const lessonSection = createElement("section", "module-lessons");
 
         item.className = "module-card student-module-card";
-        item.open = moduleIndex === 0;
+        item.open = firstIncompleteModuleId ? module.id === firstIncompleteModuleId : moduleIndex === 0;
         titleGroup.append(title, description);
         summary.append(titleGroup, label);
         lessonSection.append(createElement("h4", "", "Lessons"));
