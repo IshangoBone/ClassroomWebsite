@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Submission Review</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout">
+        <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Teacher Portal</p>
+            <h1>Submission review</h1>
+            <p class="intro">Review lesson work across your managed courses, classrooms, lessons, and students.</p>
+        </header>
+
+        <p class="auth-status management-status" data-review-status aria-live="polite"></p>
+
+        <section class="management-section" data-review-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Overview</h2>
+                    <p class="section-copy">Latest student work appears first. Open any row to review answers, points, and feedback.</p>
+                </div>
+            </div>
+
+            <div class="submission-review-summary-grid" data-review-summary>
+                <p class="empty-state">Loading submission summary...</p>
+            </div>
+
+            <form class="submission-filter-form submission-filter-form--review" data-review-filter-form>
+                <label class="form-field">
+                    <span>Course</span>
+                    <select name="course" data-review-filter-course>
+                        <option value="">All courses</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Classroom</span>
+                    <select name="classroom" data-review-filter-classroom>
+                        <option value="">All classrooms</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Lesson</span>
+                    <select name="lesson" data-review-filter-lesson>
+                        <option value="">All lessons</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Student</span>
+                    <select name="student" data-review-filter-student>
+                        <option value="">All students</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Status</span>
+                    <select name="status" data-review-filter-status>
+                        <option value="">All statuses</option>
+                        <option value="submitted">Submitted</option>
+                        <option value="draft">Incomplete drafts</option>
+                    </select>
+                </label>
+            </form>
+
+            <div data-review-list>
+                <p class="empty-state">Loading submissions...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/submissions/index.js?v=20260531-review-list"></script>
+</body>
+
+</html>
