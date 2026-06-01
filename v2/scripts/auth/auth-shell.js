@@ -21,10 +21,27 @@ const copyElement = qs(".auth-card-copy");
 const loginForm = qs("[data-login-form]");
 const signupForm = qs("[data-signup-form]");
 
+async function logAuthActivity(actionType, profile, mode) {
+    const { error } = await supabase.rpc("log_activity", {
+        action_type_input: actionType,
+        target_type_input: "user",
+        target_id_input: profile.id,
+        metadata_json_input: {
+            source: "auth_shell",
+            mode,
+            profile_completed: profile.profile_completed,
+        },
+    });
+
+    if (error) {
+        console.warn("Activity logging failed:", error.message);
+    }
+}
+
 async function continueFromAuth(user, mode) {
     const { data: profile, error } = await supabase
         .from("profiles")
-        .select("profile_completed")
+        .select("id, profile_completed")
         .eq("auth_user_id", user.id)
         .maybeSingle();
 
@@ -37,6 +54,8 @@ async function continueFromAuth(user, mode) {
         setStatus(mode, "Your account is ready, but its profile record has not been created yet.", "error");
         return;
     }
+
+    await logAuthActivity("user_login", profile, mode);
 
     window.location.href = profile.profile_completed
         ? "../dashboard/index.html"
