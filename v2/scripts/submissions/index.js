@@ -92,6 +92,22 @@ function getFilterValues() {
     };
 }
 
+function getReviewReturnUrl() {
+    const url = new URL(window.location.href);
+
+    new FormData(filterForm).forEach((value, key) => {
+        const normalizedValue = String(value || "");
+
+        if (normalizedValue) {
+            url.searchParams.set(key, normalizedValue);
+        } else {
+            url.searchParams.delete(key);
+        }
+    });
+
+    return `${url.pathname}${url.search}`;
+}
+
 async function loadCurrentProfile() {
     const { data: authData, error: authError } = await supabase.auth.getUser();
 
@@ -378,6 +394,14 @@ function renderFilters() {
     populateSelect(classroomFilter, classroomOptions, "All classrooms");
     populateSelect(lessonFilter, lessonOptions, "All lessons");
     populateSelect(studentFilter, studentOptions, "All students");
+
+    new URLSearchParams(window.location.search).forEach((value, key) => {
+        const field = filterForm.elements[key];
+
+        if (field && [...field.options].some((option) => option.value === value)) {
+            field.value = value;
+        }
+    });
 }
 
 function getFilteredSubmissions() {
@@ -444,9 +468,11 @@ function renderSubmissions(submissions) {
         );
         const status = createElement("span", "badge badge--quiet", formatStatus(submission.status));
 
+        const returnTo = getReviewReturnUrl();
+
         link.href = submission.isMissing
             ? `../classrooms/student.html?classroom=${encodeURIComponent(submission.classroom_id)}&student=${encodeURIComponent(submission.student_user_id)}`
-            : `view.html?submission=${encodeURIComponent(submission.id)}`;
+            : `view.html?submission=${encodeURIComponent(submission.id)}&returnTo=${encodeURIComponent(returnTo)}`;
         item.append(link, student, context, submittedAt, points, status);
         list.append(item);
     });

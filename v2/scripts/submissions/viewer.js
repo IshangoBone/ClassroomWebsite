@@ -3,9 +3,11 @@ import { createElement, qs } from "../utils/dom.js";
 
 const params = new URLSearchParams(window.location.search);
 const submissionId = params.get("submission");
+const returnTo = params.get("returnTo");
 const headingElement = qs("[data-submission-heading]");
 const contextElement = qs("[data-submission-context]");
 const statusElement = qs("[data-submission-status]");
+const backLink = qs("[data-submission-back-link]");
 const shellElements = [...document.querySelectorAll("[data-submission-shell]")];
 const summaryElement = qs("[data-submission-summary]");
 const answerListElement = qs("[data-answer-list]");
@@ -417,6 +419,10 @@ async function saveFeedback(event) {
 }
 
 async function initializePage() {
+    backLink.href = returnTo && returnTo.startsWith("/pages/submissions/")
+        ? returnTo
+        : "index.html";
+
     const { data: authData, error: authError } = await supabase.auth.getUser();
 
     if (authError || !authData.user) {
