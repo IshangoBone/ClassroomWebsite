@@ -82,9 +82,13 @@ function getSearchText(log) {
     return [
         log.action_type,
         log.target_type,
+        log.target_display_name,
         log.target_id,
+        log.actor_display_name,
         log.actor_user_id,
+        log.course_title,
         log.course_id,
+        log.classroom_label,
         log.classroom_id,
         JSON.stringify(log.metadata_json || {}),
         JSON.stringify(log.old_value_json || {}),
@@ -143,6 +147,16 @@ function createDetailsCell(log) {
     return cell;
 }
 
+function formatEntityLabel(label, id) {
+    return label || formatShortId(id);
+}
+
+function formatTargetLabel(log) {
+    const targetLabel = formatEntityLabel(log.target_display_name, log.target_id);
+
+    return `${log.target_type} ${targetLabel}`;
+}
+
 function renderLogs() {
     const logs = getFilteredLogs();
 
@@ -169,10 +183,10 @@ function renderLogs() {
         row.append(
             createElement("td", "", formatDate(log.created_at)),
             createElement("td", "", formatAction(log.action_type)),
-            createElement("td", "", `${log.target_type} ${formatShortId(log.target_id)}`),
-            createElement("td", "", formatShortId(log.actor_user_id)),
-            createElement("td", "", formatShortId(log.course_id)),
-            createElement("td", "", formatShortId(log.classroom_id)),
+            createElement("td", "", formatTargetLabel(log)),
+            createElement("td", "", formatEntityLabel(log.actor_display_name, log.actor_user_id)),
+            createElement("td", "", formatEntityLabel(log.course_title, log.course_id)),
+            createElement("td", "", formatEntityLabel(log.classroom_label, log.classroom_id)),
             createDetailsCell(log)
         );
         body.append(row);
@@ -218,11 +232,9 @@ async function loadActivityLogs() {
     setStatus("Loading activity logs...");
     refreshButton.disabled = true;
 
-    const { data, error } = await supabase
-        .from("activity_logs")
-        .select("id, actor_user_id, action_type, target_type, target_id, course_id, classroom_id, old_value_json, new_value_json, metadata_json, created_at")
-        .order("created_at", { ascending: false })
-        .limit(200);
+    const { data, error } = await supabase.rpc("get_admin_activity_logs", {
+        limit_input: 200,
+    });
 
     refreshButton.disabled = false;
 
