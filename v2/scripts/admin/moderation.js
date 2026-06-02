@@ -226,6 +226,45 @@ function createDeleteButton(record) {
     return button;
 }
 
+function createContentArchiveButton(record) {
+    const button = createElement("button", "secondary-button admin-result-action moderation-action-button");
+
+    button.type = "button";
+    button.textContent = "Archive";
+    button.dataset.contentAction = "archive";
+    button.dataset.nextStatus = "archived";
+    button.dataset.recordId = record.record_id;
+    button.dataset.recordType = record.record_type;
+
+    if (record.status_label === "archived") {
+        button.textContent = "Archived";
+        button.disabled = true;
+    } else if (record.status_label === "deleted") {
+        button.textContent = "Deleted";
+        button.disabled = true;
+    }
+
+    return button;
+}
+
+function createContentDeleteButton(record) {
+    const button = createElement("button", "secondary-button destructive-button admin-result-action moderation-action-button");
+
+    button.type = "button";
+    button.textContent = "Soft delete";
+    button.dataset.contentAction = "delete";
+    button.dataset.nextStatus = "deleted";
+    button.dataset.recordId = record.record_id;
+    button.dataset.recordType = record.record_type;
+
+    if (record.status_label === "deleted") {
+        button.textContent = "Already deleted";
+        button.disabled = true;
+    }
+
+    return button;
+}
+
 function renderUsers() {
     const records = getFilteredRecords();
 
@@ -308,13 +347,15 @@ function renderContentRecords() {
         const actionsCell = document.createElement("td");
         const name = createElement("strong", "admin-detail-value", record.primary_label || formatShortId(record.record_id));
         const detail = createElement("span", "course-muted", record.secondary_label || record.record_id);
+        const archiveButton = createContentArchiveButton(record);
+        const deleteButton = createContentDeleteButton(record);
         const detailLink = createElement("a", "secondary-button admin-result-action", "View details");
         const activityLink = createElement("a", "secondary-button admin-result-action", "View activity");
 
         detailLink.href = getDetailUrl(record.record_type, record.record_id);
         activityLink.href = getActivityUrl(record.record_id);
         recordCell.append(name, detail);
-        actionsCell.append(detailLink, activityLink);
+        actionsCell.append(archiveButton, deleteButton, detailLink, activityLink);
         row.append(
             recordCell,
             createElement("td", "", formatStatus(record.record_type)),
@@ -336,6 +377,10 @@ function findModerationRecord(userId) {
     return moderationRecords.find((record) => record.user_id === userId);
 }
 
+function findContentRecord(recordType, recordId) {
+    return contentRecords.find((record) => record.record_type === recordType && record.record_id === recordId);
+}
+
 function getModerationConfirmation(record, nextStatus) {
     const label = record.display_name || record.email || formatShortId(record.user_id);
 
@@ -350,6 +395,27 @@ function confirmSoftDelete(record) {
     const label = record.display_name || record.email || formatShortId(record.user_id);
     const confirmation = window.prompt(
         `Soft delete ${label}? This blocks the account, preserves history for audit review, and cannot be reactivated from this page. Type DELETE to confirm.`
+    );
+
+    return confirmation === "DELETE";
+}
+
+function getContentArchiveConfirmation(record) {
+    const label = record.primary_label || formatShortId(record.record_id);
+    const typeLabel = record.record_type === "course" ? "course" : "classroom";
+
+    if (record.record_type === "classroom") {
+        return `Archive ${typeLabel} "${label}"? Joining will close, new submissions will be blocked, and existing records will stay available for review.`;
+    }
+
+    return `Archive ${typeLabel} "${label}"? It will be hidden from active discovery, new access will be blocked, and existing records will stay available for review.`;
+}
+
+function confirmContentSoftDelete(record) {
+    const label = record.primary_label || formatShortId(record.record_id);
+    const typeLabel = record.record_type === "course" ? "course" : "classroom";
+    const confirmation = window.prompt(
+        `Soft delete ${typeLabel} "${label}"? This preserves audit history but removes it from active workflows. Type DELETE to confirm.`
     );
 
     return confirmation === "DELETE";
@@ -394,6 +460,48 @@ async function handleModerationAction(event) {
 
     await loadModerationRecords();
     setStatus(`User account ${nextStatus === "active" ? "reactivated" : nextStatus}.`);
+}
+
+async function handleContentModerationAction(event) {
+    const button = event.target.closest("[data-record-id][data-record-type][data-next-status][data-content-action]");
+
+    if (!button || button.disabled) {
+        return;
+    }
+
+    const record = findContentRecord(button.dataset.recordType, button.dataset.recordId);
+    const nextStatus = button.dataset.nextStatus;
+
+    if (!record) {
+        setStatus("That content record is no longer loaded. Refresh content and try again.", "error");
+        return;
+    }
+
+    if (button.dataset.contentAction === "delete") {
+        if (!confirmContentSoftDelete(record)) {
+            return;
+        }
+    } else if (!window.confirm(getContentArchiveConfirmation(record))) {
+        return;
+    }
+
+    setStatus("Updating content status...");
+    button.disabled = true;
+
+    const { error } = await supabase.rpc("moderate_content_record_status", {
+        next_status_input: nextStatus,
+        record_id_input: record.record_id,
+        record_type_input: record.record_type,
+    });
+
+    if (error) {
+        setStatus(error.message || "Content status could not be updated.", "error");
+        button.disabled = false;
+        return;
+    }
+
+    await loadContentRecords();
+    setStatus(`${formatStatus(record.record_type)} ${nextStatus}.`);
 }
 
 async function loadCurrentProfile() {
@@ -498,5 +606,6 @@ listElement.addEventListener("click", handleModerationAction);
 contentFilterForm.addEventListener("input", renderContentRecords);
 contentFilterForm.addEventListener("change", renderContentRecords);
 contentRefreshButton.addEventListener("click", loadContentRecords);
+contentListElement.addEventListener("click", handleContentModerationAction);
 
 await initializeModerationPage();
