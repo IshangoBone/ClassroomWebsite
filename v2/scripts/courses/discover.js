@@ -54,6 +54,7 @@ async function loadPublicCourses() {
 
 function createCourseCard(course) {
     const card = createElement("article", "course-card");
+    const media = createElement("div", "course-card-media");
     const heading = createElement("div", "course-card-header");
     const title = createElement("h3", "course-title", course.title || "Untitled course");
     const badges = createElement("div", "badge-row");
@@ -79,6 +80,16 @@ function createCourseCard(course) {
         badges.append(createElement("span", "badge badge--quiet", "Classroom access"));
     }
 
+    if (course.thumbnail_url) {
+        const thumbnail = createElement("img", "course-card-thumbnail");
+
+        thumbnail.src = course.thumbnail_url;
+        thumbnail.alt = `${course.title || "Course"} thumbnail`;
+        media.append(thumbnail);
+    } else {
+        media.append(createElement("span", "course-card-thumbnail-fallback", course.subject_area || "Course"));
+    }
+
     heading.append(title, badges);
 
     if (course.already_enrolled) {
@@ -94,11 +105,11 @@ function createCourseCard(course) {
     if (course.has_classroom_access && !course.already_enrolled) {
         const accessNote = createElement("p", "course-muted", "You already have classroom access. Join here only if you also want independent course access.");
 
-        card.append(heading, details, teacher, description, accessNote, actions);
+        card.append(media, heading, details, teacher, description, accessNote, actions);
         return card;
     }
 
-    card.append(heading, details, teacher, description, actions);
+    card.append(media, heading, details, teacher, description, actions);
     return card;
 }
 

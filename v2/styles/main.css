@@ -702,6 +702,31 @@ h2 {
     background: #ffffff;
 }
 
+.course-card-media {
+    min-height: 150px;
+    overflow: hidden;
+    border-radius: 14px;
+    background: #eef4ff;
+}
+
+.course-card-thumbnail {
+    display: block;
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.course-card-thumbnail-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+    padding: 16px;
+    color: #4568a8;
+    font-weight: 800;
+    text-align: center;
+}
+
 .course-card-header {
     display: flex;
     justify-content: space-between;
