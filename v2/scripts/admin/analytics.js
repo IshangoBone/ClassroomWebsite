@@ -16,6 +16,9 @@ const statusBreakdownElement = qs("[data-platform-status-breakdown]");
 const moderationElement = qs("[data-platform-moderation]");
 const submissionHealthElement = qs("[data-platform-submission-health]");
 const submissionsActionButton = qs("[data-platform-submissions-action]");
+const copySummaryButton = qs("[data-platform-copy-summary]");
+const downloadSummaryButton = qs("[data-platform-download-summary]");
+const exportPreviewElement = qs("[data-platform-export-preview]");
 const rangeControlElement = qs("[data-platform-range-control]");
 const growthCopyElement = qs("[data-platform-growth-copy]");
 
@@ -104,6 +107,7 @@ const DRILLDOWN_META = {
 
 let selectedDrilldownKey = "";
 let selectedRangeDays = 7;
+let latestAnalytics = null;
 
 function getRangeLabel() {
     return `last ${selectedRangeDays} days`;
@@ -158,6 +162,18 @@ function formatStatus(status = "") {
     return String(status || "")
         .replaceAll("_", " ")
         .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function getAnalyticsExport() {
+    if (!latestAnalytics) {
+        return null;
+    }
+
+    return {
+        generated_at: new Date().toISOString(),
+        range_days: selectedRangeDays,
+        metrics: latestAnalytics,
+    };
 }
 
 function isAdminRole(role) {
@@ -512,6 +528,21 @@ function createDrilldownButton(label, drilldownKey) {
     return button;
 }
 
+function createProgressCell(value, detail) {
+    const wrapper = createElement("span", "analytics-progress-cell");
+    const progress = document.createElement("progress");
+    const safeValue = Math.max(0, Math.min(100, Number(value || 0)));
+
+    progress.max = 100;
+    progress.value = safeValue;
+    wrapper.append(
+        createElement("strong", "submission-name", formatPercent(safeValue)),
+        progress,
+        createElement("span", "course-muted", detail)
+    );
+    return wrapper;
+}
+
 function createRecordActions(record) {
     const wrapper = createElement("div", "analytics-action-stack");
     const detailUrl = getDetailUrl(record);
@@ -695,17 +726,121 @@ function renderTeachers(rows) {
 function renderCourses(rows) {
     renderTable(
         coursesElement,
-        ["Course", "Status", "Owner", "Enrollments", "Submitted work", "Actions"],
+        ["Course", "Status", "Owner", "Completion", "Submissions", "Actions"],
         rows.map((row) => [
             createRecordLinkCell(row.title || "Untitled course", row.owner_email || "-", "course", row.id),
             row.status || "-",
             row.owner_email || "-",
-            formatNumber(row.enrollment_count),
-            formatNumber(row.submitted_count),
+            createProgressCell(row.completion_rate, `${formatNumber(row.enrollment_count)} enrollments`),
+            `${formatNumber(row.submitted_count)} submitted / ${formatNumber(row.draft_count)} draft`,
             createRecordActions({ record_type: "course", record_id: row.id }),
         ]),
         "No course activity has been recorded yet."
     );
+}
+
+function buildSummaryText(exportPayload) {
+    const analytics = exportPayload.metrics;
+    const archivedContent = Number(analytics.archived_courses || 0) + Number(analytics.archived_classrooms || 0);
+    const deletedContent = Number(analytics.deleted_courses || 0) + Number(analytics.deleted_classrooms || 0);
+
+    return [
+        `Platform analytics summary (${getRangeLabel()})`,
+        `Generated: ${formatDateTime(exportPayload.generated_at)}`,
+        "",
+        `Users: ${formatNumber(analytics.total_users)} total, ${formatNumber(analytics.active_users)} active, ${formatNumber(analytics.suspended_users)} suspended`,
+        `Courses: ${formatNumber(analytics.total_courses)} total, ${formatNumber(analytics.published_courses)} published`,
+        `Classrooms: ${formatNumber(analytics.total_classrooms)} total, ${formatNumber(analytics.active_classrooms)} active`,
+        `Submissions: ${formatNumber(analytics.total_submissions)} total, ${formatNumber(analytics.submitted_submissions)} submitted, ${formatNumber(analytics.draft_submissions)} drafts`,
+        `Completion rate: ${formatPercent(analytics.completion_rate)}`,
+        `Engagement points: ${formatNumber(analytics.engagement_points)}`,
+        `Moderation: ${formatNumber(archivedContent)} archived records, ${formatNumber(deletedContent)} deleted content records`,
+    ].join("\n");
+}
+
+function hideExportPreview() {
+    exportPreviewElement.hidden = true;
+    exportPreviewElement.replaceChildren();
+}
+
+function showExportPreview(text) {
+    const label = createElement("strong", "submission-name", "Analytics summary");
+    const copy = createElement("p", "section-copy", "Copy was blocked by the browser. The summary text is selected below.");
+    const textarea = document.createElement("textarea");
+
+    textarea.value = text;
+    textarea.readOnly = true;
+    exportPreviewElement.replaceChildren(label, copy, textarea);
+    exportPreviewElement.hidden = false;
+    textarea.focus();
+    textarea.select();
+}
+
+async function writeTextToClipboard(text) {
+    if (navigator.clipboard?.writeText) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return;
+        } catch (error) {
+            // Fall through to the textarea copy path when browser permissions block Clipboard API.
+        }
+    }
+
+    const textarea = document.createElement("textarea");
+
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-999px";
+    document.body.append(textarea);
+    textarea.select();
+
+    const didCopy = document.execCommand("copy");
+
+    textarea.remove();
+
+    if (!didCopy) {
+        throw new Error("Clipboard copy was blocked.");
+    }
+}
+
+async function copyAnalyticsSummary() {
+    const exportPayload = getAnalyticsExport();
+
+    if (!exportPayload) {
+        setStatus("Analytics must finish loading before copying a summary.", "error");
+        return;
+    }
+
+    const summaryText = buildSummaryText(exportPayload);
+
+    try {
+        await writeTextToClipboard(summaryText);
+        hideExportPreview();
+        setStatus("Analytics summary copied.");
+    } catch (error) {
+        showExportPreview(summaryText);
+        setStatus("Copy was blocked. The analytics summary is selected below.", "error");
+    }
+}
+
+function downloadAnalyticsSummary() {
+    const exportPayload = getAnalyticsExport();
+
+    if (!exportPayload) {
+        setStatus("Analytics must finish loading before downloading a summary.", "error");
+        return;
+    }
+
+    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+
+    link.href = URL.createObjectURL(blob);
+    link.download = `platform-analytics-${selectedRangeDays}d.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    hideExportPreview();
+    setStatus("Analytics JSON downloaded.");
 }
 
 async function loadCurrentProfile() {
@@ -759,6 +894,7 @@ async function loadPlatformAnalytics() {
         return;
     }
 
+    latestAnalytics = analytics;
     renderSummary(analytics);
     growthCopyElement.textContent = `Recent signup and active-user signals for the ${getRangeLabel()}.`;
     renderGrowth(analytics.growth_7d_json || []);
@@ -811,6 +947,12 @@ moderationElement.addEventListener("click", (event) => {
 submissionsActionButton.addEventListener("click", () => {
     void loadDrilldown("submissions");
 });
+
+copySummaryButton.addEventListener("click", () => {
+    void copyAnalyticsSummary();
+});
+
+downloadSummaryButton.addEventListener("click", downloadAnalyticsSummary);
 
 rangeControlElement.addEventListener("click", (event) => {
     const button = event.target.closest("[data-range-days]");

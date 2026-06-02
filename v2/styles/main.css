@@ -1644,6 +1644,22 @@ h2 {
     gap: 8px;
 }
 
+.analytics-export-preview {
+    display: grid;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.analytics-export-preview[hidden] {
+    display: none;
+}
+
+.analytics-export-preview textarea {
+    width: 100%;
+    min-height: 180px;
+    resize: vertical;
+}
+
 .analytics-breakdown-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

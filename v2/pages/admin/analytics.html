@@ -33,6 +33,8 @@
                     <p class="section-copy">Counts and signals across users, courses, classrooms, enrollments, and submissions. Select a metric to inspect the underlying records.</p>
                 </div>
                 <div class="section-actions">
+                    <button class="secondary-button" type="button" data-platform-copy-summary>Copy summary</button>
+                    <button class="secondary-button" type="button" data-platform-download-summary>Download JSON</button>
                     <a class="secondary-button" href="./moderation.html">Open moderation</a>
                     <a class="secondary-button" href="../activity/index.html">Open activity logs</a>
                 </div>
@@ -41,6 +43,8 @@
             <div class="dashboard-summary admin-summary-grid" data-platform-analytics-summary>
                 <p class="empty-state">Loading platform analytics...</p>
             </div>
+
+            <div class="analytics-export-preview" data-platform-export-preview hidden></div>
         </section>
 
         <section class="management-section" data-platform-analytics-shell hidden>
@@ -148,7 +152,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/admin/analytics.js?v=20260602-submission-health"></script>
+    <script type="module" src="../../scripts/admin/analytics.js?v=20260602-export-course-completion"></script>
 </body>
 
 </html>
