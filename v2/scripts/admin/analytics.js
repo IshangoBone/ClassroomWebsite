@@ -5,6 +5,7 @@ const statusElement = qs("[data-platform-analytics-status]");
 const shellElements = [...document.querySelectorAll("[data-platform-analytics-shell]")];
 const summaryElement = qs("[data-platform-analytics-summary]");
 const growthElement = qs("[data-platform-growth]");
+const growthTrendElement = qs("[data-platform-growth-trend]");
 const teachersElement = qs("[data-platform-teachers]");
 const coursesElement = qs("[data-platform-courses]");
 const drilldownElement = qs("[data-platform-drilldown]");
@@ -260,6 +261,112 @@ function createBreakdownCard(title, rows) {
     return card;
 }
 
+function createTrendStat(label, value, detail, tone = "info") {
+    const card = createElement("article", `analytics-trend-stat analytics-trend-stat--${tone}`);
+
+    card.append(
+        createElement("span", "summary-label", label),
+        createElement("strong", "summary-value summary-value--small", formatNumber(value)),
+        createElement("span", "course-muted", detail)
+    );
+    return card;
+}
+
+function createTrendPolyline(rows, key, maxValue, width, height, padding) {
+    const usableWidth = width - (padding * 2);
+    const usableHeight = height - (padding * 2);
+    const denominator = Math.max(maxValue, 1);
+
+    return rows.map((row, index) => {
+        const x = rows.length > 1
+            ? padding + ((usableWidth / (rows.length - 1)) * index)
+            : padding + (usableWidth / 2);
+        const y = padding + usableHeight - ((Number(row[key] || 0) / denominator) * usableHeight);
+
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(" ");
+}
+
+function createTrendChart(rows) {
+    const width = 720;
+    const height = 260;
+    const padding = 34;
+    const maxValue = Math.max(
+        1,
+        ...rows.flatMap((row) => [
+            Number(row.new_users || 0),
+            Number(row.active_users || 0),
+        ])
+    );
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const activeLine = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    const newUserLine = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+
+    svg.setAttribute("class", "analytics-trend-chart");
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.setAttribute("role", "img");
+    svg.setAttribute("aria-label", "Seven day growth trend for new users and active users");
+
+    [0, 0.5, 1].forEach((ratio) => {
+        const y = padding + ((height - padding * 2) * ratio);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+
+        line.setAttribute("x1", String(padding));
+        line.setAttribute("x2", String(width - padding));
+        line.setAttribute("y1", String(y));
+        line.setAttribute("y2", String(y));
+        line.setAttribute("class", "analytics-trend-gridline");
+        svg.append(line);
+    });
+
+    activeLine.setAttribute("points", createTrendPolyline(rows, "active_users", maxValue, width, height, padding));
+    activeLine.setAttribute("class", "analytics-trend-line analytics-trend-line--active");
+    newUserLine.setAttribute("points", createTrendPolyline(rows, "new_users", maxValue, width, height, padding));
+    newUserLine.setAttribute("class", "analytics-trend-line analytics-trend-line--new");
+    svg.append(activeLine, newUserLine);
+
+    rows.forEach((row, index) => {
+        const usableWidth = width - (padding * 2);
+        const x = rows.length > 1
+            ? padding + ((usableWidth / (rows.length - 1)) * index)
+            : padding + (usableWidth / 2);
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+
+        label.setAttribute("x", String(x));
+        label.setAttribute("y", String(height - 8));
+        label.setAttribute("class", "analytics-trend-axis-label");
+        label.textContent = formatDate(row.day);
+        svg.append(label);
+    });
+
+    return svg;
+}
+
+function renderGrowthTrend(rows) {
+    if (!rows.length) {
+        growthTrendElement.replaceChildren(createElement("p", "empty-state", "No growth activity has been recorded yet."));
+        return;
+    }
+
+    const totalNewUsers = rows.reduce((sum, row) => sum + Number(row.new_users || 0), 0);
+    const totalActiveSignals = rows.reduce((sum, row) => sum + Number(row.active_users || 0), 0);
+    const peakActive = rows.reduce((max, row) => Math.max(max, Number(row.active_users || 0)), 0);
+    const legend = createElement("div", "analytics-trend-legend");
+    const stats = createElement("div", "analytics-trend-stats");
+
+    legend.append(
+        createElement("span", "analytics-trend-key analytics-trend-key--new", "New users"),
+        createElement("span", "analytics-trend-key analytics-trend-key--active", "Active users")
+    );
+    stats.append(
+        createTrendStat("New users", totalNewUsers, "last 7 days", "new"),
+        createTrendStat("Active user signals", totalActiveSignals, "daily total", "active"),
+        createTrendStat("Peak active day", peakActive, "highest day")
+    );
+
+    growthTrendElement.replaceChildren(legend, createTrendChart(rows), stats);
+}
+
 function renderStatusBreakdowns(analytics) {
     const rows = analytics.status_breakdown_json || [];
     const users = [
@@ -381,6 +488,8 @@ async function loadDrilldown(drilldownKey) {
 }
 
 function renderGrowth(rows) {
+    renderGrowthTrend(rows);
+
     renderTable(
         growthElement,
         ["Day", "New users", "Active users"],
