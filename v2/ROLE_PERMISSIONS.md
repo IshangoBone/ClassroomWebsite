@@ -32,7 +32,7 @@ The current database migrations establish these permission boundaries:
 | Published public course | Authenticated users can read published, publicly discoverable course metadata plus visible, unarchived course content. Collaborators, classroom data, submissions, progress, and student records are not exposed by public course access. |
 | Enrolled student | Enrollment grants visibility into the relevant non-deleted course/classroom and visible lesson content. Active students can save/submit only their own lesson work in active, allowed contexts. |
 | Submissions and progress | Students can read their own records and save their own draft answers; authorized teachers can read managed student work. |
-| Files and references | Private file metadata can be referenced only through authorized lesson content or a student's editable draft submission. |
+| Files and references | Private file metadata can be referenced only through authorized lesson content or a student's editable draft submission. Storage objects are protected by bucket policy and the metadata-backed rules in `FILE_ACCESS_RULES.md`. |
 | Activity logs | Active platform admins can read activity history through policy-backed admin views/RPCs. |
 | Admin override | Active platform admins pass shared course, classroom, submission-review, profile, and file metadata helpers. This is a backend complement to the frontend route guard work in #41. |
 
@@ -46,7 +46,7 @@ These behaviors are intentionally not enabled by the current foundation:
 | Publish, unpublish, archive, and deletion actions | Teacher publish/archive controls (#20) and admin controls (#52) |
 | Student-safe assessment delivery without exposing answer keys | Assessment and lesson experience work (#24, #34) |
 | Final submission, scoring, and progress mutation | Submission flow (#36-#38) |
-| Storage buckets, actual uploads, and object policies | File upload/access work (#32, #42, #47). Database file metadata has RLS; Supabase Storage bucket/object policies are still tracked separately. |
+| Upload UI and signed URL plumbing | File upload/attachment work (#32, #47). Bucket/object access rules are defined for #42, but the frontend upload flows are still future work. |
 | Monetization data or payments | Non-MVP planning only (#12) |
 
 ## Implementation Rule
