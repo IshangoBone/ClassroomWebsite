@@ -98,6 +98,51 @@ main {
     font-weight: 600;
 }
 
+.profile-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid #c9d6e8;
+    background-color: #e6efff;
+    background-position: center;
+    background-size: cover;
+    color: #274a7f;
+    font-weight: 800;
+}
+
+.profile-avatar[data-has-image="true"] {
+    color: transparent;
+}
+
+.profile-avatar--large {
+    width: 64px;
+    height: 64px;
+    font-size: 1.2rem;
+}
+
+.profile-avatar--small {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+}
+
+.profile-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dashboard-profile-heading {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+}
+
 .auth-card {
     padding: 28px;
 }
@@ -2218,8 +2263,16 @@ h2 {
 }
 
 .roster-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.roster-identity-details {
     display: grid;
     gap: 4px;
+    min-width: 0;
 }
 
 .roster-activity {

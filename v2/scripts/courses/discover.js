@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { createProfileAvatar } from "../utils/profile-images.js";
 
 const statusElement = qs("[data-discovery-status]");
 const shellElements = [...document.querySelectorAll("[data-discovery-shell]")];
@@ -63,7 +64,13 @@ function createCourseCard(course) {
         "course-details",
         `${course.subject_area || "General"} | ${course.estimated_length || "Flexible pace"}`
     );
-    const teacher = createElement("p", "course-muted", `Teacher: ${course.teacher_name || "Teacher"}`);
+    const teacher = createElement("div", "profile-inline");
+    const teacherProfile = {
+        profile_photo_url: course.teacher_profile_photo_url,
+        avatar_type: course.teacher_avatar_type,
+        avatar_key: course.teacher_avatar_key,
+        username: course.teacher_name,
+    };
     const description = createElement("p", "course-muted", course.description || "No course description has been added yet.");
     const actions = createElement("div", "course-actions");
     const primaryAction = course.already_enrolled
@@ -90,6 +97,10 @@ function createCourseCard(course) {
         media.append(createElement("span", "course-card-thumbnail-fallback", course.subject_area || "Course"));
     }
 
+    teacher.append(
+        createProfileAvatar(teacherProfile, "profile-avatar profile-avatar--small", "T"),
+        createElement("span", "course-muted", `Teacher: ${course.teacher_name || "Teacher"}`)
+    );
     heading.append(title, badges);
 
     if (course.already_enrolled) {

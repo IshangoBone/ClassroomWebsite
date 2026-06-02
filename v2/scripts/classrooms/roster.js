@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { createProfileAvatar } from "../utils/profile-images.js";
 
 const params = new URLSearchParams(window.location.search);
 const classroomId = params.get("classroom");
@@ -489,6 +490,7 @@ function renderRoster(roster) {
         const progress = getStudentProgress(student.student_user_id);
         const item = createElement("li", "roster-item");
         const identity = createElement("div", "roster-identity");
+        const identityDetails = createElement("div", "roster-identity-details");
         const activityMeta = createElement("div", "roster-activity");
         const name = createElement("a", "roster-name submission-name", formatStudentName(student));
         const username = createElement("span", "course-muted", student.username ? `@${student.username}` : "No username set");
@@ -528,7 +530,8 @@ function renderRoster(roster) {
         restoreButton.addEventListener("click", () => restoreStudentToRoster(student));
         actions.append(removeButton, restoreButton);
 
-        identity.append(name, username, email, joined);
+        identityDetails.append(name, username, email, joined);
+        identity.append(createProfileAvatar(student, "profile-avatar", "S"), identityDetails);
         item.append(identity, activityMeta, badge, actions);
         list.append(item);
     });

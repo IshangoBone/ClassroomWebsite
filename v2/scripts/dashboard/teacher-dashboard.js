@@ -1,9 +1,11 @@
 import { supabase } from "../../services/supabase/client.js";
 import { isPlatformAdmin, loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { createProfileAvatar } from "../utils/profile-images.js";
 
 const dashboardStatus = qs("[data-dashboard-status]");
 const greetingElement = qs("[data-dashboard-greeting]");
+const profileAvatarElement = qs("[data-dashboard-profile-avatar]");
 const courseList = qs("[data-course-list]");
 const submissionList = qs("[data-submission-list]");
 const studentSubmissionList = qs("[data-student-submission-list]");
@@ -91,6 +93,10 @@ function setCourseFormVisible(isVisible) {
     if (isVisible) {
         courseForm.elements.title.focus();
     }
+}
+
+function renderDashboardAvatar(profile) {
+    profileAvatarElement.replaceChildren(createProfileAvatar(profile, "profile-avatar profile-avatar--large", "U"));
 }
 
 async function logDashboardActivity(actionType) {
@@ -1078,7 +1084,7 @@ async function refreshDashboard() {
 
 async function initializeDashboard() {
     const profile = await loadProtectedProfile({
-        profileColumns: "id, username, profile_completed, platform_role, account_status",
+        profileColumns: "id, username, legal_first_name, legal_last_name, email, profile_photo_url, avatar_type, avatar_key, profile_completed, platform_role, account_status",
         statusElement: dashboardStatus,
     });
 
@@ -1087,6 +1093,7 @@ async function initializeDashboard() {
     }
 
     currentProfile = profile;
+    renderDashboardAvatar(profile);
     greetingElement.textContent = `Welcome, ${profile.username || "there"}. Manage teaching work and continue saved lessons.`;
     courseFormToggle.disabled = false;
     logoutButton.disabled = false;
