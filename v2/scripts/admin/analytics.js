@@ -14,6 +14,8 @@ const drilldownCopyElement = qs("[data-platform-drilldown-copy]");
 const drilldownRefreshButton = qs("[data-platform-drilldown-refresh]");
 const statusBreakdownElement = qs("[data-platform-status-breakdown]");
 const moderationElement = qs("[data-platform-moderation]");
+const submissionHealthElement = qs("[data-platform-submission-health]");
+const submissionsActionButton = qs("[data-platform-submissions-action]");
 const rangeControlElement = qs("[data-platform-range-control]");
 const growthCopyElement = qs("[data-platform-growth-copy]");
 
@@ -118,6 +120,14 @@ function formatNumber(value) {
 
 function formatPercent(value) {
     return `${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}%`;
+}
+
+function getPercent(part, total) {
+    if (!Number(total || 0)) {
+        return 0;
+    }
+
+    return (Number(part || 0) / Number(total || 0)) * 100;
 }
 
 function formatDate(value) {
@@ -271,10 +281,11 @@ function createBreakdownCard(title, rows) {
 
 function createTrendStat(label, value, detail, tone = "info") {
     const card = createElement("article", `analytics-trend-stat analytics-trend-stat--${tone}`);
+    const displayValue = typeof value === "string" ? value : formatNumber(value);
 
     card.append(
         createElement("span", "summary-label", label),
-        createElement("strong", "summary-value summary-value--small", formatNumber(value)),
+        createElement("strong", "summary-value summary-value--small", displayValue),
         createElement("span", "course-muted", detail)
     );
     return card;
@@ -613,6 +624,58 @@ function renderGrowth(rows) {
     );
 }
 
+function renderSubmissionHealth(analytics) {
+    const totalSubmissions = Number(analytics.total_submissions || 0);
+    const submittedSubmissions = Number(analytics.submitted_submissions || 0);
+    const draftSubmissions = Number(analytics.draft_submissions || 0);
+    const draftRate = getPercent(draftSubmissions, totalSubmissions);
+    const stats = createElement("div", "analytics-trend-stats");
+    const tableShell = createElement("div", "analytics-table-shell");
+
+    stats.append(
+        createTrendStat("Submitted", submittedSubmissions, "turned in", "active"),
+        createTrendStat("Drafts", draftSubmissions, "in progress", draftRate > 35 ? "new" : "info"),
+        createTrendStat("Completion", formatPercent(analytics.completion_rate), "submitted work")
+    );
+
+    renderTable(
+        tableShell,
+        ["Signal", "Value", "Share", "Review"],
+        [
+            [
+                "Submitted work",
+                formatNumber(submittedSubmissions),
+                formatPercent(getPercent(submittedSubmissions, totalSubmissions)),
+                "Student work that has been turned in.",
+            ],
+            [
+                "Draft work",
+                formatNumber(draftSubmissions),
+                formatPercent(draftRate),
+                "In-progress student work that may need teacher follow-up.",
+            ],
+            [
+                "Completion rate",
+                formatPercent(analytics.completion_rate),
+                "Submitted / total",
+                draftRate > 35 ? "Draft share is elevated." : "Submission mix looks steady.",
+            ],
+            [
+                "Engagement points",
+                formatNumber(analytics.engagement_points),
+                "All time",
+                "Total points earned across student submissions.",
+            ],
+        ],
+        "No submission health data has been recorded yet."
+    );
+
+    submissionHealthElement.replaceChildren(
+        stats,
+        tableShell
+    );
+}
+
 function renderTeachers(rows) {
     renderTable(
         teachersElement,
@@ -699,6 +762,7 @@ async function loadPlatformAnalytics() {
     renderSummary(analytics);
     growthCopyElement.textContent = `Recent signup and active-user signals for the ${getRangeLabel()}.`;
     renderGrowth(analytics.growth_7d_json || []);
+    renderSubmissionHealth(analytics);
     renderTeachers(analytics.top_teachers_json || []);
     renderCourses(analytics.top_courses_json || []);
     renderStatusBreakdowns(analytics);
@@ -742,6 +806,10 @@ moderationElement.addEventListener("click", (event) => {
     }
 
     void loadDrilldown(button.dataset.drilldownKey);
+});
+
+submissionsActionButton.addEventListener("click", () => {
+    void loadDrilldown("submissions");
 });
 
 rangeControlElement.addEventListener("click", (event) => {

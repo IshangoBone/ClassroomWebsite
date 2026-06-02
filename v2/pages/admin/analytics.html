@@ -106,6 +106,22 @@
         </section>
 
         <section class="management-section" data-platform-analytics-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Submission health</h2>
+                    <p class="section-copy">Draft-to-submitted work mix, completion rate, and engagement points across lesson submissions.</p>
+                </div>
+                <div class="section-actions">
+                    <button class="secondary-button" type="button" data-platform-submissions-action>View submissions</button>
+                </div>
+            </div>
+
+            <div class="analytics-trend-shell" data-platform-submission-health>
+                <p class="empty-state">Loading submission health...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-platform-analytics-shell hidden>
             <div class="section-header">
                 <div>
                     <h2>Top teachers</h2>
@@ -132,7 +148,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/admin/analytics.js?v=20260602-moderation-signals"></script>
+    <script type="module" src="../../scripts/admin/analytics.js?v=20260602-submission-health"></script>
 </body>
 
 </html>
