@@ -2,13 +2,18 @@ import { supabase } from "../../services/supabase/client.js";
 import { createElement, qs } from "../utils/dom.js";
 
 const statusElement = qs("[data-moderation-status]");
-const shellElement = qs("[data-moderation-shell]");
+const shellElements = [...document.querySelectorAll("[data-moderation-shell]")];
 const summaryElement = qs("[data-moderation-summary]");
 const filterForm = qs("[data-moderation-filter-form]");
 const listElement = qs("[data-moderation-list]");
 const refreshButton = qs("[data-moderation-refresh]");
+const contentSummaryElement = qs("[data-content-summary]");
+const contentFilterForm = qs("[data-content-filter-form]");
+const contentListElement = qs("[data-content-list]");
+const contentRefreshButton = qs("[data-content-refresh]");
 
 let moderationRecords = [];
+let contentRecords = [];
 let currentProfileId = null;
 
 function setStatus(message, tone = "info") {
@@ -51,18 +56,18 @@ function createSummaryCard(label, value) {
     return card;
 }
 
-function getDetailUrl(userId) {
+function getDetailUrl(recordType, recordId) {
     const url = new URL("./detail.html", window.location.href);
 
-    url.searchParams.set("type", "user");
-    url.searchParams.set("id", userId);
+    url.searchParams.set("type", recordType);
+    url.searchParams.set("id", recordId);
     return url.href;
 }
 
-function getActivityUrl(userId) {
+function getActivityUrl(recordId) {
     const url = new URL("../activity/index.html", window.location.href);
 
-    url.searchParams.set("query", userId);
+    url.searchParams.set("query", recordId);
     return url.href;
 }
 
@@ -87,6 +92,29 @@ function getSearchText(record) {
     ].filter(Boolean).join(" ").toLowerCase();
 }
 
+function getContentFilters() {
+    const formData = new FormData(contentFilterForm);
+
+    return {
+        query: String(formData.get("query") || "").trim().toLowerCase(),
+        status: String(formData.get("status") || ""),
+        type: String(formData.get("type") || ""),
+    };
+}
+
+function getContentSearchText(record) {
+    return [
+        record.record_id,
+        record.record_type,
+        record.primary_label,
+        record.secondary_label,
+        record.status_label,
+        record.owner_email,
+        record.course_title,
+        record.course_id,
+    ].filter(Boolean).join(" ").toLowerCase();
+}
+
 function getFilteredRecords() {
     const filters = getFilters();
 
@@ -94,6 +122,16 @@ function getFilteredRecords() {
         (!filters.status || record.account_status === filters.status)
         && (!filters.role || record.platform_role === filters.role)
         && (!filters.query || getSearchText(record).includes(filters.query))
+    ));
+}
+
+function getFilteredContentRecords() {
+    const filters = getContentFilters();
+
+    return contentRecords.filter((record) => (
+        (!filters.type || record.record_type === filters.type)
+        && (!filters.status || record.status_label === filters.status)
+        && (!filters.query || getContentSearchText(record).includes(filters.query))
     ));
 }
 
@@ -111,6 +149,24 @@ function renderSummary(records) {
         createSummaryCard("Deleted", deletedCount),
         createSummaryCard("Admins", adminCount),
         createSummaryCard("Incomplete profiles", incompleteCount)
+    );
+}
+
+function renderContentSummary(records) {
+    const courseCount = records.filter((record) => record.record_type === "course").length;
+    const classroomCount = records.filter((record) => record.record_type === "classroom").length;
+    const archivedCount = records.filter((record) => record.status_label === "archived").length;
+    const deletedCount = records.filter((record) => record.status_label === "deleted").length;
+    const enrollmentCount = records.reduce((total, record) => total + Number(record.enrollment_count || 0), 0);
+    const submissionCount = records.reduce((total, record) => total + Number(record.submission_count || 0), 0);
+
+    contentSummaryElement.replaceChildren(
+        createSummaryCard("Visible records", records.length),
+        createSummaryCard("Courses", courseCount),
+        createSummaryCard("Classrooms", classroomCount),
+        createSummaryCard("Archived", archivedCount),
+        createSummaryCard("Deleted", deletedCount),
+        createSummaryCard("Submissions", submissionCount)
     );
 }
 
@@ -203,7 +259,7 @@ function renderUsers() {
         const moderationButton = createModerationButton(record);
         const deleteButton = createDeleteButton(record);
 
-        detailLink.href = getDetailUrl(record.user_id);
+        detailLink.href = getDetailUrl("user", record.user_id);
         activityLink.href = getActivityUrl(record.user_id);
         userCell.append(name, detail);
         roleCell.append(createBadge(formatStatus(record.platform_role), true));
@@ -224,6 +280,56 @@ function renderUsers() {
 
     table.append(head, body);
     listElement.replaceChildren(table);
+}
+
+function renderContentRecords() {
+    const records = getFilteredContentRecords();
+
+    renderContentSummary(records);
+
+    if (!records.length) {
+        contentListElement.replaceChildren(createElement("p", "empty-state", "No courses or classrooms match these moderation filters."));
+        return;
+    }
+
+    const table = createElement("table", "activity-table moderation-table");
+    const head = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    const body = document.createElement("tbody");
+
+    ["Record", "Type", "Status", "Owner", "Usage", "Activity", "Updated", "Actions"].forEach((label) => {
+        headRow.append(createElement("th", "", label));
+    });
+    head.append(headRow);
+
+    records.forEach((record) => {
+        const row = document.createElement("tr");
+        const recordCell = document.createElement("td");
+        const actionsCell = document.createElement("td");
+        const name = createElement("strong", "admin-detail-value", record.primary_label || formatShortId(record.record_id));
+        const detail = createElement("span", "course-muted", record.secondary_label || record.record_id);
+        const detailLink = createElement("a", "secondary-button admin-result-action", "View details");
+        const activityLink = createElement("a", "secondary-button admin-result-action", "View activity");
+
+        detailLink.href = getDetailUrl(record.record_type, record.record_id);
+        activityLink.href = getActivityUrl(record.record_id);
+        recordCell.append(name, detail);
+        actionsCell.append(detailLink, activityLink);
+        row.append(
+            recordCell,
+            createElement("td", "", formatStatus(record.record_type)),
+            createElement("td", "", formatStatus(record.status_label)),
+            createElement("td", "", record.owner_email || formatShortId(record.owner_user_id)),
+            createElement("td", "", `${formatNumber(record.enrollment_count)} enrollments / ${formatNumber(record.submission_count)} submissions`),
+            createElement("td", "", `${formatNumber(record.activity_count)} events`),
+            createElement("td", "", formatDate(record.updated_at)),
+            actionsCell
+        );
+        body.append(row);
+    });
+
+    table.append(head, body);
+    contentListElement.replaceChildren(table);
 }
 
 function findModerationRecord(userId) {
@@ -346,6 +452,29 @@ async function loadModerationRecords() {
     setStatus("");
 }
 
+async function loadContentRecords() {
+    setStatus("Loading content moderation records...");
+    contentRefreshButton.disabled = true;
+
+    const { data, error } = await supabase.rpc("get_admin_content_moderation_records", {
+        limit_input: 100,
+        record_type_filter: "",
+        search_input: "",
+        status_filter: "",
+    });
+
+    contentRefreshButton.disabled = false;
+
+    if (error) {
+        setStatus(error.message || "Content moderation records could not be loaded.", "error");
+        return;
+    }
+
+    contentRecords = data || [];
+    renderContentRecords();
+    setStatus("");
+}
+
 async function initializeModerationPage() {
     const profile = await loadCurrentProfile();
 
@@ -353,13 +482,21 @@ async function initializeModerationPage() {
         return;
     }
 
-    shellElement.hidden = false;
-    await loadModerationRecords();
+    shellElements.forEach((element) => {
+        element.hidden = false;
+    });
+    await Promise.all([
+        loadModerationRecords(),
+        loadContentRecords(),
+    ]);
 }
 
 filterForm.addEventListener("input", renderUsers);
 filterForm.addEventListener("change", renderUsers);
 refreshButton.addEventListener("click", loadModerationRecords);
 listElement.addEventListener("click", handleModerationAction);
+contentFilterForm.addEventListener("input", renderContentRecords);
+contentFilterForm.addEventListener("change", renderContentRecords);
+contentRefreshButton.addEventListener("click", loadContentRecords);
 
 await initializeModerationPage();
