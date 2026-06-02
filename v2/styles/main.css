@@ -1658,12 +1658,33 @@ h2 {
 }
 
 .admin-search-results .submission-item {
-    grid-template-columns: minmax(180px, 1fr) auto minmax(260px, 1.2fr) auto auto;
+    grid-template-columns: minmax(180px, 1fr) auto minmax(260px, 1.2fr) auto auto auto;
 }
 
 .admin-result-action {
     min-height: 36px;
     padding: 0 12px;
+}
+
+.admin-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.admin-detail-card {
+    display: grid;
+    gap: 8px;
+    padding: 16px;
+    border: 1px solid #dbe4f1;
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.admin-detail-value {
+    color: #1d3760;
+    font-size: 0.98rem;
+    overflow-wrap: anywhere;
 }
 
 .dashboard-summary--activity {
@@ -2037,6 +2058,10 @@ h2 {
 
     .admin-result-action {
         width: 100%;
+    }
+
+    .admin-detail-grid {
+        grid-template-columns: 1fr;
     }
 
     .admin-health-grid {

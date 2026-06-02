@@ -77,6 +77,14 @@ function getActivityUrlForRecord(result) {
     return url.href;
 }
 
+function getDetailUrlForRecord(result) {
+    const url = new URL("./detail.html", window.location.href);
+
+    url.searchParams.set("type", result.record_type);
+    url.searchParams.set("id", result.record_id);
+    return url.href;
+}
+
 function renderSummary(summary) {
     summaryElement.replaceChildren(
         createSummaryCard("Total users", summary.total_users),
@@ -182,10 +190,12 @@ function renderSearchResults(results, query) {
         const type = createElement("span", "badge", formatStatus(result.record_type));
         const details = createElement("span", "course-muted", result.secondary_label || `${result.record_type} ${formatShortId(result.record_id)}`);
         const status = createElement("span", "badge badge--quiet", formatStatus(result.status_label));
+        const detailLink = createElement("a", "primary-button admin-result-action", "View details");
         const activityLink = createElement("a", "secondary-button admin-result-action", "View activity");
 
+        detailLink.href = getDetailUrlForRecord(result);
         activityLink.href = getActivityUrlForRecord(result);
-        item.append(title, type, details, status, activityLink);
+        item.append(title, type, details, status, detailLink, activityLink);
         list.append(item);
     });
 
