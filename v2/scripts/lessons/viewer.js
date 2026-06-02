@@ -1,4 +1,5 @@
 import { supabase } from "../../services/supabase/client.js";
+import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
 
 const params = new URLSearchParams(window.location.search);
@@ -139,24 +140,8 @@ function getSubmissionFilter(query) {
     return filteredQuery;
 }
 
-async function loadCurrentProfile(authUserId) {
-    const { data, error } = await supabase
-        .from("profiles")
-        .select("id, profile_completed")
-        .eq("auth_user_id", authUserId)
-        .maybeSingle();
-
-    if (error || !data) {
-        setStatus("Your profile could not be loaded. Please sign in again.", "error");
-        return null;
-    }
-
-    if (!data.profile_completed) {
-        window.location.href = "../auth/onboarding.html";
-        return null;
-    }
-
-    return data;
+async function loadCurrentProfile() {
+    return loadProtectedProfile({ statusElement });
 }
 
 function isQuestionAnswered(question) {
@@ -1013,14 +998,7 @@ async function turnInLesson() {
 }
 
 async function initializePage() {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !authData.user) {
-        window.location.href = "../auth/login.html";
-        return;
-    }
-
-    const profile = await loadCurrentProfile(authData.user.id);
+    const profile = await loadCurrentProfile();
 
     if (!profile) {
         return;

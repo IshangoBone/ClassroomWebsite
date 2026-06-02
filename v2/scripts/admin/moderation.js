@@ -1,4 +1,5 @@
 import { supabase } from "../../services/supabase/client.js";
+import { isPlatformAdmin, loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
 
 const statusElement = qs("[data-moderation-status]");
@@ -60,7 +61,7 @@ function createSummaryCard(label, value) {
 }
 
 function isAdminRole(role) {
-    return role === "admin" || role === "supreme_admin";
+    return isPlatformAdmin(role);
 }
 
 function isSupremeAdminRole(role) {
@@ -595,31 +596,13 @@ async function handleContentModerationAction(event) {
 }
 
 async function loadCurrentProfile() {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const profile = await loadProtectedProfile({
+        requireAdmin: true,
+        statusElement,
+        adminMessage: "User moderation is only available to active platform admins.",
+    });
 
-    if (authError || !authData.user) {
-        window.location.href = "../auth/login.html";
-        return null;
-    }
-
-    const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, profile_completed, platform_role, account_status")
-        .eq("auth_user_id", authData.user.id)
-        .maybeSingle();
-
-    if (profileError || !profile) {
-        setStatus("Your profile could not be loaded. Please sign in again.", "error");
-        return null;
-    }
-
-    if (!profile.profile_completed) {
-        window.location.href = "../auth/onboarding.html";
-        return null;
-    }
-
-    if (!isAdminRole(profile.platform_role) || profile.account_status !== "active") {
-        setStatus("User moderation is only available to active platform admins.", "error");
+    if (!profile) {
         return null;
     }
 

@@ -1,4 +1,5 @@
 import { supabase } from "../../services/supabase/client.js";
+import { isPlatformAdmin, loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
 
 const dashboardStatus = qs("[data-dashboard-status]");
@@ -1018,7 +1019,7 @@ async function refreshDashboard() {
         courseFormPanel.hidden = true;
         teacherSubmissionsSection.hidden = isStudentOnly;
         teacherAnalyticsEntry.hidden = isStudentOnly;
-        const isActiveAdmin = ["admin", "supreme_admin"].includes(currentProfile.platform_role) && currentProfile.account_status === "active";
+        const isActiveAdmin = isPlatformAdmin(currentProfile.platform_role) && currentProfile.account_status === "active";
         adminDashboardEntry.hidden = !isActiveAdmin;
         adminActivityEntry.hidden = !isActiveAdmin;
         studentActivitySection.hidden = !isStudentOnly;
@@ -1076,26 +1077,12 @@ async function refreshDashboard() {
 }
 
 async function initializeDashboard() {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const profile = await loadProtectedProfile({
+        profileColumns: "id, username, profile_completed, platform_role, account_status",
+        statusElement: dashboardStatus,
+    });
 
-    if (authError || !authData.user) {
-        window.location.href = "../auth/login.html";
-        return;
-    }
-
-    const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, username, profile_completed, platform_role, account_status")
-        .eq("auth_user_id", authData.user.id)
-        .maybeSingle();
-
-    if (profileError || !profile) {
-        setStatus("Your profile could not be loaded. Please sign in again.", "error");
-        return;
-    }
-
-    if (!profile.profile_completed) {
-        window.location.href = "../auth/onboarding.html";
+    if (!profile) {
         return;
     }
 

@@ -1,4 +1,5 @@
 import { supabase } from "../../services/supabase/client.js";
+import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
 
 const statusElement = qs("[data-progress-status]");
@@ -145,30 +146,7 @@ function getFilteredSubmissions(enrollments) {
 }
 
 async function loadCurrentProfile() {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !authData.user) {
-        window.location.href = "../auth/login.html";
-        return null;
-    }
-
-    const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, profile_completed")
-        .eq("auth_user_id", authData.user.id)
-        .maybeSingle();
-
-    if (profileError || !profile) {
-        setStatus("Your profile could not be loaded. Please sign in again.", "error");
-        return null;
-    }
-
-    if (!profile.profile_completed) {
-        window.location.href = "../auth/onboarding.html";
-        return null;
-    }
-
-    return profile;
+    return loadProtectedProfile({ statusElement });
 }
 
 async function loadStudentEnrollments(profileId) {

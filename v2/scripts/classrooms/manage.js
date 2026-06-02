@@ -1,4 +1,5 @@
 import { supabase } from "../../services/supabase/client.js";
+import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
 
 const params = new URLSearchParams(window.location.search);
@@ -470,28 +471,15 @@ async function handleClassroomSubmit(event) {
 }
 
 async function initializePage() {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
+    const profile = await loadProtectedProfile({ statusElement });
 
-    if (authError || !authData.user) {
-        window.location.href = "../auth/login.html";
+    if (!profile) {
         return;
     }
 
     if (!courseId) {
         headingElement.textContent = "Course unavailable";
         setStatus("Choose a course from the dashboard before opening classrooms.", "error");
-        return;
-    }
-
-    const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("auth_user_id", authData.user.id)
-        .single();
-
-    if (profileError || !profile) {
-        headingElement.textContent = "Classrooms unavailable";
-        setStatus("Complete your profile before managing classrooms.", "error");
         return;
     }
 
