@@ -77,6 +77,14 @@ function getActivityUrlForRecord(result) {
     return url.href;
 }
 
+function getActivityUrlForLog(log) {
+    const url = new URL("../activity/index.html", window.location.href);
+    const query = log.target_id || log.course_id || log.classroom_id || log.action_type;
+
+    url.searchParams.set("query", query);
+    return url.href;
+}
+
 function getDetailUrlForRecord(result) {
     const url = new URL("./detail.html", window.location.href);
 
@@ -159,11 +167,12 @@ function renderRecentActivity(logs) {
 
     logs.slice(0, 8).forEach((log) => {
         const item = createElement("li", "submission-item");
-        const action = createElement("strong", "submission-name", formatAction(log.action_type));
+        const action = createElement("a", "submission-name", formatAction(log.action_type));
         const target = createElement("span", "course-muted", `${log.target_type} ${formatEntityLabel(log.target_display_name, log.target_id)}`);
         const actor = createElement("span", "course-muted", `Actor: ${formatEntityLabel(log.actor_display_name, log.actor_user_id)}`);
         const createdAt = createElement("span", "course-muted", formatDate(log.created_at));
 
+        action.href = getActivityUrlForLog(log);
         item.append(action, target, actor, createdAt);
         list.append(item);
     });
