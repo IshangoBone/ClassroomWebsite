@@ -85,6 +85,12 @@
                         <input type="url" name="content-url" placeholder="https://example.com/resource" maxlength="500" data-url-content-input />
                     </label>
 
+                    <label class="form-field" data-content-upload-field hidden>
+                        <span data-content-upload-label>Upload resource</span>
+                        <input type="file" name="content-upload" data-content-upload-input />
+                        <small class="form-hint">Optional. Uploaded resources are stored privately and shown to authorized students.</small>
+                    </label>
+
                     <label class="form-field" data-file-type-field hidden>
                         <span>File type</span>
                         <select name="file-type">
@@ -249,7 +255,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/lessons/builder.js?v=20260602-route-guards"></script>
+    <script type="module" src="../../scripts/lessons/builder.js?v=20260602-lesson-resource-uploads"></script>
 </body>
 
 </html>

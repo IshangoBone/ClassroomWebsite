@@ -23,6 +23,9 @@ const textContentField = qs("[data-text-content-field]");
 const urlContentField = qs("[data-url-content-field]");
 const urlContentLabel = qs("[data-url-content-label]");
 const urlContentInput = qs("[data-url-content-input]");
+const contentUploadField = qs("[data-content-upload-field]");
+const contentUploadLabel = qs("[data-content-upload-label]");
+const contentUploadInput = qs("[data-content-upload-input]");
 const fileTypeField = qs("[data-file-type-field]");
 const contentBlockList = qs("[data-content-block-list]");
 const questionForm = qs("[data-question-form]");
@@ -36,6 +39,19 @@ const responseRulesField = qs("[data-response-rules-field]");
 const questionOptionsField = qs("[data-question-options-field]");
 let loadedContentBlocks = [];
 let loadedQuestions = [];
+let currentProfile = null;
+let currentLessonContext = null;
+const lessonResourceBucket = "lesson-resources";
+const maxLessonResourceSize = 50 * 1024 * 1024;
+const lessonResourceMimeTypes = new Set([
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/zip",
+]);
 const questionTypeLabels = {
     short_response: "Short response",
     long_response: "Long response",
@@ -133,13 +149,15 @@ function setContentBlockFormMode(blockType) {
     const isYoutube = normalizedBlockType === "youtube";
     const isImage = normalizedBlockType === "image";
     const isFile = normalizedBlockType === "file";
+    const supportsUpload = isImage || isFile;
 
     contentBlockTypeSelect.value = normalizedBlockType;
     textContentField.hidden = !isText;
     urlContentField.hidden = isText;
+    contentUploadField.hidden = !supportsUpload;
     fileTypeField.hidden = !isFile;
     contentBlockForm.elements["body-text"].required = isText;
-    contentBlockForm.elements["content-url"].required = !isText;
+    contentBlockForm.elements["content-url"].required = !isText && !supportsUpload;
     contentBlockForm.elements["file-type"].required = isFile;
     contentTitleInput.placeholder = isText ? "What is a computer?" : isYoutube ? "Video title" : "Resource title";
     urlContentLabel.textContent = isYoutube
@@ -151,6 +169,10 @@ function setContentBlockFormMode(blockType) {
                 : isFile
                     ? "File URL"
                     : "External URL";
+    contentUploadLabel.textContent = isImage ? "Upload image" : "Upload file";
+    contentUploadInput.accept = isImage
+        ? "image/png,image/jpeg,image/webp"
+        : "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/zip";
     urlContentInput.placeholder = isYoutube
         ? "https://www.youtube.com/watch?v=..."
         : isSlides
@@ -158,8 +180,108 @@ function setContentBlockFormMode(blockType) {
             : isImage
                 ? "https://example.com/image.png"
                 : isFile
-                    ? "https://example.com/worksheet.pdf"
+                    ? "https://example.com/worksheet.pdf or upload below"
                     : "https://example.com/resource";
+}
+
+function getFileExtension(file) {
+    const extension = file.name.split(".").pop()?.toLowerCase();
+
+    if (extension) {
+        return extension.replace(/[^a-z0-9]/g, "");
+    }
+
+    return file.type.split("/").pop() || "file";
+}
+
+function getSafeFileName(file) {
+    const extension = getFileExtension(file);
+    const baseName = file.name
+        .replace(/\.[^.]+$/, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 48) || "lesson-resource";
+
+    return `${Date.now()}-${baseName}.${extension}`;
+}
+
+function validateLessonResource(file, blockType) {
+    if (!file) {
+        return "";
+    }
+
+    if (file.size > maxLessonResourceSize) {
+        return "Choose a lesson resource smaller than 50 MB.";
+    }
+
+    if (!lessonResourceMimeTypes.has(file.type)) {
+        return "Choose a PDF, image, Word document, slide deck, or ZIP resource.";
+    }
+
+    if (blockType === "image" && !file.type.startsWith("image/")) {
+        return "Choose an image file for an image resource.";
+    }
+
+    if (blockType === "file" && file.type.startsWith("image/")) {
+        return "Use Image resource when uploading an image.";
+    }
+
+    return "";
+}
+
+async function uploadLessonResource(file, title) {
+    const storagePath = `${currentProfile.id}/lessons/${lessonId}/${getSafeFileName(file)}`;
+    const { error: uploadError } = await supabase.storage
+        .from(lessonResourceBucket)
+        .upload(storagePath, file, {
+            cacheControl: "3600",
+            contentType: file.type,
+            upsert: false,
+        });
+
+    if (uploadError) {
+        throw new Error(uploadError.message);
+    }
+
+    const { data: fileRecord, error: metadataError } = await supabase
+        .from("files")
+        .insert({
+            owner_user_id: currentProfile.id,
+            original_file_name: file.name,
+            display_name: title || file.name,
+            file_type: "lesson_resource",
+            mime_type: file.type,
+            file_extension: getFileExtension(file),
+            file_size: file.size,
+            storage_bucket: lessonResourceBucket,
+            storage_path: storagePath,
+        })
+        .select("id, storage_path")
+        .single();
+
+    if (metadataError) {
+        await supabase.storage.from(lessonResourceBucket).remove([storagePath]);
+        throw new Error(metadataError.message);
+    }
+
+    return fileRecord;
+}
+
+async function linkLessonResource(fileRecord, contentBlockId) {
+    const { error } = await supabase
+        .from("content_file_links")
+        .insert({
+            file_id: fileRecord.id,
+            lesson_content_block_id: contentBlockId,
+            lesson_id: lessonId,
+            course_id: currentLessonContext.course.id,
+            classroom_id: null,
+        });
+
+    if (error) {
+        throw new Error(error.message);
+    }
 }
 
 function getContentBlockTypeLabel(contentBlock) {
@@ -189,6 +311,7 @@ function getContentBlockTypeLabel(contentBlock) {
 function resetContentBlockForm() {
     contentBlockForm.reset();
     contentBlockForm.elements["content-block-id"].value = "";
+    contentUploadInput.value = "";
     setContentBlockFormMode("text");
     contentBlockFormHeading.textContent = "Add lesson content";
     contentBlockSubmit.textContent = "Create content block";
@@ -1168,12 +1291,14 @@ async function initializePage() {
         return;
     }
 
+    currentProfile = profile;
     const context = await loadLessonContext();
 
     if (!context) {
         return;
     }
 
+    currentLessonContext = context;
     const { lesson, module, course } = context;
 
     headingElement.textContent = lesson.title || "Untitled lesson";
@@ -1203,11 +1328,23 @@ contentBlockForm.addEventListener("submit", async (event) => {
     const title = String(formData.get("title") || "").trim();
     const bodyText = String(formData.get("body-text") || "").trim();
     const contentUrl = String(formData.get("content-url") || "").trim();
+    const uploadedResource = contentUploadInput.files?.[0];
+    const resourceValidationError = validateLessonResource(uploadedResource, blockType);
     const fileType = String(formData.get("file-type") || "pdf");
     const submitButton = contentBlockForm.querySelector("button[type='submit']");
 
-    if (!title || (blockType === "text" && !bodyText) || (blockType !== "text" && !contentUrl)) {
+    if (!title || (blockType === "text" && !bodyText) || (!["text", "file", "image"].includes(blockType) && !contentUrl)) {
         setStatus(`Enter a title and ${blockType === "text" ? "written content" : "URL"} before saving.`, "error");
+        return;
+    }
+
+    if (["file", "image"].includes(blockType) && !contentUrl && !uploadedResource) {
+        setStatus("Paste a resource URL or choose a file to upload before saving.", "error");
+        return;
+    }
+
+    if (resourceValidationError) {
+        setStatus(resourceValidationError, "error");
         return;
     }
 
@@ -1221,6 +1358,20 @@ contentBlockForm.addEventListener("submit", async (event) => {
 
         setStatus("Saving lesson content...");
         submitButton.disabled = true;
+        let uploadedFileRecord = null;
+        let savedFileUrl = contentUrl;
+
+        if (uploadedResource) {
+            try {
+                setStatus("Uploading lesson resource...");
+                uploadedFileRecord = await uploadLessonResource(uploadedResource, title);
+                savedFileUrl = uploadedFileRecord.storage_path;
+            } catch (error) {
+                submitButton.disabled = false;
+                setStatus(`Lesson resource upload failed: ${error.message}`, "error");
+                return;
+            }
+        }
 
         const { error } = await supabase
             .from("lesson_content_blocks")
@@ -1229,7 +1380,7 @@ contentBlockForm.addEventListener("submit", async (event) => {
                 title,
                 body_text: blockType === "text" ? bodyText : null,
                 external_url: ["link", "slides", "youtube"].includes(blockType) ? contentUrl : null,
-                file_url: ["file", "image"].includes(blockType) ? contentUrl : null,
+                file_url: ["file", "image"].includes(blockType) ? savedFileUrl : null,
                 file_type: blockType === "image" ? "image" : blockType === "file" ? fileType : null,
             })
             .eq("id", contentBlockId)
@@ -1240,6 +1391,15 @@ contentBlockForm.addEventListener("submit", async (event) => {
         if (error) {
             setStatus(error.message || "The lesson content could not be saved.", "error");
             return;
+        }
+
+        if (uploadedFileRecord) {
+            try {
+                await linkLessonResource(uploadedFileRecord, contentBlockId);
+            } catch (error) {
+                setStatus(`Lesson content saved, but the file link failed: ${error.message}`, "error");
+                return;
+            }
         }
 
         resetContentBlockForm();
@@ -1254,24 +1414,49 @@ contentBlockForm.addEventListener("submit", async (event) => {
     ) + 1;
     setStatus("Creating lesson content...");
     submitButton.disabled = true;
+    let uploadedFileRecord = null;
+    let savedFileUrl = contentUrl;
 
-    const { error } = await supabase.from("lesson_content_blocks").insert({
+    if (uploadedResource) {
+        try {
+            setStatus("Uploading lesson resource...");
+            uploadedFileRecord = await uploadLessonResource(uploadedResource, title);
+            savedFileUrl = uploadedFileRecord.storage_path;
+        } catch (error) {
+            submitButton.disabled = false;
+            setStatus(`Lesson resource upload failed: ${error.message}`, "error");
+            return;
+        }
+    }
+
+    const { data: contentBlock, error } = await supabase.from("lesson_content_blocks").insert({
         lesson_id: lessonId,
         block_type: storedBlockType,
         title,
         body_text: blockType === "text" ? bodyText : null,
         external_url: ["link", "slides", "youtube"].includes(blockType) ? contentUrl : null,
-        file_url: ["file", "image"].includes(blockType) ? contentUrl : null,
+        file_url: ["file", "image"].includes(blockType) ? savedFileUrl : null,
         file_type: blockType === "image" ? "image" : blockType === "file" ? fileType : null,
         order_index: nextOrder,
         is_visible: false,
-    });
+    })
+        .select("id")
+        .single();
 
     submitButton.disabled = false;
 
     if (error) {
         setStatus(error.message || "The lesson content could not be created.", "error");
         return;
+    }
+
+    if (uploadedFileRecord) {
+        try {
+            await linkLessonResource(uploadedFileRecord, contentBlock.id);
+        } catch (error) {
+            setStatus(`Lesson content created, but the file link failed: ${error.message}`, "error");
+            return;
+        }
     }
 
     resetContentBlockForm();
