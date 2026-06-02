@@ -114,12 +114,20 @@ toggleButtons.forEach((button) => {
 });
 
 if (googleButton) {
-    googleButton.addEventListener("click", () => {
-        setStatus(
-            document.body.dataset.authMode || "login",
-            "Google sign-in is the next auth polish step once the Google OAuth credentials are connected.",
-            "info"
-        );
+    googleButton.addEventListener("click", async () => {
+        const mode = document.body.dataset.authMode || "login";
+        setStatus(mode, "Opening Google sign-in...", "info");
+
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: "google",
+            options: {
+                redirectTo: new URL("./onboarding.html", window.location.href).href,
+            },
+        });
+
+        if (error) {
+            setStatus(mode, error.message, "error");
+        }
     });
 }
 
