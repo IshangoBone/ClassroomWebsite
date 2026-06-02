@@ -1612,6 +1612,19 @@ h2 {
     border-bottom: 0;
 }
 
+.analytics-range-control {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 18px;
+}
+
+.analytics-range-control [aria-pressed="true"] {
+    border-color: #365a9b;
+    background: #365a9b;
+    color: #ffffff;
+}
+
 .analytics-card-action {
     width: fit-content;
     min-height: 36px;

@@ -13,6 +13,8 @@ const drilldownTitleElement = qs("[data-platform-drilldown-title]");
 const drilldownCopyElement = qs("[data-platform-drilldown-copy]");
 const drilldownRefreshButton = qs("[data-platform-drilldown-refresh]");
 const statusBreakdownElement = qs("[data-platform-status-breakdown]");
+const rangeControlElement = qs("[data-platform-range-control]");
+const growthCopyElement = qs("[data-platform-growth-copy]");
 
 const DRILLDOWN_META = {
     users: {
@@ -98,6 +100,11 @@ const DRILLDOWN_META = {
 };
 
 let selectedDrilldownKey = "";
+let selectedRangeDays = 7;
+
+function getRangeLabel() {
+    return `last ${selectedRangeDays} days`;
+}
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -178,9 +185,9 @@ function renderSummary(analytics) {
         createSummaryCard("Enrollments", formatNumber(analytics.total_enrollments), "active or retained", "enrollments"),
         createSummaryCard("Submissions", formatNumber(analytics.total_submissions), `${formatPercent(analytics.completion_rate)} submitted`, "submissions"),
         createSummaryCard("Engagement points", formatNumber(analytics.engagement_points), "earned by students"),
-        createSummaryCard("New users", formatNumber(analytics.new_users_this_week), "last 7 days", "new_users"),
-        createSummaryCard("New courses", formatNumber(analytics.new_courses_this_month), "last 30 days", "new_courses"),
-        createSummaryCard("New classrooms", formatNumber(analytics.new_classrooms_this_month), "last 30 days", "new_classrooms"),
+        createSummaryCard("New users", formatNumber(analytics.new_users_this_week), getRangeLabel(), "new_users"),
+        createSummaryCard("New courses", formatNumber(analytics.new_courses_this_month), getRangeLabel(), "new_courses"),
+        createSummaryCard("New classrooms", formatNumber(analytics.new_classrooms_this_month), getRangeLabel(), "new_classrooms"),
         createSummaryCard("Suspended users", formatNumber(analytics.suspended_users), `${formatNumber(analytics.deleted_users)} deleted users`, "suspended_users"),
         createSummaryCard("Archived content", formatNumber(Number(analytics.archived_courses || 0) + Number(analytics.archived_classrooms || 0)), `${formatNumber(Number(analytics.deleted_courses || 0) + Number(analytics.deleted_classrooms || 0))} deleted records`, "archived_content")
     );
@@ -305,7 +312,7 @@ function createTrendChart(rows) {
     svg.setAttribute("class", "analytics-trend-chart");
     svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
     svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", "Seven day growth trend for new users and active users");
+    svg.setAttribute("aria-label", `${selectedRangeDays} day growth trend for new users and active users`);
 
     [0, 0.5, 1].forEach((ratio) => {
         const y = padding + ((height - padding * 2) * ratio);
@@ -325,7 +332,13 @@ function createTrendChart(rows) {
     newUserLine.setAttribute("class", "analytics-trend-line analytics-trend-line--new");
     svg.append(activeLine, newUserLine);
 
+    const labelInterval = rows.length > 60 ? 14 : rows.length > 14 ? 5 : 1;
+
     rows.forEach((row, index) => {
+        if (index !== 0 && index !== rows.length - 1 && index % labelInterval !== 0) {
+            return;
+        }
+
         const usableWidth = width - (padding * 2);
         const x = rows.length > 1
             ? padding + ((usableWidth / (rows.length - 1)) * index)
@@ -359,7 +372,7 @@ function renderGrowthTrend(rows) {
         createElement("span", "analytics-trend-key analytics-trend-key--active", "Active users")
     );
     stats.append(
-        createTrendStat("New users", totalNewUsers, "last 7 days", "new"),
+        createTrendStat("New users", totalNewUsers, getRangeLabel(), "new"),
         createTrendStat("Active user signals", totalActiveSignals, "daily total", "active"),
         createTrendStat("Peak active day", peakActive, "highest day")
     );
@@ -431,11 +444,19 @@ function createRecordActions(record) {
     return wrapper;
 }
 
+function getDrilldownCopy(meta) {
+    if (["new_users", "new_courses", "new_classrooms"].includes(selectedDrilldownKey)) {
+        return meta.copy.replace(/last (7|30) days/, getRangeLabel());
+    }
+
+    return meta.copy;
+}
+
 function renderDrilldown(rows) {
     const meta = DRILLDOWN_META[selectedDrilldownKey] || DRILLDOWN_META.users;
 
     drilldownTitleElement.textContent = meta.title;
-    drilldownCopyElement.textContent = meta.copy;
+    drilldownCopyElement.textContent = getDrilldownCopy(meta);
 
     renderTable(
         drilldownElement,
@@ -473,6 +494,7 @@ async function loadDrilldown(drilldownKey) {
     const { data, error } = await supabase.rpc("get_admin_platform_analytics_drilldown", {
         metric_input: drilldownKey,
         limit_input: 50,
+        range_days_input: selectedRangeDays,
     });
 
     if (error) {
@@ -565,9 +587,11 @@ async function loadCurrentProfile() {
 }
 
 async function loadPlatformAnalytics() {
-    setStatus("Loading platform analytics...");
+    setStatus(`Loading platform analytics for the ${getRangeLabel()}...`);
 
-    const { data, error } = await supabase.rpc("get_admin_platform_analytics");
+    const { data, error } = await supabase.rpc("get_admin_platform_analytics", {
+        range_days_input: selectedRangeDays,
+    });
 
     if (error) {
         setStatus(error.message || "Platform analytics could not be loaded.", "error");
@@ -582,6 +606,7 @@ async function loadPlatformAnalytics() {
     }
 
     renderSummary(analytics);
+    growthCopyElement.textContent = `Recent signup and active-user signals for the ${getRangeLabel()}.`;
     renderGrowth(analytics.growth_7d_json || []);
     renderTeachers(analytics.top_teachers_json || []);
     renderCourses(analytics.top_courses_json || []);
@@ -615,6 +640,20 @@ summaryElement.addEventListener("click", (event) => {
     }
 
     void loadDrilldown(button.dataset.drilldownKey);
+});
+
+rangeControlElement.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-range-days]");
+
+    if (!button) {
+        return;
+    }
+
+    selectedRangeDays = Number(button.dataset.rangeDays || 7);
+    rangeControlElement.querySelectorAll("[data-range-days]").forEach((rangeButton) => {
+        rangeButton.setAttribute("aria-pressed", String(rangeButton === button));
+    });
+    void loadPlatformAnalytics();
 });
 
 drilldownRefreshButton.addEventListener("click", () => {
