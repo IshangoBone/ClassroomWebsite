@@ -1,4 +1,5 @@
 import { supabase } from "../../services/supabase/client.js";
+import { supabaseConfig } from "../../services/supabase/config.local.js";
 import { qs } from "../utils/dom.js";
 
 const authModes = {
@@ -20,6 +21,11 @@ const headingElement = qs(".auth-card-title");
 const copyElement = qs(".auth-card-copy");
 const loginForm = qs("[data-login-form]");
 const signupForm = qs("[data-signup-form]");
+const googleOAuthEnabled = supabaseConfig.googleOAuthEnabled === true;
+const googleOAuthDisabledMessage = [
+    "Google sign-in is not enabled for this Supabase project yet.",
+    "Enable Google OAuth in Supabase, then set googleOAuthEnabled to true in config.local.js.",
+].join(" ");
 
 async function logAuthActivity(actionType, profile, mode) {
     const { error } = await supabase.rpc("log_activity", {
@@ -116,6 +122,12 @@ toggleButtons.forEach((button) => {
 if (googleButton) {
     googleButton.addEventListener("click", async () => {
         const mode = document.body.dataset.authMode || "login";
+
+        if (!googleOAuthEnabled) {
+            setStatus(mode, googleOAuthDisabledMessage, "error");
+            return;
+        }
+
         setStatus(mode, "Opening Google sign-in...", "info");
 
         const { error } = await supabase.auth.signInWithOAuth({

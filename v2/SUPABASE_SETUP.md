@@ -25,6 +25,8 @@ Then set:
 
 - `supabaseUrl`: the project URL, for example `https://<project-ref>.supabase.co`
 - `supabasePublishableKey`: the browser-safe Supabase publishable key
+- `googleOAuthEnabled`: `true` only after the hosted Google auth provider is
+  enabled
 
 Do not commit service-role keys, database passwords, OAuth secrets, or admin
 tokens. The static frontend should use only the publishable browser key.
@@ -43,6 +45,7 @@ Hosted project checklist:
 - Email/password auth enabled.
 - Google OAuth enabled in the Supabase dashboard when Google sign-in is needed.
 - Google OAuth client id and secret stored only in Supabase/provider settings.
+- `googleOAuthEnabled: true` in `config.local.js` after Google OAuth is enabled.
 - Redirect URLs include the local V2 URLs above and any future staging or
   production V2 URLs.
 
