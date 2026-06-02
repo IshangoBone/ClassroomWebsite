@@ -13,6 +13,7 @@ const drilldownTitleElement = qs("[data-platform-drilldown-title]");
 const drilldownCopyElement = qs("[data-platform-drilldown-copy]");
 const drilldownRefreshButton = qs("[data-platform-drilldown-refresh]");
 const statusBreakdownElement = qs("[data-platform-status-breakdown]");
+const moderationElement = qs("[data-platform-moderation]");
 const rangeControlElement = qs("[data-platform-range-control]");
 const growthCopyElement = qs("[data-platform-growth-copy]");
 
@@ -407,6 +408,52 @@ function renderStatusBreakdowns(analytics) {
     );
 }
 
+function renderModerationSignals(analytics) {
+    renderTable(
+        moderationElement,
+        ["Signal", "Count", "Review note", "Actions"],
+        [
+            [
+                "Suspended users",
+                formatNumber(analytics.suspended_users),
+                "Accounts currently blocked from normal platform use.",
+                createModerationActions("suspended_users"),
+            ],
+            [
+                "Deleted users",
+                formatNumber(analytics.deleted_users),
+                "Soft-deleted account records preserved for admin review.",
+                createModerationActions(),
+            ],
+            [
+                "Archived courses",
+                formatNumber(analytics.archived_courses),
+                "Courses hidden from discovery and active student workflows.",
+                createModerationActions("archived_content"),
+            ],
+            [
+                "Archived classrooms",
+                formatNumber(analytics.archived_classrooms),
+                "Classrooms removed from active teaching workflows.",
+                createModerationActions("archived_content"),
+            ],
+            [
+                "Deleted courses",
+                formatNumber(analytics.deleted_courses),
+                "Soft-deleted course records preserved for audit history.",
+                createModerationActions("deleted_content"),
+            ],
+            [
+                "Deleted classrooms",
+                formatNumber(analytics.deleted_classrooms),
+                "Soft-deleted classroom records preserved for audit history.",
+                createModerationActions("deleted_content"),
+            ],
+        ],
+        "No moderation signals are available yet."
+    );
+}
+
 function getDetailUrl(record) {
     if (!["user", "course", "classroom"].includes(record.record_type)) {
         return "";
@@ -446,6 +493,14 @@ function createRecordLinkCell(label, detail, recordType, recordId) {
     return wrapper;
 }
 
+function createDrilldownButton(label, drilldownKey) {
+    const button = createElement("button", "secondary-button analytics-table-action", label);
+
+    button.type = "button";
+    button.dataset.drilldownKey = drilldownKey;
+    return button;
+}
+
 function createRecordActions(record) {
     const wrapper = createElement("div", "analytics-action-stack");
     const detailUrl = getDetailUrl(record);
@@ -461,6 +516,20 @@ function createRecordActions(record) {
     }
 
     wrapper.append(activityLink);
+    return wrapper;
+}
+
+function createModerationActions(drilldownKey = "") {
+    const wrapper = createElement("div", "analytics-action-stack");
+    const moderationLink = createElement("a", "secondary-button analytics-table-action", "Moderation");
+
+    moderationLink.href = "./moderation.html";
+
+    if (drilldownKey) {
+        wrapper.append(createDrilldownButton("Records", drilldownKey));
+    }
+
+    wrapper.append(moderationLink);
     return wrapper;
 }
 
@@ -633,6 +702,7 @@ async function loadPlatformAnalytics() {
     renderTeachers(analytics.top_teachers_json || []);
     renderCourses(analytics.top_courses_json || []);
     renderStatusBreakdowns(analytics);
+    renderModerationSignals(analytics);
 
     if (selectedDrilldownKey) {
         await loadDrilldown(selectedDrilldownKey);
@@ -655,6 +725,16 @@ async function initializePlatformAnalytics() {
 }
 
 summaryElement.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-drilldown-key]");
+
+    if (!button) {
+        return;
+    }
+
+    void loadDrilldown(button.dataset.drilldownKey);
+});
+
+moderationElement.addEventListener("click", (event) => {
     const button = event.target.closest("[data-drilldown-key]");
 
     if (!button) {
