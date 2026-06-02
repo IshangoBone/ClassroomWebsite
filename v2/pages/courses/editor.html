@@ -76,6 +76,17 @@
                     <textarea name="description" rows="4" maxlength="600" required></textarea>
                 </label>
 
+                <label class="form-field form-field--wide">
+                    <span>Course thumbnail</span>
+                    <input type="file" name="course-thumbnail" accept="image/png,image/jpeg,image/webp,image/gif" />
+                    <small class="form-hint">Optional public image for course discovery. PNG, JPEG, WebP, or GIF up to 10 MB.</small>
+                </label>
+
+                <div class="file-preview form-field--wide" data-course-thumbnail-preview hidden>
+                    <img alt="Course thumbnail preview" data-course-thumbnail-preview-image />
+                    <span data-course-thumbnail-preview-name></span>
+                </div>
+
                 <div class="course-form-actions form-field--wide">
                     <button type="submit" class="primary-button">Save course basics</button>
                 </div>
@@ -171,7 +182,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/courses/editor.js?v=20260602-route-guards"></script>
+    <script type="module" src="../../scripts/courses/editor.js?v=20260602-course-thumbnail-upload"></script>
 </body>
 
 </html>

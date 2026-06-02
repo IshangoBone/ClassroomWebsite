@@ -27,11 +27,32 @@ const copyPublicCourseLinkButton = qs("[data-copy-public-course-link]");
 const coursePreviewLink = qs("[data-course-preview-link]");
 const archiveCourseButton = qs("[data-archive-course]");
 const deleteCourseButton = qs("[data-delete-course]");
+const courseThumbnailInput = editorForm.elements["course-thumbnail"];
+const courseThumbnailPreview = qs("[data-course-thumbnail-preview]");
+const courseThumbnailPreviewImage = qs("[data-course-thumbnail-preview-image]");
+const courseThumbnailPreviewName = qs("[data-course-thumbnail-preview-name]");
+const courseSelectColumns = [
+    "id",
+    "owner_user_id",
+    "title",
+    "description",
+    "subject_area",
+    "estimated_length",
+    "thumbnail_url",
+    "thumbnail_type",
+    "status",
+    "is_publicly_discoverable",
+].join(", ");
+const courseThumbnailBucket = "course-public-assets";
+const maxCourseThumbnailSize = 10 * 1024 * 1024;
+const allowedCourseThumbnailTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 let loadedModules = [];
 let loadedLessons = [];
 let loadedContentBlocks = [];
 let loadedQuestions = [];
 let loadedCourse = null;
+let currentProfile = null;
+let selectedCourseThumbnailUrl = "";
 const collapsedModuleIds = new Set();
 
 function setStatus(message, tone = "info") {
@@ -50,6 +71,123 @@ function fillCourseForm(course) {
     editorForm.elements["subject-area"].value = course.subject_area || "";
     editorForm.elements["estimated-length"].value = course.estimated_length || "";
     editorForm.elements.description.value = course.description || "";
+
+    if (course.thumbnail_url) {
+        courseThumbnailPreviewImage.src = course.thumbnail_url;
+        courseThumbnailPreviewName.textContent = "Current course thumbnail";
+        courseThumbnailPreview.hidden = false;
+    }
+}
+
+function getFileExtension(file) {
+    const extension = file.name.split(".").pop()?.toLowerCase();
+
+    if (extension) {
+        return extension.replace(/[^a-z0-9]/g, "");
+    }
+
+    return file.type.split("/").pop() || "image";
+}
+
+function getSafeFileName(file, fallbackName) {
+    const extension = getFileExtension(file);
+    const baseName = file.name
+        .replace(/\.[^.]+$/, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 48) || fallbackName;
+
+    return `${Date.now()}-${baseName}.${extension}`;
+}
+
+function clearCourseThumbnailPreview() {
+    if (selectedCourseThumbnailUrl) {
+        URL.revokeObjectURL(selectedCourseThumbnailUrl);
+        selectedCourseThumbnailUrl = "";
+    }
+
+    if (!loadedCourse?.thumbnail_url) {
+        courseThumbnailPreview.hidden = true;
+        courseThumbnailPreviewImage.removeAttribute("src");
+        courseThumbnailPreviewName.textContent = "";
+        return;
+    }
+
+    courseThumbnailPreviewImage.src = loadedCourse.thumbnail_url;
+    courseThumbnailPreviewName.textContent = "Current course thumbnail";
+    courseThumbnailPreview.hidden = false;
+}
+
+function validateCourseThumbnail(file) {
+    if (!file) {
+        return "";
+    }
+
+    if (!allowedCourseThumbnailTypes.has(file.type)) {
+        return "Choose a PNG, JPEG, WebP, or GIF course thumbnail.";
+    }
+
+    if (file.size > maxCourseThumbnailSize) {
+        return "Choose a course thumbnail smaller than 10 MB.";
+    }
+
+    return "";
+}
+
+function showCourseThumbnailPreview(file) {
+    clearCourseThumbnailPreview();
+
+    if (!file) {
+        return;
+    }
+
+    selectedCourseThumbnailUrl = URL.createObjectURL(file);
+    courseThumbnailPreviewImage.src = selectedCourseThumbnailUrl;
+    courseThumbnailPreviewName.textContent = file.name;
+    courseThumbnailPreview.hidden = false;
+}
+
+async function uploadCourseThumbnail(file) {
+    const storagePath = `${currentProfile.id}/courses/${courseId}/${getSafeFileName(file, "course-thumbnail")}`;
+    const { error: uploadError } = await supabase.storage
+        .from(courseThumbnailBucket)
+        .upload(storagePath, file, {
+            cacheControl: "3600",
+            contentType: file.type,
+            upsert: false,
+        });
+
+    if (uploadError) {
+        throw new Error(uploadError.message);
+    }
+
+    const { data: urlData } = supabase.storage
+        .from(courseThumbnailBucket)
+        .getPublicUrl(storagePath);
+    const publicUrl = urlData.publicUrl;
+
+    const { error: metadataError } = await supabase
+        .from("files")
+        .insert({
+            owner_user_id: currentProfile.id,
+            original_file_name: file.name,
+            display_name: "Course thumbnail",
+            file_type: "course_thumbnail",
+            mime_type: file.type,
+            file_extension: getFileExtension(file),
+            file_size: file.size,
+            storage_bucket: courseThumbnailBucket,
+            storage_path: storagePath,
+            public_url: publicUrl,
+        });
+
+    if (metadataError) {
+        await supabase.storage.from(courseThumbnailBucket).remove([storagePath]);
+        throw new Error(metadataError.message);
+    }
+
+    return publicUrl;
 }
 
 function getPublicCourseUrl(course) {
@@ -223,7 +361,7 @@ async function toggleCourseVisibility() {
         .from("courses")
         .update({ status: nextStatus })
         .eq("id", courseId)
-        .select("id, title, description, subject_area, estimated_length, status, is_publicly_discoverable")
+        .select(courseSelectColumns)
         .single();
 
     toggleCourseVisibilityButton.disabled = false;
@@ -260,7 +398,7 @@ async function updateDiscoveryListing() {
         .from("courses")
         .update({ is_publicly_discoverable: shouldList })
         .eq("id", courseId)
-        .select("id, title, description, subject_area, estimated_length, status, is_publicly_discoverable")
+        .select(courseSelectColumns)
         .single();
 
     if (error) {
@@ -296,7 +434,7 @@ async function archiveCourse() {
         .from("courses")
         .update({ status: "archived" })
         .eq("id", courseId)
-        .select("id, title, description, subject_area, estimated_length, status, is_publicly_discoverable")
+        .select(courseSelectColumns)
         .single();
 
     if (error) {
@@ -797,7 +935,7 @@ async function confirmCourseManagement() {
 
     const { data: course, error: courseError } = await supabase
         .from("courses")
-        .select("id, title, description, subject_area, estimated_length, status, is_publicly_discoverable")
+        .select(courseSelectColumns)
         .eq("id", courseId)
         .single();
 
@@ -816,6 +954,7 @@ async function initializePage() {
         return;
     }
 
+    currentProfile = profile;
     const course = await confirmCourseManagement();
 
     if (!course) {
@@ -839,6 +978,8 @@ editorForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const formData = new FormData(editorForm);
+    const courseThumbnail = courseThumbnailInput?.files?.[0];
+    const courseThumbnailError = validateCourseThumbnail(courseThumbnail);
     const changes = {
         title: String(formData.get("title") || "").trim(),
         subject_area: String(formData.get("subject-area") || "").trim(),
@@ -851,13 +992,29 @@ editorForm.addEventListener("submit", async (event) => {
         return;
     }
 
+    if (courseThumbnailError) {
+        setStatus(courseThumbnailError, "error");
+        return;
+    }
+
     setStatus("Saving course basics...");
+
+    if (courseThumbnail) {
+        try {
+            setStatus("Uploading course thumbnail...");
+            changes.thumbnail_url = await uploadCourseThumbnail(courseThumbnail);
+            changes.thumbnail_type = "uploaded";
+        } catch (error) {
+            setStatus(`Course thumbnail upload failed: ${error.message}`, "error");
+            return;
+        }
+    }
 
     const { data: course, error } = await supabase
         .from("courses")
         .update(changes)
         .eq("id", courseId)
-        .select("id, title, description, subject_area, estimated_length, status, is_publicly_discoverable")
+        .select(courseSelectColumns)
         .single();
 
     if (error) {
@@ -867,9 +1024,28 @@ editorForm.addEventListener("submit", async (event) => {
 
     headingElement.textContent = course.title;
     loadedCourse = course;
+    courseThumbnailInput.value = "";
     renderCourseAccess(course);
+    fillCourseForm(course);
     setStatus("Course basics saved.", "success");
 });
+
+if (courseThumbnailInput) {
+    courseThumbnailInput.addEventListener("change", () => {
+        const file = courseThumbnailInput.files?.[0];
+        const validationError = validateCourseThumbnail(file);
+
+        if (validationError) {
+            courseThumbnailInput.value = "";
+            clearCourseThumbnailPreview();
+            setStatus(validationError, "error");
+            return;
+        }
+
+        showCourseThumbnailPreview(file);
+        setStatus(file ? "Course thumbnail ready to upload when you save." : "", "info");
+    });
+}
 
 toggleCourseVisibilityButton.addEventListener("click", toggleCourseVisibility);
 courseDiscoverySelect.addEventListener("change", updateDiscoveryListing);

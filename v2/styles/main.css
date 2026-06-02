@@ -277,6 +277,29 @@ h2 {
     font-size: 0.9rem;
 }
 
+.file-preview,
+.profile-photo-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #dbe4f1;
+    border-radius: 12px;
+    background: #f8fbff;
+    color: #355075;
+    font-weight: 600;
+}
+
+.file-preview img,
+.profile-photo-preview img {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid #c9d6e8;
+    background: #ffffff;
+}
+
 .primary-button {
     display: inline-flex;
     align-items: center;

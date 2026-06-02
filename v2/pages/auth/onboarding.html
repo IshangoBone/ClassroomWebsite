@@ -43,14 +43,25 @@
                 </label>
 
                 <label class="form-field">
-                    <span>Starter avatar</span>
+                    <span>Fallback avatar</span>
                     <select name="avatar-key" required>
                         <option value="bolt">Bolt</option>
                         <option value="compass">Compass</option>
                         <option value="pixel">Pixel</option>
                     </select>
-                    <small class="form-hint">Uploading a custom photo will be available after storage is connected.</small>
+                    <small class="form-hint">Used when you do not upload a custom profile photo.</small>
                 </label>
+
+                <label class="form-field">
+                    <span>Profile photo</span>
+                    <input type="file" name="profile-photo" accept="image/png,image/jpeg,image/webp,image/gif" />
+                    <small class="form-hint">Optional. PNG, JPEG, WebP, or GIF up to 10 MB.</small>
+                </label>
+
+                <div class="profile-photo-preview" data-profile-photo-preview hidden>
+                    <img alt="Selected profile preview" data-profile-photo-preview-image />
+                    <span data-profile-photo-preview-name></span>
+                </div>
 
                 <button type="submit" class="primary-button primary-button--signup">Continue to Dashboard</button>
             </form>
@@ -59,7 +70,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/auth/onboarding.js?v=20260601-activity-logging"></script>
+    <script type="module" src="../../scripts/auth/onboarding.js?v=20260602-profile-photo-upload"></script>
 </body>
 
 </html>

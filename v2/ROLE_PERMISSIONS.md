@@ -46,7 +46,7 @@ These behaviors are intentionally not enabled by the current foundation:
 | Publish, unpublish, archive, and deletion actions | Teacher publish/archive controls (#20) and admin controls (#52) |
 | Student-safe assessment delivery without exposing answer keys | Assessment and lesson experience work (#24, #34) |
 | Final submission, scoring, and progress mutation | Submission flow (#36-#38) |
-| Upload UI and signed URL plumbing | File upload/attachment work (#32, #47). Bucket/object access rules are defined for #42, but the frontend upload flows are still future work. |
+| Lesson resources and submission attachments | File upload/attachment work (#32, #47). Profile photo and course thumbnail uploads are wired; lesson and submission file attachment UIs still need focused follow-up slices. |
 | Monetization data or payments | Non-MVP planning only (#12) |
 
 ## Implementation Rule
