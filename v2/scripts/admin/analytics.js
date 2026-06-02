@@ -426,6 +426,26 @@ function getActivityUrl(record) {
     return url.href;
 }
 
+function createRecordLinkCell(label, detail, recordType, recordId) {
+    const wrapper = createElement("span", "analytics-record-cell");
+    const detailUrl = getDetailUrl({ record_type: recordType, record_id: recordId });
+    const title = detailUrl
+        ? createElement("a", "submission-name", label)
+        : createElement("strong", "submission-name", label);
+
+    if (detailUrl) {
+        title.href = detailUrl;
+    }
+
+    wrapper.append(title);
+
+    if (detail) {
+        wrapper.append(createElement("span", "course-muted", detail));
+    }
+
+    return wrapper;
+}
+
 function createRecordActions(record) {
     const wrapper = createElement("div", "analytics-action-stack");
     const detailUrl = getDetailUrl(record);
@@ -527,13 +547,14 @@ function renderGrowth(rows) {
 function renderTeachers(rows) {
     renderTable(
         teachersElement,
-        ["Teacher", "Email", "Courses", "Classrooms", "Submitted work"],
+        ["Teacher", "Email", "Courses", "Classrooms", "Submitted work", "Actions"],
         rows.map((row) => [
-            row.display_name || "Unnamed teacher",
+            createRecordLinkCell(row.display_name || "Unnamed teacher", row.email || "-", "user", row.id),
             row.email || "-",
             formatNumber(row.course_count),
             formatNumber(row.classroom_count),
             formatNumber(row.submitted_count),
+            createRecordActions({ record_type: "user", record_id: row.id }),
         ]),
         "No teacher activity has been recorded yet."
     );
@@ -542,13 +563,14 @@ function renderTeachers(rows) {
 function renderCourses(rows) {
     renderTable(
         coursesElement,
-        ["Course", "Status", "Owner", "Enrollments", "Submitted work"],
+        ["Course", "Status", "Owner", "Enrollments", "Submitted work", "Actions"],
         rows.map((row) => [
-            row.title || "Untitled course",
+            createRecordLinkCell(row.title || "Untitled course", row.owner_email || "-", "course", row.id),
             row.status || "-",
             row.owner_email || "-",
             formatNumber(row.enrollment_count),
             formatNumber(row.submitted_count),
+            createRecordActions({ record_type: "course", record_id: row.id }),
         ]),
         "No course activity has been recorded yet."
     );
