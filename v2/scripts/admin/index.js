@@ -4,6 +4,7 @@ import { createElement, qs } from "../utils/dom.js";
 const statusElement = qs("[data-admin-status]");
 const shellElements = [...document.querySelectorAll("[data-admin-shell]")];
 const summaryElement = qs("[data-admin-summary]");
+const healthElement = qs("[data-admin-health]");
 const recentActivityElement = qs("[data-admin-recent-activity]");
 const searchForm = qs("[data-admin-search-form]");
 const searchResultsElement = qs("[data-admin-search-results]");
@@ -50,6 +51,17 @@ function createSummaryCard(label, value) {
     return card;
 }
 
+function createHealthCard(label, value, detail, tone = "info") {
+    const card = createElement("article", `summary-card admin-health-card admin-health-card--${tone}`);
+
+    card.append(
+        createElement("span", "summary-label", label),
+        createElement("strong", "summary-value summary-value--small", formatNumber(value)),
+        createElement("span", "course-muted", detail)
+    );
+    return card;
+}
+
 function formatEntityLabel(label, id) {
     return label || formatShortId(id);
 }
@@ -81,6 +93,51 @@ function renderSummary(summary) {
         createSummaryCard("Activity this week", summary.activity_this_week),
         createSummaryCard("Archived courses", summary.archived_courses),
         createSummaryCard("Suspended users", summary.suspended_users)
+    );
+}
+
+function renderHealth(summary) {
+    const deletedContent = Number(summary.deleted_courses || 0)
+        + Number(summary.deleted_classrooms || 0)
+        + Number(summary.deleted_files || 0);
+
+    healthElement.replaceChildren(
+        createHealthCard(
+            "Suspended users",
+            summary.suspended_users,
+            "Accounts that may need moderation review.",
+            Number(summary.suspended_users || 0) ? "warning" : "success"
+        ),
+        createHealthCard(
+            "Deleted users",
+            summary.deleted_users,
+            "Soft-deleted accounts preserved for audit history.",
+            Number(summary.deleted_users || 0) ? "warning" : "success"
+        ),
+        createHealthCard(
+            "Archived courses",
+            summary.archived_courses,
+            "Courses hidden from active discovery.",
+            Number(summary.archived_courses || 0) ? "info" : "success"
+        ),
+        createHealthCard(
+            "Archived classrooms",
+            summary.archived_classrooms,
+            "Classrooms removed from active teaching workflows.",
+            Number(summary.archived_classrooms || 0) ? "info" : "success"
+        ),
+        createHealthCard(
+            "Draft submissions",
+            summary.draft_submissions,
+            "Student work started but not submitted.",
+            Number(summary.draft_submissions || 0) ? "info" : "success"
+        ),
+        createHealthCard(
+            "Deleted content",
+            deletedContent,
+            "Courses, classrooms, and files marked deleted.",
+            deletedContent ? "warning" : "success"
+        )
     );
 }
 
@@ -214,6 +271,7 @@ async function loadAdminDashboard() {
     }
 
     renderSummary(summaryData?.[0] || {});
+    renderHealth(summaryData?.[0] || {});
     renderRecentActivity(activityData || []);
     setStatus("");
 }
