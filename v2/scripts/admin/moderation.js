@@ -123,6 +123,7 @@ function createModerationButton(record) {
 
     button.type = "button";
     button.dataset.userId = record.user_id;
+    button.dataset.actionType = "status";
 
     if (record.account_status === "active") {
         button.textContent = "Suspend user";
@@ -136,6 +137,29 @@ function createModerationButton(record) {
     }
 
     if (record.user_id === currentProfileId) {
+        button.textContent = "Current admin";
+        button.disabled = true;
+    } else if (record.platform_role === "admin") {
+        button.textContent = "Admin protected";
+        button.disabled = true;
+    }
+
+    return button;
+}
+
+function createDeleteButton(record) {
+    const button = createElement("button", "secondary-button destructive-button admin-result-action moderation-action-button");
+
+    button.type = "button";
+    button.textContent = "Soft delete user";
+    button.dataset.actionType = "delete";
+    button.dataset.nextStatus = "deleted";
+    button.dataset.userId = record.user_id;
+
+    if (record.account_status === "deleted") {
+        button.textContent = "Already deleted";
+        button.disabled = true;
+    } else if (record.user_id === currentProfileId) {
         button.textContent = "Current admin";
         button.disabled = true;
     } else if (record.platform_role === "admin") {
@@ -177,13 +201,14 @@ function renderUsers() {
         const detailLink = createElement("a", "secondary-button admin-result-action", "View details");
         const activityLink = createElement("a", "secondary-button admin-result-action", "View activity");
         const moderationButton = createModerationButton(record);
+        const deleteButton = createDeleteButton(record);
 
         detailLink.href = getDetailUrl(record.user_id);
         activityLink.href = getActivityUrl(record.user_id);
         userCell.append(name, detail);
         roleCell.append(createBadge(formatStatus(record.platform_role), true));
         statusCell.append(createBadge(formatStatus(record.account_status), record.account_status === "active"));
-        actionsCell.append(moderationButton, detailLink, activityLink);
+        actionsCell.append(moderationButton, deleteButton, detailLink, activityLink);
         row.append(
             userCell,
             roleCell,
@@ -215,8 +240,17 @@ function getModerationConfirmation(record, nextStatus) {
     return `Reactivate ${label}? This restores normal account access and logs the moderation action.`;
 }
 
+function confirmSoftDelete(record) {
+    const label = record.display_name || record.email || formatShortId(record.user_id);
+    const confirmation = window.prompt(
+        `Soft delete ${label}? This blocks the account, preserves history for audit review, and cannot be reactivated from this page. Type DELETE to confirm.`
+    );
+
+    return confirmation === "DELETE";
+}
+
 async function handleModerationAction(event) {
-    const button = event.target.closest("[data-user-id][data-next-status]");
+    const button = event.target.closest("[data-user-id][data-next-status][data-action-type]");
 
     if (!button || button.disabled) {
         return;
@@ -230,7 +264,11 @@ async function handleModerationAction(event) {
         return;
     }
 
-    if (!window.confirm(getModerationConfirmation(record, nextStatus))) {
+    if (button.dataset.actionType === "delete") {
+        if (!confirmSoftDelete(record)) {
+            return;
+        }
+    } else if (!window.confirm(getModerationConfirmation(record, nextStatus))) {
         return;
     }
 
@@ -249,7 +287,7 @@ async function handleModerationAction(event) {
     }
 
     await loadModerationRecords();
-    setStatus(`User account ${nextStatus === "active" ? "reactivated" : "suspended"}.`);
+    setStatus(`User account ${nextStatus === "active" ? "reactivated" : nextStatus}.`);
 }
 
 async function loadCurrentProfile() {
