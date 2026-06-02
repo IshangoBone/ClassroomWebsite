@@ -9,6 +9,7 @@ const listElement = qs("[data-moderation-list]");
 const refreshButton = qs("[data-moderation-refresh]");
 
 let moderationRecords = [];
+let currentProfileId = null;
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -117,6 +118,34 @@ function createBadge(text, quiet = false) {
     return createElement("span", quiet ? "badge badge--quiet" : "badge", text);
 }
 
+function createModerationButton(record) {
+    const button = createElement("button", "secondary-button admin-result-action moderation-action-button");
+
+    button.type = "button";
+    button.dataset.userId = record.user_id;
+
+    if (record.account_status === "active") {
+        button.textContent = "Suspend user";
+        button.dataset.nextStatus = "suspended";
+    } else if (record.account_status === "suspended") {
+        button.textContent = "Reactivate user";
+        button.dataset.nextStatus = "active";
+    } else {
+        button.textContent = "No status action";
+        button.disabled = true;
+    }
+
+    if (record.user_id === currentProfileId) {
+        button.textContent = "Current admin";
+        button.disabled = true;
+    } else if (record.platform_role === "admin") {
+        button.textContent = "Admin protected";
+        button.disabled = true;
+    }
+
+    return button;
+}
+
 function renderUsers() {
     const records = getFilteredRecords();
 
@@ -147,13 +176,14 @@ function renderUsers() {
         const detail = createElement("span", "course-muted", record.email || record.username || record.user_id);
         const detailLink = createElement("a", "secondary-button admin-result-action", "View details");
         const activityLink = createElement("a", "secondary-button admin-result-action", "View activity");
+        const moderationButton = createModerationButton(record);
 
         detailLink.href = getDetailUrl(record.user_id);
         activityLink.href = getActivityUrl(record.user_id);
         userCell.append(name, detail);
         roleCell.append(createBadge(formatStatus(record.platform_role), true));
         statusCell.append(createBadge(formatStatus(record.account_status), record.account_status === "active"));
-        actionsCell.append(detailLink, activityLink);
+        actionsCell.append(moderationButton, detailLink, activityLink);
         row.append(
             userCell,
             roleCell,
@@ -169,6 +199,57 @@ function renderUsers() {
 
     table.append(head, body);
     listElement.replaceChildren(table);
+}
+
+function findModerationRecord(userId) {
+    return moderationRecords.find((record) => record.user_id === userId);
+}
+
+function getModerationConfirmation(record, nextStatus) {
+    const label = record.display_name || record.email || formatShortId(record.user_id);
+
+    if (nextStatus === "suspended") {
+        return `Suspend ${label}? This blocks the account from normal platform use until an admin reactivates it. The change will be logged.`;
+    }
+
+    return `Reactivate ${label}? This restores normal account access and logs the moderation action.`;
+}
+
+async function handleModerationAction(event) {
+    const button = event.target.closest("[data-user-id][data-next-status]");
+
+    if (!button || button.disabled) {
+        return;
+    }
+
+    const record = findModerationRecord(button.dataset.userId);
+    const nextStatus = button.dataset.nextStatus;
+
+    if (!record) {
+        setStatus("That user record is no longer loaded. Refresh users and try again.", "error");
+        return;
+    }
+
+    if (!window.confirm(getModerationConfirmation(record, nextStatus))) {
+        return;
+    }
+
+    setStatus("Updating user account status...");
+    button.disabled = true;
+
+    const { error } = await supabase.rpc("moderate_user_account_status", {
+        next_status_input: nextStatus,
+        target_user_id_input: record.user_id,
+    });
+
+    if (error) {
+        setStatus(error.message || "User account status could not be updated.", "error");
+        button.disabled = false;
+        return;
+    }
+
+    await loadModerationRecords();
+    setStatus(`User account ${nextStatus === "active" ? "reactivated" : "suspended"}.`);
 }
 
 async function loadCurrentProfile() {
@@ -200,6 +281,7 @@ async function loadCurrentProfile() {
         return null;
     }
 
+    currentProfileId = profile.id;
     return profile;
 }
 
@@ -240,5 +322,6 @@ async function initializeModerationPage() {
 filterForm.addEventListener("input", renderUsers);
 filterForm.addEventListener("change", renderUsers);
 refreshButton.addEventListener("click", loadModerationRecords);
+listElement.addEventListener("click", handleModerationAction);
 
 await initializeModerationPage();
