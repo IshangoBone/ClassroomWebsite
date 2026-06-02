@@ -11,6 +11,7 @@ const drilldownElement = qs("[data-platform-drilldown]");
 const drilldownTitleElement = qs("[data-platform-drilldown-title]");
 const drilldownCopyElement = qs("[data-platform-drilldown-copy]");
 const drilldownRefreshButton = qs("[data-platform-drilldown-refresh]");
+const statusBreakdownElement = qs("[data-platform-status-breakdown]");
 
 const DRILLDOWN_META = {
     users: {
@@ -221,6 +222,71 @@ function renderTable(container, headers, rows, emptyMessage) {
     container.replaceChildren(table);
 }
 
+function getBreakdownValue(analytics, rows, analyticsKey, rowKey = "") {
+    if (analyticsKey in analytics) {
+        return Number(analytics[analyticsKey] || 0);
+    }
+
+    return Number(rows.find((row) => row.key === rowKey)?.value || 0);
+}
+
+function createBreakdownBar(label, value, total, tone = "info") {
+    const item = createElement("div", "analytics-breakdown-row");
+    const labelElement = createElement("span", "analytics-breakdown-label", label);
+    const valueElement = createElement("strong", "analytics-breakdown-value", formatNumber(value));
+    const track = createElement("span", "analytics-breakdown-track");
+    const fill = createElement("span", `analytics-breakdown-fill analytics-breakdown-fill--${tone}`);
+    const percent = total > 0 ? Math.round((Number(value || 0) / total) * 100) : 0;
+
+    fill.style.width = `${percent}%`;
+    track.append(fill);
+    item.append(labelElement, valueElement, track, createElement("span", "course-muted", `${percent}%`));
+    return item;
+}
+
+function createBreakdownCard(title, rows) {
+    const card = createElement("article", "analytics-breakdown-card");
+    const total = rows.reduce((sum, row) => sum + Number(row.value || 0), 0);
+
+    card.append(
+        createElement("h3", "analytics-breakdown-title", title),
+        createElement("p", "course-muted", `${formatNumber(total)} total records`)
+    );
+
+    rows.forEach((row) => {
+        card.append(createBreakdownBar(row.label, row.value, total, row.tone));
+    });
+
+    return card;
+}
+
+function renderStatusBreakdowns(analytics) {
+    const rows = analytics.status_breakdown_json || [];
+    const users = [
+        { label: "Active", value: getBreakdownValue(analytics, rows, "active_users", "users_active"), tone: "success" },
+        { label: "Suspended", value: getBreakdownValue(analytics, rows, "suspended_users", "users_suspended"), tone: "warning" },
+        { label: "Deleted", value: getBreakdownValue(analytics, rows, "deleted_users", "users_deleted"), tone: "danger" },
+    ];
+    const courses = [
+        { label: "Published", value: getBreakdownValue(analytics, rows, "published_courses", "courses_published"), tone: "success" },
+        { label: "Private", value: getBreakdownValue(analytics, rows, "private_courses", "courses_private"), tone: "info" },
+        { label: "Draft", value: getBreakdownValue(analytics, rows, "draft_courses"), tone: "info" },
+        { label: "Archived", value: getBreakdownValue(analytics, rows, "archived_courses", "courses_archived"), tone: "warning" },
+        { label: "Deleted", value: getBreakdownValue(analytics, rows, "deleted_courses"), tone: "danger" },
+    ];
+    const classrooms = [
+        { label: "Active", value: getBreakdownValue(analytics, rows, "active_classrooms", "classrooms_active"), tone: "success" },
+        { label: "Archived", value: getBreakdownValue(analytics, rows, "archived_classrooms", "classrooms_archived"), tone: "warning" },
+        { label: "Deleted", value: getBreakdownValue(analytics, rows, "deleted_classrooms"), tone: "danger" },
+    ];
+
+    statusBreakdownElement.replaceChildren(
+        createBreakdownCard("Users", users),
+        createBreakdownCard("Courses", courses),
+        createBreakdownCard("Classrooms", classrooms)
+    );
+}
+
 function getDetailUrl(record) {
     if (!["user", "course", "classroom"].includes(record.record_type)) {
         return "";
@@ -410,6 +476,7 @@ async function loadPlatformAnalytics() {
     renderGrowth(analytics.growth_7d_json || []);
     renderTeachers(analytics.top_teachers_json || []);
     renderCourses(analytics.top_courses_json || []);
+    renderStatusBreakdowns(analytics);
 
     if (selectedDrilldownKey) {
         await loadDrilldown(selectedDrilldownKey);

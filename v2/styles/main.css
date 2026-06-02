@@ -1631,6 +1631,72 @@ h2 {
     gap: 8px;
 }
 
+.analytics-breakdown-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.analytics-breakdown-card {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #dbe4f1;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.analytics-breakdown-title {
+    margin: 0;
+    color: #1d3760;
+    font-size: 1rem;
+}
+
+.analytics-breakdown-row {
+    display: grid;
+    grid-template-columns: minmax(82px, 1fr) auto;
+    gap: 6px 10px;
+    align-items: center;
+}
+
+.analytics-breakdown-label {
+    color: #334766;
+    font-weight: 800;
+}
+
+.analytics-breakdown-value {
+    color: #1d3760;
+    font-size: 0.95rem;
+}
+
+.analytics-breakdown-track {
+    grid-column: 1 / -1;
+    height: 10px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #edf3fb;
+}
+
+.analytics-breakdown-fill {
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    border-radius: inherit;
+    background: #365a9b;
+}
+
+.analytics-breakdown-fill--success {
+    background: #2f7d5b;
+}
+
+.analytics-breakdown-fill--warning {
+    background: #b77a20;
+}
+
+.analytics-breakdown-fill--danger {
+    background: #ba3b2f;
+}
+
 .activity-layout {
     max-width: 1180px;
 }
@@ -1837,6 +1903,10 @@ h2 {
 
     .admin-health-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .analytics-breakdown-grid {
+        grid-template-columns: 1fr;
     }
 
     .dashboard-summary--activity {
