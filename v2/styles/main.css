@@ -1612,6 +1612,25 @@ h2 {
     border-bottom: 0;
 }
 
+.analytics-card-action {
+    width: fit-content;
+    min-height: 36px;
+    margin-top: 4px;
+    padding: 0 12px;
+}
+
+.analytics-record-cell {
+    display: grid;
+    gap: 4px;
+    min-width: 220px;
+}
+
+.analytics-action-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .activity-layout {
     max-width: 1180px;
 }

@@ -7,6 +7,95 @@ const summaryElement = qs("[data-platform-analytics-summary]");
 const growthElement = qs("[data-platform-growth]");
 const teachersElement = qs("[data-platform-teachers]");
 const coursesElement = qs("[data-platform-courses]");
+const drilldownElement = qs("[data-platform-drilldown]");
+const drilldownTitleElement = qs("[data-platform-drilldown-title]");
+const drilldownCopyElement = qs("[data-platform-drilldown-copy]");
+const drilldownRefreshButton = qs("[data-platform-drilldown-refresh]");
+
+const DRILLDOWN_META = {
+    users: {
+        title: "Total users",
+        copy: "All platform profiles, ordered by activity count and recent updates.",
+        metricLabel: "Activity",
+    },
+    active_users: {
+        title: "Active users",
+        copy: "Profiles with active account status.",
+        metricLabel: "Activity",
+    },
+    teachers: {
+        title: "Teachers",
+        copy: "Users who own, manage, or collaborate on teaching records.",
+        metricLabel: "Activity",
+    },
+    students: {
+        title: "Students",
+        copy: "Users with active or retained enrollment records.",
+        metricLabel: "Activity",
+    },
+    courses: {
+        title: "Courses",
+        copy: "Non-deleted courses, ordered by submitted student work and recent updates.",
+        metricLabel: "Submitted",
+    },
+    published_courses: {
+        title: "Published courses",
+        copy: "Courses currently visible for public course discovery or access.",
+        metricLabel: "Submitted",
+    },
+    classrooms: {
+        title: "Classrooms",
+        copy: "Non-deleted classrooms, ordered by enrollment count and recent updates.",
+        metricLabel: "Enrollments",
+    },
+    active_classrooms: {
+        title: "Active classrooms",
+        copy: "Classrooms currently open as active teaching contexts.",
+        metricLabel: "Enrollments",
+    },
+    enrollments: {
+        title: "Enrollments",
+        copy: "Active, completed, or retained student enrollments.",
+        metricLabel: "Count",
+    },
+    submissions: {
+        title: "Submissions",
+        copy: "Student lesson submission records, ordered by points earned and recent updates.",
+        metricLabel: "Points",
+    },
+    new_users: {
+        title: "New users",
+        copy: "Profiles created in the last 7 days.",
+        metricLabel: "Activity",
+    },
+    new_courses: {
+        title: "New courses",
+        copy: "Courses created in the last 30 days.",
+        metricLabel: "Submitted",
+    },
+    new_classrooms: {
+        title: "New classrooms",
+        copy: "Classrooms created in the last 30 days.",
+        metricLabel: "Enrollments",
+    },
+    suspended_users: {
+        title: "Suspended users",
+        copy: "Suspended accounts that may need moderation review.",
+        metricLabel: "Activity",
+    },
+    archived_content: {
+        title: "Archived content",
+        copy: "Archived courses and classrooms hidden from active discovery or teaching workflows.",
+        metricLabel: "Activity",
+    },
+    deleted_content: {
+        title: "Deleted content",
+        copy: "Soft-deleted courses and classrooms preserved for audit history.",
+        metricLabel: "Activity",
+    },
+};
+
+let selectedDrilldownKey = "";
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -32,11 +121,30 @@ function formatDate(value) {
     });
 }
 
+function formatDateTime(value) {
+    if (!value) {
+        return "-";
+    }
+
+    return new Date(value).toLocaleString([], {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    });
+}
+
+function formatStatus(status = "") {
+    return String(status || "")
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function isAdminRole(role) {
     return role === "admin" || role === "supreme_admin";
 }
 
-function createSummaryCard(label, value, detail = "") {
+function createSummaryCard(label, value, detail = "", drilldownKey = "") {
     const card = createElement("article", "summary-card");
 
     card.append(
@@ -48,23 +156,31 @@ function createSummaryCard(label, value, detail = "") {
         card.append(createElement("span", "course-muted", detail));
     }
 
+    if (drilldownKey) {
+        const button = createElement("button", "secondary-button analytics-card-action", "View records");
+
+        button.type = "button";
+        button.dataset.drilldownKey = drilldownKey;
+        card.append(button);
+    }
+
     return card;
 }
 
 function renderSummary(analytics) {
     summaryElement.replaceChildren(
-        createSummaryCard("Total users", formatNumber(analytics.total_users), `${formatNumber(analytics.active_users)} active`),
-        createSummaryCard("Teachers", formatNumber(analytics.teacher_users), `${formatNumber(analytics.student_users)} students`),
-        createSummaryCard("Courses", formatNumber(analytics.total_courses), `${formatNumber(analytics.published_courses)} published`),
-        createSummaryCard("Classrooms", formatNumber(analytics.total_classrooms), `${formatNumber(analytics.active_classrooms)} active`),
-        createSummaryCard("Enrollments", formatNumber(analytics.total_enrollments), "active or retained"),
-        createSummaryCard("Submissions", formatNumber(analytics.total_submissions), `${formatPercent(analytics.completion_rate)} submitted`),
+        createSummaryCard("Total users", formatNumber(analytics.total_users), `${formatNumber(analytics.active_users)} active`, "users"),
+        createSummaryCard("Teachers", formatNumber(analytics.teacher_users), `${formatNumber(analytics.student_users)} students`, "teachers"),
+        createSummaryCard("Courses", formatNumber(analytics.total_courses), `${formatNumber(analytics.published_courses)} published`, "courses"),
+        createSummaryCard("Classrooms", formatNumber(analytics.total_classrooms), `${formatNumber(analytics.active_classrooms)} active`, "classrooms"),
+        createSummaryCard("Enrollments", formatNumber(analytics.total_enrollments), "active or retained", "enrollments"),
+        createSummaryCard("Submissions", formatNumber(analytics.total_submissions), `${formatPercent(analytics.completion_rate)} submitted`, "submissions"),
         createSummaryCard("Engagement points", formatNumber(analytics.engagement_points), "earned by students"),
-        createSummaryCard("New users", formatNumber(analytics.new_users_this_week), "last 7 days"),
-        createSummaryCard("New courses", formatNumber(analytics.new_courses_this_month), "last 30 days"),
-        createSummaryCard("New classrooms", formatNumber(analytics.new_classrooms_this_month), "last 30 days"),
-        createSummaryCard("Suspended users", formatNumber(analytics.suspended_users), `${formatNumber(analytics.deleted_users)} deleted users`),
-        createSummaryCard("Archived content", formatNumber(Number(analytics.archived_courses || 0) + Number(analytics.archived_classrooms || 0)), `${formatNumber(Number(analytics.deleted_courses || 0) + Number(analytics.deleted_classrooms || 0))} deleted records`)
+        createSummaryCard("New users", formatNumber(analytics.new_users_this_week), "last 7 days", "new_users"),
+        createSummaryCard("New courses", formatNumber(analytics.new_courses_this_month), "last 30 days", "new_courses"),
+        createSummaryCard("New classrooms", formatNumber(analytics.new_classrooms_this_month), "last 30 days", "new_classrooms"),
+        createSummaryCard("Suspended users", formatNumber(analytics.suspended_users), `${formatNumber(analytics.deleted_users)} deleted users`, "suspended_users"),
+        createSummaryCard("Archived content", formatNumber(Number(analytics.archived_courses || 0) + Number(analytics.archived_classrooms || 0)), `${formatNumber(Number(analytics.deleted_courses || 0) + Number(analytics.deleted_classrooms || 0))} deleted records`, "archived_content")
     );
 }
 
@@ -88,13 +204,114 @@ function renderTable(container, headers, rows, emptyMessage) {
         const row = document.createElement("tr");
 
         cells.forEach((cell) => {
-            row.append(createElement("td", "", cell));
+            const tableCell = document.createElement("td");
+
+            if (cell instanceof Node) {
+                tableCell.append(cell);
+            } else {
+                tableCell.textContent = cell;
+            }
+
+            row.append(tableCell);
         });
         body.append(row);
     });
 
     table.append(head, body);
     container.replaceChildren(table);
+}
+
+function getDetailUrl(record) {
+    if (!["user", "course", "classroom"].includes(record.record_type)) {
+        return "";
+    }
+
+    const url = new URL("./detail.html", window.location.href);
+
+    url.searchParams.set("type", record.record_type);
+    url.searchParams.set("id", record.record_id);
+    return url.href;
+}
+
+function getActivityUrl(record) {
+    const url = new URL("../activity/index.html", window.location.href);
+
+    url.searchParams.set("query", record.record_id);
+    return url.href;
+}
+
+function createRecordActions(record) {
+    const wrapper = createElement("div", "analytics-action-stack");
+    const detailUrl = getDetailUrl(record);
+    const activityLink = createElement("a", "secondary-button analytics-table-action", "Activity");
+
+    activityLink.href = getActivityUrl(record);
+
+    if (detailUrl) {
+        const detailLink = createElement("a", "primary-button analytics-table-action", "Details");
+
+        detailLink.href = detailUrl;
+        wrapper.append(detailLink);
+    }
+
+    wrapper.append(activityLink);
+    return wrapper;
+}
+
+function renderDrilldown(rows) {
+    const meta = DRILLDOWN_META[selectedDrilldownKey] || DRILLDOWN_META.users;
+
+    drilldownTitleElement.textContent = meta.title;
+    drilldownCopyElement.textContent = meta.copy;
+
+    renderTable(
+        drilldownElement,
+        ["Record", "Type", "Status", meta.metricLabel, "Updated", "Actions"],
+        rows.map((row) => {
+            const recordCell = createElement("span", "analytics-record-cell");
+
+            recordCell.append(
+                createElement("strong", "submission-name", row.primary_label || row.record_id),
+                createElement("span", "course-muted", row.secondary_label || row.record_id)
+            );
+
+            return [
+                recordCell,
+                formatStatus(row.record_type),
+                formatStatus(row.status_label),
+                formatNumber(row.metric_value),
+                formatDateTime(row.updated_at || row.created_at),
+                createRecordActions(row),
+            ];
+        }),
+        "No records matched that metric yet."
+    );
+}
+
+async function loadDrilldown(drilldownKey) {
+    if (!drilldownKey) {
+        return;
+    }
+
+    selectedDrilldownKey = drilldownKey;
+    drilldownRefreshButton.disabled = true;
+    drilldownElement.replaceChildren(createElement("p", "empty-state", "Loading record details..."));
+
+    const { data, error } = await supabase.rpc("get_admin_platform_analytics_drilldown", {
+        metric_input: drilldownKey,
+        limit_input: 50,
+    });
+
+    if (error) {
+        setStatus(error.message || "Metric drill-down could not be loaded.", "error");
+        drilldownElement.replaceChildren(createElement("p", "empty-state", "Metric drill-down could not be loaded."));
+        drilldownRefreshButton.disabled = false;
+        return;
+    }
+
+    renderDrilldown(data || []);
+    drilldownRefreshButton.disabled = false;
+    setStatus("");
 }
 
 function renderGrowth(rows) {
@@ -193,6 +410,11 @@ async function loadPlatformAnalytics() {
     renderGrowth(analytics.growth_7d_json || []);
     renderTeachers(analytics.top_teachers_json || []);
     renderCourses(analytics.top_courses_json || []);
+
+    if (selectedDrilldownKey) {
+        await loadDrilldown(selectedDrilldownKey);
+    }
+
     setStatus("");
 }
 
@@ -208,5 +430,19 @@ async function initializePlatformAnalytics() {
     });
     await loadPlatformAnalytics();
 }
+
+summaryElement.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-drilldown-key]");
+
+    if (!button) {
+        return;
+    }
+
+    void loadDrilldown(button.dataset.drilldownKey);
+});
+
+drilldownRefreshButton.addEventListener("click", () => {
+    void loadDrilldown(selectedDrilldownKey);
+});
 
 await initializePlatformAnalytics();
