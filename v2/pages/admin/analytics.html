@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Platform Analytics</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout admin-layout">
+        <a class="back-link" href="./index.html">Back to admin dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Admin Portal</p>
+            <h1>Platform analytics</h1>
+            <p class="intro">High-level growth, usage, engagement, and moderation metrics across the platform.</p>
+        </header>
+
+        <p class="auth-status management-status" data-platform-analytics-status aria-live="polite"></p>
+
+        <section class="management-section" data-platform-analytics-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Platform metrics</h2>
+                    <p class="section-copy">Counts and signals across users, courses, classrooms, enrollments, and submissions.</p>
+                </div>
+                <div class="section-actions">
+                    <a class="secondary-button" href="./moderation.html">Open moderation</a>
+                    <a class="secondary-button" href="../activity/index.html">Open activity logs</a>
+                </div>
+            </div>
+
+            <div class="dashboard-summary admin-summary-grid" data-platform-analytics-summary>
+                <p class="empty-state">Loading platform analytics...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-platform-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Growth and activity</h2>
+                    <p class="section-copy">Recent signup and active-user signals for the last 7 days.</p>
+                </div>
+            </div>
+
+            <div class="analytics-table-shell" data-platform-growth>
+                <p class="empty-state">Loading growth metrics...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-platform-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Top teachers</h2>
+                    <p class="section-copy">Teachers with the most submitted student work, classrooms, and courses.</p>
+                </div>
+            </div>
+
+            <div class="analytics-table-shell" data-platform-teachers>
+                <p class="empty-state">Loading teacher analytics...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-platform-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Top courses</h2>
+                    <p class="section-copy">Courses ranked by submitted work and active enrollments.</p>
+                </div>
+            </div>
+
+            <div class="analytics-table-shell" data-platform-courses>
+                <p class="empty-state">Loading course analytics...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/admin/analytics.js?v=20260602-platform-analytics"></script>
+</body>
+
+</html>
