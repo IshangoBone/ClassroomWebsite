@@ -1018,7 +1018,7 @@ async function refreshDashboard() {
         courseFormPanel.hidden = true;
         teacherSubmissionsSection.hidden = isStudentOnly;
         teacherAnalyticsEntry.hidden = isStudentOnly;
-        const isActiveAdmin = currentProfile.platform_role === "admin" && currentProfile.account_status === "active";
+        const isActiveAdmin = ["admin", "supreme_admin"].includes(currentProfile.platform_role) && currentProfile.account_status === "active";
         adminDashboardEntry.hidden = !isActiveAdmin;
         adminActivityEntry.hidden = !isActiveAdmin;
         studentActivitySection.hidden = !isStudentOnly;

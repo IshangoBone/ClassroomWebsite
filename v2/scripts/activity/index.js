@@ -41,6 +41,10 @@ function formatAction(actionType) {
         .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function isAdminRole(role) {
+    return role === "admin" || role === "supreme_admin";
+}
+
 function createSummaryCard(label, value) {
     const card = createElement("article", "summary-card");
 
@@ -221,7 +225,7 @@ async function loadCurrentProfile() {
         return null;
     }
 
-    if (profile.platform_role !== "admin" || profile.account_status !== "active") {
+    if (!isAdminRole(profile.platform_role) || profile.account_status !== "active") {
         setStatus("Activity logs are only available to active platform admins.", "error");
         return null;
     }

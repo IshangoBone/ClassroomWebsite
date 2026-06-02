@@ -21,7 +21,13 @@ function formatShortId(id) {
 }
 
 function formatStatus(status = "") {
-    return status.charAt(0).toUpperCase() + status.slice(1);
+    return String(status || "")
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function isAdminRole(role) {
+    return role === "admin" || role === "supreme_admin";
 }
 
 function formatDate(value) {
@@ -112,7 +118,7 @@ async function loadCurrentProfile() {
         return null;
     }
 
-    if (profile.platform_role !== "admin" || profile.account_status !== "active") {
+    if (!isAdminRole(profile.platform_role) || profile.account_status !== "active") {
         setStatus("Admin record details are only available to active platform admins.", "error");
         return null;
     }

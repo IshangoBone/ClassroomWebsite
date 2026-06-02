@@ -15,6 +15,7 @@ const contentRefreshButton = qs("[data-content-refresh]");
 let moderationRecords = [];
 let contentRecords = [];
 let currentProfileId = null;
+let currentProfileRole = "";
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -30,7 +31,9 @@ function formatShortId(id) {
 }
 
 function formatStatus(status = "") {
-    return status.charAt(0).toUpperCase() + status.slice(1);
+    return String(status || "")
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function formatDate(value) {
@@ -54,6 +57,14 @@ function createSummaryCard(label, value) {
         createElement("strong", "summary-value summary-value--small", formatNumber(value))
     );
     return card;
+}
+
+function isAdminRole(role) {
+    return role === "admin" || role === "supreme_admin";
+}
+
+function isSupremeAdminRole(role) {
+    return role === "supreme_admin";
 }
 
 function getDetailUrl(recordType, recordId) {
@@ -139,16 +150,16 @@ function renderSummary(records) {
     const activeCount = records.filter((record) => record.account_status === "active").length;
     const suspendedCount = records.filter((record) => record.account_status === "suspended").length;
     const deletedCount = records.filter((record) => record.account_status === "deleted").length;
-    const adminCount = records.filter((record) => record.platform_role === "admin").length;
-    const incompleteCount = records.filter((record) => !record.profile_completed).length;
+    const adminCount = records.filter((record) => isAdminRole(record.platform_role)).length;
+    const supremeAdminCount = records.filter((record) => isSupremeAdminRole(record.platform_role)).length;
 
     summaryElement.replaceChildren(
         createSummaryCard("Visible users", records.length),
         createSummaryCard("Active", activeCount),
         createSummaryCard("Suspended", suspendedCount),
         createSummaryCard("Deleted", deletedCount),
-        createSummaryCard("Admins", adminCount),
-        createSummaryCard("Incomplete profiles", incompleteCount)
+        createSummaryCard("Platform admins", adminCount),
+        createSummaryCard("Supreme admins", supremeAdminCount)
     );
 }
 
@@ -195,7 +206,10 @@ function createModerationButton(record) {
     if (record.user_id === currentProfileId) {
         button.textContent = "Current admin";
         button.disabled = true;
-    } else if (record.platform_role === "admin") {
+    } else if (isSupremeAdminRole(record.platform_role)) {
+        button.textContent = "Supreme protected";
+        button.disabled = true;
+    } else if (record.platform_role === "admin" && !isSupremeAdminRole(currentProfileRole)) {
         button.textContent = "Admin protected";
         button.disabled = true;
     }
@@ -218,8 +232,36 @@ function createDeleteButton(record) {
     } else if (record.user_id === currentProfileId) {
         button.textContent = "Current admin";
         button.disabled = true;
-    } else if (record.platform_role === "admin") {
+    } else if (isSupremeAdminRole(record.platform_role)) {
+        button.textContent = "Supreme protected";
+        button.disabled = true;
+    } else if (record.platform_role === "admin" && !isSupremeAdminRole(currentProfileRole)) {
         button.textContent = "Admin protected";
+        button.disabled = true;
+    }
+
+    return button;
+}
+
+function createRoleButton(record) {
+    const button = createElement("button", "secondary-button admin-result-action moderation-action-button");
+
+    button.type = "button";
+    button.dataset.nextRole = record.platform_role === "admin" ? "user" : "admin";
+    button.dataset.userId = record.user_id;
+    button.textContent = record.platform_role === "admin" ? "Remove admin" : "Make admin";
+
+    if (!isSupremeAdminRole(currentProfileRole)) {
+        button.textContent = "Supreme admin only";
+        button.disabled = true;
+    } else if (record.user_id === currentProfileId) {
+        button.textContent = "Current admin";
+        button.disabled = true;
+    } else if (isSupremeAdminRole(record.platform_role)) {
+        button.textContent = "Supreme protected";
+        button.disabled = true;
+    } else if (record.account_status === "deleted") {
+        button.textContent = "Deleted";
         button.disabled = true;
     }
 
@@ -295,6 +337,7 @@ function renderUsers() {
         const detail = createElement("span", "course-muted", record.email || record.username || record.user_id);
         const detailLink = createElement("a", "secondary-button admin-result-action", "View details");
         const activityLink = createElement("a", "secondary-button admin-result-action", "View activity");
+        const roleButton = createRoleButton(record);
         const moderationButton = createModerationButton(record);
         const deleteButton = createDeleteButton(record);
 
@@ -303,7 +346,7 @@ function renderUsers() {
         userCell.append(name, detail);
         roleCell.append(createBadge(formatStatus(record.platform_role), true));
         statusCell.append(createBadge(formatStatus(record.account_status), record.account_status === "active"));
-        actionsCell.append(moderationButton, deleteButton, detailLink, activityLink);
+        actionsCell.append(roleButton, moderationButton, deleteButton, detailLink, activityLink);
         row.append(
             userCell,
             roleCell,
@@ -400,6 +443,16 @@ function confirmSoftDelete(record) {
     return confirmation === "DELETE";
 }
 
+function getRoleConfirmation(record, nextRole) {
+    const label = record.display_name || record.email || formatShortId(record.user_id);
+
+    if (nextRole === "admin") {
+        return `Grant admin access to ${label}? They will be able to view admin dashboards, activity logs, and moderation tools.`;
+    }
+
+    return `Remove admin access from ${label}? They will keep their account but lose admin dashboard and moderation access.`;
+}
+
 function getContentArchiveConfirmation(record) {
     const label = record.primary_label || formatShortId(record.record_id);
     const typeLabel = record.record_type === "course" ? "course" : "classroom";
@@ -460,6 +513,43 @@ async function handleModerationAction(event) {
 
     await loadModerationRecords();
     setStatus(`User account ${nextStatus === "active" ? "reactivated" : nextStatus}.`);
+}
+
+async function handleRoleAction(event) {
+    const button = event.target.closest("[data-user-id][data-next-role]");
+
+    if (!button || button.disabled) {
+        return;
+    }
+
+    const record = findModerationRecord(button.dataset.userId);
+    const nextRole = button.dataset.nextRole;
+
+    if (!record) {
+        setStatus("That user record is no longer loaded. Refresh users and try again.", "error");
+        return;
+    }
+
+    if (!window.confirm(getRoleConfirmation(record, nextRole))) {
+        return;
+    }
+
+    setStatus("Updating user platform role...");
+    button.disabled = true;
+
+    const { error } = await supabase.rpc("moderate_user_platform_role", {
+        next_role_input: nextRole,
+        target_user_id_input: record.user_id,
+    });
+
+    if (error) {
+        setStatus(error.message || "User platform role could not be updated.", "error");
+        button.disabled = false;
+        return;
+    }
+
+    await loadModerationRecords();
+    setStatus(`User role changed to ${formatStatus(nextRole)}.`);
 }
 
 async function handleContentModerationAction(event) {
@@ -528,12 +618,13 @@ async function loadCurrentProfile() {
         return null;
     }
 
-    if (profile.platform_role !== "admin" || profile.account_status !== "active") {
+    if (!isAdminRole(profile.platform_role) || profile.account_status !== "active") {
         setStatus("User moderation is only available to active platform admins.", "error");
         return null;
     }
 
     currentProfileId = profile.id;
+    currentProfileRole = profile.platform_role;
     return profile;
 }
 
@@ -603,6 +694,7 @@ filterForm.addEventListener("input", renderUsers);
 filterForm.addEventListener("change", renderUsers);
 refreshButton.addEventListener("click", loadModerationRecords);
 listElement.addEventListener("click", handleModerationAction);
+listElement.addEventListener("click", handleRoleAction);
 contentFilterForm.addEventListener("input", renderContentRecords);
 contentFilterForm.addEventListener("change", renderContentRecords);
 contentRefreshButton.addEventListener("click", loadContentRecords);
