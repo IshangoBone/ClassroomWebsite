@@ -1691,8 +1691,16 @@ h2 {
     grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
+.dashboard-summary--moderation {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .activity-filter-form {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.moderation-filter-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .activity-table-shell {
@@ -1723,6 +1731,21 @@ h2 {
 
 .activity-table tbody tr:last-child td {
     border-bottom: 0;
+}
+
+.moderation-table {
+    min-width: 1120px;
+}
+
+.moderation-table td:first-child {
+    display: grid;
+    gap: 4px;
+}
+
+.moderation-table td:last-child {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .activity-details-stack {
@@ -2001,7 +2024,8 @@ h2 {
     .roster-summary-grid,
     .submission-review-summary-grid,
     .submission-filter-form,
-    .activity-filter-form {
+    .activity-filter-form,
+    .moderation-filter-form {
         grid-template-columns: 1fr;
     }
 

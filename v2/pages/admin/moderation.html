@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | User Moderation</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout admin-layout">
+        <a class="back-link" href="./index.html">Back to admin dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Admin Portal</p>
+            <h1>User moderation</h1>
+            <p class="intro">Review account status, roles, owned records, student activity, and investigation links.</p>
+        </header>
+
+        <p class="auth-status management-status" data-moderation-status aria-live="polite"></p>
+
+        <section class="management-section" data-moderation-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Moderation queue</h2>
+                    <p class="section-copy">Suspended and deleted users are surfaced first. Actions will be added after this read-only review pass.</p>
+                </div>
+                <button type="button" class="secondary-button" data-moderation-refresh>Refresh users</button>
+            </div>
+
+            <div class="dashboard-summary dashboard-summary--moderation" data-moderation-summary>
+                <p class="empty-state">Loading moderation summary...</p>
+            </div>
+
+            <form class="submission-filter-form moderation-filter-form" data-moderation-filter-form>
+                <label class="form-field">
+                    <span>Account status</span>
+                    <select name="status">
+                        <option value="">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                        <option value="deleted">Deleted</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Platform role</span>
+                    <select name="role">
+                        <option value="">All roles</option>
+                        <option value="admin">Admin</option>
+                        <option value="user">User</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Search</span>
+                    <input type="search" name="query" placeholder="Name, email, username, ID" autocomplete="off" />
+                </label>
+            </form>
+
+            <div class="activity-table-shell" data-moderation-list>
+                <p class="empty-state">Loading users...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/admin/moderation.js?v=20260602-user-moderation"></script>
+</body>
+
+</html>
