@@ -59,8 +59,9 @@ async function loadPublicCourses() {
     return data || [];
 }
 
-async function joinClassroomWithCode(joinCode, form) {
+async function joinClassroomWithCode(joinCode, form, expectedCourse) {
     const submitButton = form.querySelector("button[type='submit']");
+    const expectedCourseId = String(expectedCourse.course_id || "");
 
     if (!joinCode) {
         setStatus("Enter a classroom join code.", "error");
@@ -85,6 +86,15 @@ async function joinClassroomWithCode(joinCode, form) {
     if (!preview) {
         submitButton.disabled = false;
         setStatus("That class code was not found.", "error");
+        return;
+    }
+
+    if (String(preview.course_id || "") !== expectedCourseId) {
+        submitButton.disabled = false;
+        setStatus(
+            `That class code belongs to ${preview.course_title || "a different course"}, not ${expectedCourse.title || "this course"}. Choose the matching course card or ask your teacher for the correct code.`,
+            "error"
+        );
         return;
     }
 
@@ -201,7 +211,7 @@ function createCourseCard(course) {
             const formData = new FormData(classCodeForm);
             const joinCode = String(formData.get("join-code") || "").trim();
 
-            joinClassroomWithCode(joinCode, classCodeForm);
+            joinClassroomWithCode(joinCode, classCodeForm, course);
         });
         joinPanel.append(joinPanelHeading, joinPanelCopy, classCodeForm);
     }
