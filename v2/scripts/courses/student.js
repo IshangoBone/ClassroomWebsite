@@ -84,8 +84,20 @@ function getLessonHref(lesson, enrollment) {
     return `../lessons/view.html?${paramsToSet.toString()}`;
 }
 
-function getNextLesson(lessons, submissions) {
-    const orderedLessons = [...lessons].sort((first, second) => first.order_index - second.order_index);
+function getOrderedCourseLessons(modules, lessons) {
+    return modules.flatMap((module) => {
+        return lessons
+            .filter((lesson) => lesson.module_id === module.id)
+            .sort((first, second) => first.order_index - second.order_index);
+    });
+}
+
+function getLessonNumberMap(modules, lessons) {
+    return new Map(getOrderedCourseLessons(modules, lessons).map((lesson, index) => [lesson.id, index + 1]));
+}
+
+function getNextLesson(modules, lessons, submissions) {
+    const orderedLessons = getOrderedCourseLessons(modules, lessons);
     const draftSubmission = submissions.find((submission) => submission.status === "draft");
 
     if (draftSubmission) {
@@ -270,9 +282,9 @@ async function loadTeacherName(enrollment) {
     return teacher ? formatTeacherName(teacher) : "Teacher";
 }
 
-function renderSummary(enrollment, lessons, submissions) {
+function renderSummary(enrollment, modules, lessons, submissions) {
     const { points, progressPercent, submittedCount, totalLessons } = getProgress(lessons, submissions);
-    const nextLesson = getNextLesson(lessons, submissions);
+    const nextLesson = getNextLesson(modules, lessons, submissions);
     const isComplete = Boolean(totalLessons) && submittedCount === totalLessons;
 
     progressElement.textContent = `${progressPercent}%`;
@@ -307,6 +319,7 @@ function renderModules(modules, lessons, submissions, enrollment) {
     }
 
     const list = createElement("ol", "module-list");
+    const lessonNumberMap = getLessonNumberMap(modules, lessons);
 
     modules.forEach((module) => {
         const moduleLessons = lessons.filter((lesson) => lesson.module_id === module.id);
@@ -348,7 +361,7 @@ function renderModules(modules, lessons, submissions, enrollment) {
 
                 lessonLink.href = getLessonHref(lesson, enrollment);
                 metaRow.append(
-                    createElement("span", "badge student-lesson-number-badge", `Lesson ${lesson.order_index + 1}`),
+                    createElement("span", "badge student-lesson-number-badge", `Lesson ${lessonNumberMap.get(lesson.id) || lesson.order_index + 1}`),
                     createElement("span", "badge badge--quiet", lesson.estimated_time || "No time estimate"),
                     createElement("span", status === "submitted" ? "badge" : "badge badge--quiet", formatStatus(status))
                 );
@@ -405,7 +418,7 @@ async function initializePage() {
 
         headingElement.textContent = course.title || "Untitled course";
         contextElement.textContent = `${classroomLabel} / ${teacherName} / ${course.description || "No course description added yet."}`;
-        renderSummary(enrollment, lessons, submissions);
+        renderSummary(enrollment, modules, lessons, submissions);
         renderModules(modules, lessons, submissions, enrollment);
         shellElement.hidden = false;
         setStatus("");
