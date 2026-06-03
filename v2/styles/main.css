@@ -928,6 +928,38 @@ h2 {
     gap: 8px;
 }
 
+.dashboard-section--panel {
+    gap: 18px;
+    padding: 22px;
+    border: 1px solid #dbe4f1;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(24, 49, 83, 0.06);
+}
+
+.dashboard-section--panel .section-header {
+    margin-bottom: 0;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #e6edf8;
+}
+
+.dashboard-section--panel h2 {
+    font-size: 1.25rem;
+}
+
+.dashboard-section--courses {
+    border-left: 4px solid #3569d9;
+}
+
+.dashboard-section--submissions {
+    border-left: 4px solid #2f7d5b;
+}
+
+.dashboard-section--activity,
+.dashboard-section--lesson-work {
+    border-left: 4px solid #9a5a18;
+}
+
 .dashboard-section--muted {
     padding-top: 8px;
     border-top: 1px solid #e6edf8;
@@ -969,7 +1001,7 @@ h2 {
 
 .course-grid {
     display: grid;
-    gap: 16px;
+    gap: 18px;
 }
 
 .course-card {
@@ -977,8 +1009,15 @@ h2 {
     gap: 14px;
     padding: 20px;
     border: 1px solid #dbe4f1;
+    border-left: 4px solid #bfd0ec;
     border-radius: 18px;
     background: #ffffff;
+    box-shadow: 0 10px 24px rgba(24, 49, 83, 0.05);
+}
+
+.course-card:hover {
+    border-left-color: #3569d9;
+    box-shadow: 0 14px 30px rgba(24, 49, 83, 0.08);
 }
 
 .course-card-media {
@@ -1010,6 +1049,8 @@ h2 {
     display: flex;
     justify-content: space-between;
     gap: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eef3fb;
 }
 
 .course-title {
@@ -1086,6 +1127,20 @@ h2 {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+}
+
+.classroom-list {
+    padding: 14px;
+    border: 1px solid #e6edf8;
+    border-radius: 14px;
+    background: #f7faff;
+}
+
+.classroom-item {
+    min-height: 34px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: #ffffff;
 }
 
 .submission-filter-form {
@@ -2670,6 +2725,11 @@ h2 {
 
     .dashboard-header {
         display: grid;
+    }
+
+    .dashboard-section--panel {
+        padding: 16px;
+        border-radius: 16px;
     }
 
     .dashboard-new-course-button {
