@@ -650,15 +650,7 @@ function getEnrollmentClassroom(enrollment, classrooms) {
 }
 
 function getDisplayStudentEnrollments(enrollments) {
-    const classroomCourseIds = new Set(
-        enrollments
-            .filter((enrollment) => enrollment.enrollment_type === "classroom")
-            .map((enrollment) => enrollment.course_id)
-    );
-
-    return enrollments.filter((enrollment) => (
-        enrollment.enrollment_type === "classroom" || !classroomCourseIds.has(enrollment.course_id)
-    ));
+    return enrollments;
 }
 
 function getStudentCourseProgress(enrollment, lessons, submissions) {
