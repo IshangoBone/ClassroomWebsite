@@ -1,5 +1,5 @@
 import { supabase } from "../../services/supabase/client.js";
-import { isPlatformAdmin, loadProtectedProfile } from "../utils/auth-guard.js";
+import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
 import { createProfileAvatar } from "../utils/profile-images.js";
 
@@ -20,7 +20,6 @@ const studentJoinForm = qs("[data-student-join-form]");
 const submissionFilterForm = qs("[data-submission-filter-form]");
 const studentActivitySection = qs("[data-student-activity-section]");
 const studentActivityList = qs("[data-student-activity-list]");
-const studentProgressEntry = qs("[data-student-progress-entry]");
 const submissionFilterCourse = qs("[data-submission-filter-course]");
 const submissionFilterClassroom = qs("[data-submission-filter-classroom]");
 const submissionFilterLesson = qs("[data-submission-filter-lesson]");
@@ -37,9 +36,6 @@ const managedCoursesHeading = qs("[data-managed-courses-heading]");
 const managedCoursesCopy = qs("[data-managed-courses-copy]");
 const teacherSubmissionsSection = qs("[data-teacher-submissions-section]");
 const studentJoinSection = qs("[data-student-join-section]");
-const teacherAnalyticsEntry = qs("[data-teacher-analytics-entry]");
-const adminDashboardEntry = qs("[data-admin-dashboard-entry]");
-const adminActivityEntry = qs("[data-admin-activity-entry]");
 const dashboardParams = new URLSearchParams(window.location.search);
 
 let currentProfile = null;
@@ -1052,13 +1048,8 @@ async function refreshDashboard() {
         courseFormToggle.hidden = isStudentOnly;
         courseFormPanel.hidden = true;
         teacherSubmissionsSection.hidden = isStudentOnly;
-        teacherAnalyticsEntry.hidden = isStudentOnly;
-        const isActiveAdmin = isPlatformAdmin(currentProfile.platform_role) && currentProfile.account_status === "active";
-        adminDashboardEntry.hidden = !isActiveAdmin;
-        adminActivityEntry.hidden = !isActiveAdmin;
         studentActivitySection.hidden = !isStudentOnly;
         studentJoinSection.hidden = !isStudentOnly;
-        studentProgressEntry.hidden = !hasStudentEnrollments;
         if (enrolledCoursesSection) {
             enrolledCoursesSection.hidden = isStudentOnly || !hasStudentEnrollments;
         }
