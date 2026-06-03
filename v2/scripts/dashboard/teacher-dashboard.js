@@ -775,7 +775,9 @@ function renderStudentEnrollments(enrollments, courses, classrooms, lessons, sub
                     : `${incompleteCount} lessons still need your attention.`
             )
             : null;
-        const actions = createElement("div", "course-actions");
+        const actions = createElement("div", "course-actions course-actions--split");
+        const mainActions = createElement("div", "course-actions-group");
+        const enrollmentActions = createElement("div", "course-actions-group course-actions-group--danger");
         const courseParams = new URLSearchParams({ course: enrollment.course_id });
         const openCourseAction = createElement("a", "secondary-button", "Open course");
         const leaveAction = createElement(
@@ -791,13 +793,14 @@ function renderStudentEnrollments(enrollments, courses, classrooms, lessons, sub
         openCourseAction.href = `../courses/student.html?${courseParams.toString()}`;
         leaveAction.type = "button";
         leaveAction.addEventListener("click", () => leaveEnrollment(enrollment));
-        actions.append(openCourseAction);
+        mainActions.append(openCourseAction);
         if (continueLesson) {
             const continueAction = createElement("a", "primary-button", continueLesson.label);
             continueAction.href = continueLesson.href;
-            actions.append(continueAction);
+            mainActions.append(continueAction);
         }
-        actions.append(leaveAction);
+        enrollmentActions.append(leaveAction);
+        actions.append(mainActions, enrollmentActions);
 
         card.append(heading, details, teacher, progress, progressBar);
 

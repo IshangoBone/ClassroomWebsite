@@ -913,6 +913,27 @@ h2 {
     gap: 10px;
 }
 
+.course-actions--split {
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.course-actions-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.course-actions-group--danger {
+    margin-left: auto;
+}
+
+.course-actions--split .primary-button {
+    min-width: 220px;
+}
+
 .catalog-join-panel {
     display: grid;
     gap: 10px;
@@ -2466,6 +2487,22 @@ h2 {
 
     .course-card-header {
         display: grid;
+    }
+
+    .course-actions--split,
+    .course-actions-group {
+        display: grid;
+        justify-content: stretch;
+    }
+
+    .course-actions-group--danger {
+        margin-left: 0;
+    }
+
+    .course-actions--split .primary-button,
+    .course-actions--split .secondary-button {
+        width: 100%;
+        min-width: 0;
     }
 
     .badge-row {
