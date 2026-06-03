@@ -1122,6 +1122,30 @@ h2 {
     padding: 9px 14px;
 }
 
+.lesson-reorder-controls {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
+.lesson-move-label {
+    font-weight: 700;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.lesson-position-select {
+    min-height: 42px;
+    min-width: 68px;
+    border: 1px solid #d7e2f1;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #1f3556;
+    font: inherit;
+    font-weight: 700;
+    padding: 0 10px;
+}
+
 .lesson-list {
     display: grid;
     gap: 8px;
@@ -2423,6 +2447,7 @@ h2 {
 
     .module-lessons-header,
     .module-actions,
+    .lesson-reorder-controls,
     .lesson-header-actions,
     .lesson-content-header {
         align-items: stretch;

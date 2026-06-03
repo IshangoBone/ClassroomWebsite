@@ -535,8 +535,7 @@ function getDragAfterElement(container, y, itemClass, draggingClass) {
     ).element;
 }
 
-async function saveLessonOrder(list, moduleId) {
-    const orderedIds = [...list.children].map((child) => child.dataset.lessonId).filter(Boolean);
+async function persistLessonOrder(moduleId, orderedIds) {
     const updates = orderedIds
         .map((id, orderIndex) => ({ id, order_index: orderIndex }))
         .filter((update) => {
@@ -550,12 +549,16 @@ async function saveLessonOrder(list, moduleId) {
 
     setStatus("Saving lesson order...");
 
-    const results = await Promise.all(
-        updates.map((update) => {
-            return supabase.from("lessons").update({ order_index: update.order_index }).eq("id", update.id);
-        })
-    );
-    const failedUpdate = results.find((result) => result.error);
+    let failedUpdate = null;
+
+    for (const update of updates) {
+        const result = await supabase.from("lessons").update({ order_index: update.order_index }).eq("id", update.id);
+
+        if (result.error) {
+            failedUpdate = result;
+            break;
+        }
+    }
 
     if (failedUpdate) {
         setStatus(failedUpdate.error.message || "The lesson order could not be saved.", "error");
@@ -569,6 +572,29 @@ async function saveLessonOrder(list, moduleId) {
     });
     renderModules(loadedModules, loadedLessons, loadedContentBlocks, loadedQuestions);
     setStatus("Lesson order saved.", "success");
+}
+
+async function saveLessonOrder(list, moduleId) {
+    const orderedIds = [...list.querySelectorAll(".lesson-card")].map((child) => child.dataset.lessonId).filter(Boolean);
+    await persistLessonOrder(moduleId, orderedIds);
+}
+
+async function moveLessonToPosition(moduleId, lessonId, targetIndex) {
+    const moduleLessons = loadedLessons
+        .filter((lesson) => lesson.module_id === moduleId)
+        .sort((firstLesson, secondLesson) => firstLesson.order_index - secondLesson.order_index);
+    const currentIndex = moduleLessons.findIndex((lesson) => lesson.id === lessonId);
+
+    if (currentIndex === -1 || currentIndex === targetIndex) {
+        return;
+    }
+
+    const [lessonToMove] = moduleLessons.splice(currentIndex, 1);
+    moduleLessons.splice(targetIndex, 0, lessonToMove);
+    await persistLessonOrder(
+        moduleId,
+        moduleLessons.map((lesson) => lesson.id)
+    );
 }
 
 async function saveModuleOrder(list) {
@@ -685,7 +711,7 @@ function renderLessons(module, lessons, contentBlocks, questions) {
         }
     });
 
-    lessons.forEach((lesson) => {
+    lessons.forEach((lesson, index) => {
         const item = createElement("li", "lesson-card");
         const header = createElement("div", "lesson-card-header");
         const content = createElement("div");
@@ -701,6 +727,10 @@ function renderLessons(module, lessons, contentBlocks, questions) {
         const label = createElement("span", "badge badge--quiet", labelText);
         const headerActions = createElement("div", "lesson-header-actions");
         const dragHint = createElement("span", "lesson-drag-hint", "Drag to reorder");
+        const reorderControls = createElement("div", "lesson-reorder-controls");
+        const moveLabel = createElement("span", "course-muted lesson-move-label", "Move to");
+        const positionSelect = document.createElement("select");
+        const moveButton = createElement("button", "secondary-button lesson-action", "Move");
         const openLessonBuilderLink = createElement("a", "secondary-button lesson-action", "Open lesson builder");
         const deleteLessonButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete lesson");
         const lessonContentBlocks = contentBlocks.filter((contentBlock) => contentBlock.lesson_id === lesson.id);
@@ -725,11 +755,26 @@ function renderLessons(module, lessons, contentBlocks, questions) {
             await saveLessonOrder(list, module.id);
         });
         openLessonBuilderLink.href = `../lessons/builder.html?lesson=${encodeURIComponent(lesson.id)}`;
+        positionSelect.className = "lesson-position-select";
+        positionSelect.setAttribute("aria-label", `Move ${lesson.title} to lesson position`);
+        lessons.forEach((_, optionIndex) => {
+            const option = document.createElement("option");
+            option.value = String(optionIndex);
+            option.textContent = String(optionIndex + 1);
+            positionSelect.append(option);
+        });
+        positionSelect.value = String(index);
+        moveButton.type = "button";
+        moveButton.disabled = lessons.length < 2;
+        moveButton.addEventListener("click", () => {
+            moveLessonToPosition(module.id, lesson.id, Number(positionSelect.value));
+        });
         deleteLessonButton.type = "button";
         deleteLessonButton.addEventListener("click", () => deleteLesson(lesson));
+        reorderControls.append(moveLabel, positionSelect, moveButton);
         metaRow.append(contentCount, questionCount);
         content.append(title, objective, metaRow);
-        headerActions.append(dragHint, label, openLessonBuilderLink, deleteLessonButton);
+        headerActions.append(dragHint, reorderControls, label, openLessonBuilderLink, deleteLessonButton);
         header.append(content, headerActions);
         item.append(header);
         list.append(item);
