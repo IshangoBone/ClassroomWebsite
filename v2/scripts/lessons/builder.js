@@ -26,6 +26,10 @@ const urlContentInput = qs("[data-url-content-input]");
 const contentUploadField = qs("[data-content-upload-field]");
 const contentUploadLabel = qs("[data-content-upload-label]");
 const contentUploadInput = qs("[data-content-upload-input]");
+const contentUploadStatus = qs("[data-content-upload-status]");
+const resourceLibraryField = qs("[data-resource-library-field]");
+const resourceLibrarySelect = qs("[data-resource-library-select]");
+const resourceLibraryStatus = qs("[data-resource-library-status]");
 const fileTypeField = qs("[data-file-type-field]");
 const contentBlockList = qs("[data-content-block-list]");
 const questionForm = qs("[data-question-form]");
@@ -39,12 +43,20 @@ const responseRulesField = qs("[data-response-rules-field]");
 const questionOptionsField = qs("[data-question-options-field]");
 let loadedContentBlocks = [];
 let loadedQuestions = [];
+let loadedLessonResources = [];
 let currentProfile = null;
 let currentLessonContext = null;
 const lessonResourceBucket = "lesson-resources";
 const maxLessonResourceSize = 50 * 1024 * 1024;
 const lessonResourceMimeTypes = new Set([
     "application/pdf",
+    "audio/aac",
+    "audio/mp4",
+    "audio/mpeg",
+    "audio/ogg",
+    "audio/wav",
+    "audio/webm",
+    "audio/x-wav",
     "image/jpeg",
     "image/png",
     "image/webp",
@@ -122,6 +134,108 @@ function getStoredBlockType(formBlockType) {
     return ["file", "image"].includes(formBlockType) ? "file" : formBlockType;
 }
 
+function formatFileSize(bytes) {
+    if (!Number.isFinite(Number(bytes)) || Number(bytes) <= 0) {
+        return "Size unknown";
+    }
+
+    const units = ["B", "KB", "MB", "GB"];
+    let size = Number(bytes);
+    let unitIndex = 0;
+
+    while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex += 1;
+    }
+
+    return `${size >= 10 || unitIndex === 0 ? Math.round(size) : size.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function isImageMimeType(mimeType = "") {
+    return mimeType.startsWith("image/");
+}
+
+function isAudioMimeType(mimeType = "") {
+    return mimeType.startsWith("audio/");
+}
+
+function isExternalUrl(url = "") {
+    return /^https?:\/\//i.test(url);
+}
+
+function getResourceDisplayName(resource) {
+    return resource.display_name || resource.original_file_name || "Untitled resource";
+}
+
+function getResourceFileType(resource) {
+    const extension = String(resource.file_extension || "").toLowerCase();
+
+    if (isImageMimeType(resource.mime_type || "")) {
+        return "image";
+    }
+
+    if (isAudioMimeType(resource.mime_type || "")) {
+        return "audio";
+    }
+
+    if (["pdf", "docx", "pptx", "zip"].includes(extension)) {
+        return extension;
+    }
+
+    return "file";
+}
+
+function getUploadedFileType(file) {
+    if (!file) {
+        return "file";
+    }
+
+    return getResourceFileType({
+        mime_type: file.type,
+        file_extension: getFileExtension(file),
+    });
+}
+
+function getLibraryResourcesForBlockType(blockType) {
+    return loadedLessonResources.filter((resource) => {
+        const isImage = isImageMimeType(resource.mime_type || "");
+
+        return blockType === "image" ? isImage : !isImage;
+    });
+}
+
+function setUploadStatus(message = "Optional. PDF, DOCX, PPTX, images, ZIP, and audio up to 50 MB.", tone = "info") {
+    contentUploadStatus.textContent = message;
+    contentUploadStatus.dataset.tone = tone;
+}
+
+function populateResourceLibrary(blockType, selectedResourceId = "") {
+    const resources = getLibraryResourcesForBlockType(blockType);
+    const emptyOption = document.createElement("option");
+
+    emptyOption.value = "";
+    emptyOption.textContent = resources.length ? "No library resource selected" : "No matching resources yet";
+    resourceLibrarySelect.replaceChildren(emptyOption);
+
+    resources.forEach((resource) => {
+        const option = document.createElement("option");
+        const type = getResourceFileType(resource).toUpperCase();
+
+        option.value = resource.id;
+        option.textContent = `${getResourceDisplayName(resource)} (${type}, ${formatFileSize(resource.file_size)})`;
+        resourceLibrarySelect.append(option);
+    });
+
+    resourceLibrarySelect.value = selectedResourceId;
+    resourceLibraryStatus.textContent = resources.length
+        ? "Choose an existing upload, or upload a replacement above."
+        : "Uploads you add here will appear in this reusable library.";
+}
+
+function getSelectedLessonResource(resourceId) {
+    return loadedLessonResources.find((resource) => resource.id === resourceId) || null;
+}
+
 function getDragAfterElement(container, y, itemClass, draggingClass) {
     const draggableElements = [...container.children].filter((child) => {
         return child.classList.contains(itemClass) && !child.classList.contains(draggingClass);
@@ -155,6 +269,7 @@ function setContentBlockFormMode(blockType) {
     textContentField.hidden = !isText;
     urlContentField.hidden = isText;
     contentUploadField.hidden = !supportsUpload;
+    resourceLibraryField.hidden = !supportsUpload;
     fileTypeField.hidden = !isFile;
     contentBlockForm.elements["body-text"].required = isText;
     contentBlockForm.elements["content-url"].required = !isText && !supportsUpload;
@@ -172,7 +287,9 @@ function setContentBlockFormMode(blockType) {
     contentUploadLabel.textContent = isImage ? "Upload image" : "Upload file";
     contentUploadInput.accept = isImage
         ? "image/png,image/jpeg,image/webp"
-        : "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/zip";
+        : "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/zip,audio/aac,audio/mp4,audio/mpeg,audio/ogg,audio/wav,audio/webm";
+    setUploadStatus();
+    populateResourceLibrary(normalizedBlockType);
     urlContentInput.placeholder = isYoutube
         ? "https://www.youtube.com/watch?v=..."
         : isSlides
@@ -216,7 +333,7 @@ function validateLessonResource(file, blockType) {
     }
 
     if (!lessonResourceMimeTypes.has(file.type)) {
-        return "Choose a PDF, image, Word document, slide deck, or ZIP resource.";
+        return "Choose a PDF, image, Word document, slide deck, ZIP, or audio resource.";
     }
 
     if (blockType === "image" && !file.type.startsWith("image/")) {
@@ -257,7 +374,7 @@ async function uploadLessonResource(file, title) {
             storage_bucket: lessonResourceBucket,
             storage_path: storagePath,
         })
-        .select("id, storage_path")
+        .select("id, original_file_name, display_name, mime_type, file_extension, file_size, storage_bucket, storage_path")
         .single();
 
     if (metadataError) {
@@ -266,6 +383,18 @@ async function uploadLessonResource(file, title) {
     }
 
     return fileRecord;
+}
+
+async function clearLessonResourceLinks(contentBlockId) {
+    const { error } = await supabase
+        .from("content_file_links")
+        .delete()
+        .eq("lesson_content_block_id", contentBlockId)
+        .eq("lesson_id", lessonId);
+
+    if (error) {
+        throw new Error(error.message);
+    }
 }
 
 async function linkLessonResource(fileRecord, contentBlockId) {
@@ -312,6 +441,7 @@ function resetContentBlockForm() {
     contentBlockForm.reset();
     contentBlockForm.elements["content-block-id"].value = "";
     contentUploadInput.value = "";
+    resourceLibrarySelect.value = "";
     setContentBlockFormMode("text");
     contentBlockFormHeading.textContent = "Add lesson content";
     contentBlockSubmit.textContent = "Create content block";
@@ -325,8 +455,9 @@ function editContentBlock(contentBlock) {
     contentBlockForm.elements["content-block-id"].value = contentBlock.id;
     contentBlockForm.elements.title.value = contentBlock.title || "";
     contentBlockForm.elements["body-text"].value = contentBlock.body_text || "";
-    contentBlockForm.elements["content-url"].value = contentBlock.file_url || contentBlock.external_url || "";
+    contentBlockForm.elements["content-url"].value = contentBlock.file_resource ? "" : contentBlock.file_url || contentBlock.external_url || "";
     contentBlockForm.elements["file-type"].value = contentBlock.file_type || "pdf";
+    populateResourceLibrary(blockType, contentBlock.file_resource?.id || "");
     contentBlockFormHeading.textContent = `Edit ${contentBlock.title || (blockType === "text" ? "text section" : "content block")}`;
     contentBlockSubmit.textContent = blockType === "text" ? "Save text section" : "Save content block";
     cancelContentBlockEditButton.hidden = false;
@@ -361,6 +492,43 @@ async function deleteContentBlock(contentBlock) {
 
     await loadContentBlocks();
     setStatus("Lesson content deleted.", "success");
+}
+
+async function removeFileFromContentBlock(contentBlock) {
+    const confirmed = window.confirm(
+        `Remove the attached file from "${contentBlock.title || "Untitled content"}"? The file stays in your resource library.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus("Removing attached file...");
+
+    try {
+        await clearLessonResourceLinks(contentBlock.id);
+    } catch (error) {
+        setStatus(`The file link could not be removed: ${error.message}`, "error");
+        return;
+    }
+
+    const { error } = await supabase
+        .from("lesson_content_blocks")
+        .update({ file_url: null })
+        .eq("id", contentBlock.id)
+        .eq("lesson_id", lessonId);
+
+    if (error) {
+        setStatus(error.message || "The attached file could not be removed.", "error");
+        return;
+    }
+
+    if (contentBlockForm.elements["content-block-id"].value === contentBlock.id) {
+        resetContentBlockForm();
+    }
+
+    await loadContentBlocks();
+    setStatus("File removed from this lesson. It is still available in your resource library.", "success");
 }
 
 async function moveContentBlock(contentBlock, direction) {
@@ -835,6 +1003,7 @@ function renderContentBlocks(contentBlocks) {
         const label = createElement("span", "badge badge--quiet", `${getContentBlockTypeLabel(contentBlock)} ${contentBlock.order_index + 1}`);
         const contentUrl = contentBlock.file_url || contentBlock.external_url || "";
         const isImageResource = contentBlock.block_type === "file" && contentBlock.file_type === "image";
+        const attachedResource = contentBlock.file_resource;
         const contentPreview = ["file", "link", "slides", "youtube"].includes(contentBlock.block_type)
             ? createElement("a", "course-muted content-block-body", contentUrl)
             : createElement("p", "course-muted content-block-body", contentBlock.body_text || "");
@@ -846,6 +1015,7 @@ function renderContentBlocks(contentBlocks) {
             contentBlock.is_visible ? "Hide content" : "Show content"
         );
         const editButton = createElement("button", "secondary-button lesson-action", "Edit content");
+        const removeFileButton = createElement("button", "secondary-button destructive-button lesson-action", "Remove file");
         const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete content");
         const actions = createElement("div", "content-block-actions");
 
@@ -854,13 +1024,19 @@ function renderContentBlocks(contentBlocks) {
             contentPreview.target = "_blank";
             contentPreview.rel = "noopener noreferrer";
 
-            if (isImageResource && contentUrl) {
+            if (isImageResource && contentUrl && !attachedResource) {
                 const image = createElement("img", "content-block-image-preview");
                 image.src = contentUrl;
                 image.alt = contentBlock.title || "Lesson image";
                 contentPreview.replaceChildren(image);
+            } else if (isImageResource && attachedResource) {
+                contentPreview.textContent = `${getResourceDisplayName(attachedResource)} (${formatFileSize(attachedResource.file_size)})`;
             } else if (contentBlock.block_type === "file") {
-                contentPreview.textContent = `${contentBlock.file_type?.toUpperCase() || "File"} resource`;
+                contentPreview.textContent = attachedResource
+                    ? `${getResourceDisplayName(attachedResource)} (${formatFileSize(attachedResource.file_size)})`
+                    : contentUrl
+                        ? `${contentBlock.file_type?.toUpperCase() || "File"} resource`
+                        : "No file attached";
             }
         }
 
@@ -874,9 +1050,15 @@ function renderContentBlocks(contentBlocks) {
         visibilityButton.addEventListener("click", () => toggleContentBlockVisibility(contentBlock));
         editButton.type = "button";
         editButton.addEventListener("click", () => editContentBlock(contentBlock));
+        removeFileButton.type = "button";
+        removeFileButton.addEventListener("click", () => removeFileFromContentBlock(contentBlock));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteContentBlock(contentBlock));
-        actions.append(moveUpButton, moveDownButton, visibilityButton, editButton, deleteButton);
+        actions.append(moveUpButton, moveDownButton, visibilityButton, editButton);
+        if (contentBlock.block_type === "file" && contentUrl) {
+            actions.append(removeFileButton);
+        }
+        actions.append(deleteButton);
         item.append(title, label, contentPreview, actions);
         list.append(item);
     });
@@ -900,8 +1082,43 @@ async function loadContentBlocks() {
         return false;
     }
 
-    loadedContentBlocks = data;
-    renderContentBlocks(data);
+    const contentBlockIds = data.map((contentBlock) => contentBlock.id);
+    const { data: links, error: linksError } = contentBlockIds.length
+        ? await supabase
+            .from("content_file_links")
+            .select("lesson_content_block_id, files(id, original_file_name, display_name, mime_type, file_extension, file_size, storage_bucket, storage_path)")
+            .in("lesson_content_block_id", contentBlockIds)
+        : { data: [], error: null };
+
+    if (linksError) {
+        setStatus("Lesson content loaded, but attached file details could not be loaded.", "error");
+    }
+
+    loadedContentBlocks = data.map((contentBlock) => ({
+        ...contentBlock,
+        file_resource: (links || []).find((link) => link.lesson_content_block_id === contentBlock.id)?.files || null,
+    }));
+    renderContentBlocks(loadedContentBlocks);
+    return true;
+}
+
+async function loadLessonResources() {
+    const { data, error } = await supabase
+        .from("files")
+        .select("id, original_file_name, display_name, mime_type, file_extension, file_size, storage_bucket, storage_path, created_at")
+        .eq("owner_user_id", currentProfile.id)
+        .eq("file_type", "lesson_resource")
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        loadedLessonResources = [];
+        resourceLibraryStatus.textContent = "Resource library could not be loaded.";
+        return false;
+    }
+
+    loadedLessonResources = data || [];
+    populateResourceLibrary(contentBlockTypeSelect.value);
     return true;
 }
 
@@ -1311,6 +1528,7 @@ async function initializePage() {
     lessonPosition.textContent = String(lesson.order_index + 1);
     lessonDetails.replaceChildren(buildDetailsList(lesson, module, course));
     showContent();
+    await loadLessonResources();
     const [contentLoaded, questionsLoaded] = await Promise.all([loadContentBlocks(), loadQuestions()]);
 
     if (contentLoaded && questionsLoaded) {
@@ -1329,8 +1547,14 @@ contentBlockForm.addEventListener("submit", async (event) => {
     const bodyText = String(formData.get("body-text") || "").trim();
     const contentUrl = String(formData.get("content-url") || "").trim();
     const uploadedResource = contentUploadInput.files?.[0];
+    const selectedResourceId = String(formData.get("resource-library") || "").trim();
+    const selectedResource = selectedResourceId ? getSelectedLessonResource(selectedResourceId) : null;
     const resourceValidationError = validateLessonResource(uploadedResource, blockType);
-    const fileType = String(formData.get("file-type") || "pdf");
+    const fileType = uploadedResource
+        ? getUploadedFileType(uploadedResource)
+        : selectedResource
+            ? getResourceFileType(selectedResource)
+            : String(formData.get("file-type") || "pdf");
     const submitButton = contentBlockForm.querySelector("button[type='submit']");
 
     if (!title || (blockType === "text" && !bodyText) || (!["text", "file", "image"].includes(blockType) && !contentUrl)) {
@@ -1338,8 +1562,23 @@ contentBlockForm.addEventListener("submit", async (event) => {
         return;
     }
 
-    if (["file", "image"].includes(blockType) && !contentUrl && !uploadedResource) {
+    if (["file", "image"].includes(blockType) && !contentUrl && !uploadedResource && !selectedResource) {
         setStatus("Paste a resource URL or choose a file to upload before saving.", "error");
+        return;
+    }
+
+    if (uploadedResource && selectedResource) {
+        setStatus("Choose either a new upload or a resource library item, not both.", "error");
+        return;
+    }
+
+    if (contentUrl && selectedResource) {
+        setStatus("Clear the URL field before attaching a resource library item.", "error");
+        return;
+    }
+
+    if (selectedResourceId && !selectedResource) {
+        setStatus("Choose a valid resource from your library before saving.", "error");
         return;
     }
 
@@ -1359,13 +1598,17 @@ contentBlockForm.addEventListener("submit", async (event) => {
         setStatus("Saving lesson content...");
         submitButton.disabled = true;
         let uploadedFileRecord = null;
-        let savedFileUrl = contentUrl;
+        let savedFileRecord = selectedResource;
+        let savedFileUrl = selectedResource?.storage_path || contentUrl;
 
         if (uploadedResource) {
             try {
                 setStatus("Uploading lesson resource...");
+                setUploadStatus(`Uploading ${uploadedResource.name}...`, "info");
                 uploadedFileRecord = await uploadLessonResource(uploadedResource, title);
+                savedFileRecord = uploadedFileRecord;
                 savedFileUrl = uploadedFileRecord.storage_path;
+                setUploadStatus(`Uploaded ${uploadedResource.name}.`, "success");
             } catch (error) {
                 submitButton.disabled = false;
                 setStatus(`Lesson resource upload failed: ${error.message}`, "error");
@@ -1393,16 +1636,27 @@ contentBlockForm.addEventListener("submit", async (event) => {
             return;
         }
 
-        if (uploadedFileRecord) {
+        if (["file", "image"].includes(blockType)) {
             try {
-                await linkLessonResource(uploadedFileRecord, contentBlockId);
+                await clearLessonResourceLinks(contentBlockId);
+                if (savedFileRecord) {
+                    await linkLessonResource(savedFileRecord, contentBlockId);
+                }
             } catch (error) {
                 setStatus(`Lesson content saved, but the file link failed: ${error.message}`, "error");
+                return;
+            }
+        } else if (contentBlock.file_resource) {
+            try {
+                await clearLessonResourceLinks(contentBlockId);
+            } catch (error) {
+                setStatus(`Lesson content saved, but the old file link could not be removed: ${error.message}`, "error");
                 return;
             }
         }
 
         resetContentBlockForm();
+        await loadLessonResources();
         await loadContentBlocks();
         setStatus("Lesson content saved.", "success");
         return;
@@ -1415,13 +1669,17 @@ contentBlockForm.addEventListener("submit", async (event) => {
     setStatus("Creating lesson content...");
     submitButton.disabled = true;
     let uploadedFileRecord = null;
-    let savedFileUrl = contentUrl;
+    let savedFileRecord = selectedResource;
+    let savedFileUrl = selectedResource?.storage_path || contentUrl;
 
     if (uploadedResource) {
         try {
             setStatus("Uploading lesson resource...");
+            setUploadStatus(`Uploading ${uploadedResource.name}...`, "info");
             uploadedFileRecord = await uploadLessonResource(uploadedResource, title);
+            savedFileRecord = uploadedFileRecord;
             savedFileUrl = uploadedFileRecord.storage_path;
+            setUploadStatus(`Uploaded ${uploadedResource.name}.`, "success");
         } catch (error) {
             submitButton.disabled = false;
             setStatus(`Lesson resource upload failed: ${error.message}`, "error");
@@ -1450,9 +1708,9 @@ contentBlockForm.addEventListener("submit", async (event) => {
         return;
     }
 
-    if (uploadedFileRecord) {
+    if (savedFileRecord) {
         try {
-            await linkLessonResource(uploadedFileRecord, contentBlock.id);
+            await linkLessonResource(savedFileRecord, contentBlock.id);
         } catch (error) {
             setStatus(`Lesson content created, but the file link failed: ${error.message}`, "error");
             return;
@@ -1460,12 +1718,40 @@ contentBlockForm.addEventListener("submit", async (event) => {
     }
 
     resetContentBlockForm();
+    await loadLessonResources();
     await loadContentBlocks();
     setStatus("Lesson content created.", "success");
 });
 
 contentBlockTypeSelect.addEventListener("change", () => {
     setContentBlockFormMode(contentBlockTypeSelect.value);
+});
+
+contentUploadInput.addEventListener("change", () => {
+    const file = contentUploadInput.files?.[0];
+
+    if (!file) {
+        setUploadStatus();
+        return;
+    }
+
+    const blockType = formatContentBlockType(contentBlockTypeSelect.value);
+    const validationError = validateLessonResource(file, blockType);
+
+    if (validationError) {
+        setUploadStatus(validationError, "error");
+        return;
+    }
+
+    resourceLibrarySelect.value = "";
+    setUploadStatus(`Ready to upload ${file.name} (${formatFileSize(file.size)}).`, "success");
+});
+
+resourceLibrarySelect.addEventListener("change", () => {
+    if (resourceLibrarySelect.value) {
+        contentUploadInput.value = "";
+        setUploadStatus("Using a resource from your library for this content block.", "info");
+    }
 });
 
 cancelContentBlockEditButton.addEventListener("click", resetContentBlockForm);

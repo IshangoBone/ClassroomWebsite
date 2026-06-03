@@ -88,7 +88,15 @@
                     <label class="form-field" data-content-upload-field hidden>
                         <span data-content-upload-label>Upload resource</span>
                         <input type="file" name="content-upload" data-content-upload-input />
-                        <small class="form-hint">Optional. Uploaded resources are stored privately and shown to authorized students.</small>
+                        <small class="form-hint" data-content-upload-status>Optional. PDF, DOCX, PPTX, images, ZIP, and audio up to 50 MB.</small>
+                    </label>
+
+                    <label class="form-field" data-resource-library-field hidden>
+                        <span>Attach from resource library</span>
+                        <select name="resource-library" data-resource-library-select>
+                            <option value="">No library resource selected</option>
+                        </select>
+                        <small class="form-hint" data-resource-library-status>Uploaded lesson resources you own appear here.</small>
                     </label>
 
                     <label class="form-field" data-file-type-field hidden>
@@ -98,6 +106,7 @@
                             <option value="docx">Word document</option>
                             <option value="pptx">Slides</option>
                             <option value="zip">ZIP archive</option>
+                            <option value="audio">Audio</option>
                         </select>
                     </label>
                 </div>
@@ -255,7 +264,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/lessons/builder.js?v=20260602-lesson-resource-uploads"></script>
+    <script type="module" src="../../scripts/lessons/builder.js?v=20260603-resource-library"></script>
 </body>
 
 </html>

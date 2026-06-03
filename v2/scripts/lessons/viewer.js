@@ -40,6 +40,7 @@ let autoSaveTimer = null;
 let isSubmitted = false;
 let lastSavedAt = null;
 let submittedAt = null;
+const lessonResourceBucket = "lesson-resources";
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -103,6 +104,33 @@ function setSavedStatus(message = "Draft saved.") {
 
 function getBlockUrl(contentBlock) {
     return contentBlock.file_url || contentBlock.external_url || "";
+}
+
+function isExternalUrl(url = "") {
+    return /^https?:\/\//i.test(url);
+}
+
+function isLessonStoragePath(url = "") {
+    return Boolean(url) && !isExternalUrl(url) && !url.startsWith("data:") && !url.startsWith("blob:");
+}
+
+async function getDisplayResourceUrl(contentBlock) {
+    const url = getBlockUrl(contentBlock);
+
+    if (!isLessonStoragePath(url)) {
+        return url;
+    }
+
+    const { data, error } = await supabase.storage
+        .from(lessonResourceBucket)
+        .createSignedUrl(url, 60 * 60);
+
+    if (error) {
+        console.warn("Lesson resource signed URL failed", error);
+        return "";
+    }
+
+    return data?.signedUrl || "";
 }
 
 function getQuestionOptions(question) {
@@ -243,6 +271,10 @@ function isAudioUrl(url) {
     return /\.(mp3|m4a|ogg|wav|webm)(\?.*)?$/i.test(url);
 }
 
+function isPdfUrl(url) {
+    return /\.pdf(\?.*)?$/i.test(url);
+}
+
 function getYouTubeEmbedUrl(url) {
     try {
         const parsedUrl = new URL(url);
@@ -309,11 +341,11 @@ function createExternalLink(url, label = "Open resource") {
     return link;
 }
 
-function createContentBlock(contentBlock) {
+async function createContentBlock(contentBlock) {
     const article = createElement("article", `lesson-render-block lesson-render-block--${contentBlock.block_type}`);
     const title = createElement("h3", "", contentBlock.title || "Untitled content");
     const label = createElement("span", "badge badge--quiet", `Block ${contentBlock.order_index + 1}`);
-    const url = getBlockUrl(contentBlock);
+    const url = await getDisplayResourceUrl(contentBlock);
 
     article.append(title, label);
 
@@ -338,18 +370,23 @@ function createContentBlock(contentBlock) {
     if (contentBlock.block_type === "file" && contentBlock.file_type === "image") {
         const image = createElement("img", "lesson-render-image");
 
-        image.src = url;
+        image.src = url || "";
         image.alt = contentBlock.title || "Lesson image";
         article.append(image, createExternalLink(url, "Open image"));
         return article;
     }
 
-    if (isAudioUrl(url)) {
+    if (contentBlock.block_type === "file" && contentBlock.file_type === "pdf" && isPdfUrl(url)) {
+        article.append(createEmbedFrame(contentBlock.title || "PDF resource", url), createExternalLink(url, "Download PDF"));
+        return article;
+    }
+
+    if (contentBlock.file_type === "audio" || isAudioUrl(url)) {
         const audio = document.createElement("audio");
 
         audio.controls = true;
-        audio.src = url;
-        article.append(audio, createExternalLink(url, "Open audio"));
+        audio.src = url || "";
+        article.append(audio, createExternalLink(url, "Download audio"));
         return article;
     }
 
@@ -365,13 +402,14 @@ function createContentBlock(contentBlock) {
     return article;
 }
 
-function renderContentBlocks(contentBlocks) {
+async function renderContentBlocks(contentBlocks) {
     if (!contentBlocks.length) {
         contentRenderer.replaceChildren(createElement("p", "empty-state", "No visible lesson content is available yet."));
         return;
     }
 
-    contentRenderer.replaceChildren(...contentBlocks.map(createContentBlock));
+    const renderedBlocks = await Promise.all(contentBlocks.map(createContentBlock));
+    contentRenderer.replaceChildren(...renderedBlocks);
 }
 
 function createQuestionOptionControl(question, option, type) {
@@ -683,7 +721,7 @@ async function loadContentBlocks() {
         return false;
     }
 
-    renderContentBlocks(data);
+    await renderContentBlocks(data);
     return true;
 }
 
