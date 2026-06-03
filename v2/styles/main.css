@@ -53,6 +53,10 @@ main {
     margin: 0 auto;
 }
 
+.has-app-sidebar .back-link {
+    display: none;
+}
+
 .app-sidebar {
     position: sticky;
     top: 32px;
@@ -588,6 +592,130 @@ h2 {
 
 .auth-status[data-tone="success"] {
     color: #117a37;
+}
+
+.ui-alert {
+    margin: 0;
+    padding: 14px 16px;
+    border: 1px solid #dbe4f1;
+    border-radius: 14px;
+    background: #f7faff;
+    color: #274a7f;
+    font-weight: 700;
+}
+
+.ui-alert--success {
+    border-color: #b8dfc8;
+    background: #f1fbf5;
+    color: #117a37;
+}
+
+.ui-alert--warning {
+    border-color: #f0d2a8;
+    background: #fff8ec;
+    color: #8a4a10;
+}
+
+.ui-alert--error {
+    border-color: #efc3c0;
+    background: #fff4f3;
+    color: #b42318;
+}
+
+.ui-action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.ui-action-row--start {
+    justify-content: flex-start;
+}
+
+.ui-action-row--end {
+    justify-content: flex-end;
+}
+
+.ui-action-row--between {
+    justify-content: space-between;
+}
+
+.field-error {
+    color: #b42318;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.form-field :is(input, select, textarea)[aria-invalid="true"] {
+    border-color: #dc8079;
+    outline-color: #dc8079;
+}
+
+.ui-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(24, 49, 83, 0.42);
+}
+
+.ui-modal {
+    display: grid;
+    gap: 16px;
+    width: min(520px, 100%);
+    padding: 22px;
+    border: 1px solid #dbe4f1;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 0 24px 60px rgba(24, 49, 83, 0.22);
+}
+
+.ui-modal-title {
+    margin: 0;
+}
+
+.ui-modal-body {
+    color: #49617f;
+}
+
+.ui-tabs {
+    display: grid;
+    gap: 16px;
+}
+
+.ui-tab-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px;
+    border: 1px solid #dbe4f1;
+    border-radius: 14px;
+    background: #f7faff;
+}
+
+.ui-tab {
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: #274a7f;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.ui-tab[aria-selected="true"] {
+    border-color: #bfd0ec;
+    background: #ffffff;
+    color: #183153;
+}
+
+.ui-tab-panel {
+    min-width: 0;
 }
 
 .status-list {
@@ -1794,7 +1922,8 @@ h2 {
     margin-bottom: 24px;
 }
 
-.lesson-view-shell {
+.lesson-view-shell,
+.split-learning-layout {
     display: grid;
     grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
     gap: 20px;
@@ -2474,7 +2603,8 @@ h2 {
 }
 
 @media (max-width: 900px) {
-    .lesson-view-shell {
+    .lesson-view-shell,
+    .split-learning-layout {
         grid-template-columns: 1fr;
     }
 
