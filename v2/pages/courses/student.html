@@ -10,11 +10,14 @@
 
 <body>
     <main class="management-layout student-course-layout">
-        <header class="management-header">
-            <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
-            <p class="eyebrow">Student Course</p>
-            <h1 data-student-course-heading>Loading course...</h1>
-            <p class="intro" data-student-course-context>Preparing your course outline.</p>
+        <header class="management-header student-course-header">
+            <div>
+                <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+                <p class="eyebrow">Student Course</p>
+                <h1 data-student-course-heading>Loading course...</h1>
+                <p class="intro" data-student-course-context>Preparing your course outline.</p>
+            </div>
+            <button class="secondary-button destructive-button management-action" type="button" data-student-course-unenroll hidden>Unenroll</button>
         </header>
 
         <p class="auth-status management-status" data-student-course-status aria-live="polite"></p>
@@ -74,7 +77,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/courses/student.js?v=20260603-continuous-lesson-numbers"></script>
+    <script type="module" src="../../scripts/courses/student.js?v=20260603-unenroll-course"></script>
 </body>
 
 </html>

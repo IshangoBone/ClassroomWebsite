@@ -549,6 +549,13 @@ h2 {
     height: 14px;
 }
 
+.student-course-header {
+    align-items: start;
+    display: flex;
+    gap: 18px;
+    justify-content: space-between;
+}
+
 .student-course-layout .lesson-card-header {
     align-items: center;
 }
@@ -2438,6 +2445,10 @@ h2 {
     }
 
     .section-header--actions {
+        display: grid;
+    }
+
+    .student-course-header {
         display: grid;
     }
 

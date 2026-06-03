@@ -22,8 +22,10 @@ const pointsElement = qs("[data-student-course-points]");
 const nextCopyElement = qs("[data-student-course-next-copy]");
 const nextLinkElement = qs("[data-student-course-next-link]");
 const moduleListElement = qs("[data-student-course-module-list]");
+const unenrollButton = qs("[data-student-course-unenroll]");
 
 let currentProfileId = "";
+let currentEnrollment = null;
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -141,6 +143,37 @@ function getModuleProgress(moduleLessons, submissions) {
         submittedCount,
         totalLessons: moduleLessons.length,
     };
+}
+
+async function unenrollFromCourse() {
+    if (!currentEnrollment) {
+        return;
+    }
+
+    const label = currentEnrollment.enrollment_type === "classroom" ? "classroom" : "course";
+    const confirmed = window.confirm(
+        `Leave this ${label}? It will be removed from your active courses, but your existing work history will be preserved.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    unenrollButton.disabled = true;
+    setStatus(`Leaving ${label}...`);
+
+    const { error } = await supabase.rpc("leave_student_enrollment", {
+        enrollment_id_input: currentEnrollment.id,
+    });
+
+    if (error) {
+        unenrollButton.disabled = false;
+        setStatus(error.message || `You could not leave this ${label}.`, "error");
+        return;
+    }
+
+    setStatus(`You left this ${label}. Redirecting to your dashboard...`, "success");
+    window.location.href = "../dashboard/index.html";
 }
 
 async function loadCurrentProfile() {
@@ -391,6 +424,7 @@ async function initializePage() {
 
     currentProfileId = profile.id;
     const enrollment = await loadEnrollment();
+    currentEnrollment = enrollment;
 
     if (!enrollment) {
         headingElement.textContent = "Course unavailable";
@@ -418,6 +452,8 @@ async function initializePage() {
 
         headingElement.textContent = course.title || "Untitled course";
         contextElement.textContent = `${classroomLabel} / ${teacherName} / ${course.description || "No course description added yet."}`;
+        unenrollButton.textContent = enrollment.enrollment_type === "classroom" ? "Leave classroom" : "Unenroll";
+        unenrollButton.hidden = false;
         renderSummary(enrollment, modules, lessons, submissions);
         renderModules(modules, lessons, submissions, enrollment);
         shellElement.hidden = false;
@@ -426,5 +462,7 @@ async function initializePage() {
         setStatus(error.message || "Student course view could not be loaded.", "error");
     }
 }
+
+unenrollButton.addEventListener("click", unenrollFromCourse);
 
 await initializePage();
