@@ -66,18 +66,25 @@
                             <option value="youtube">YouTube video</option>
                             <option value="slides">Slides embed</option>
                             <option value="image">Image resource</option>
+                            <option value="audio">Audio block</option>
                             <option value="file">File/resource download</option>
                         </select>
                     </label>
 
                     <label class="form-field">
-                        <span>Section title</span>
-                        <input type="text" name="title" placeholder="What is a computer?" maxlength="120" data-content-title required />
+                        <span>Optional label</span>
+                        <input type="text" name="title" placeholder="What is a computer?" maxlength="120" data-content-title />
                     </label>
 
                     <label class="form-field" data-text-content-field>
                         <span>Section text</span>
-                        <textarea name="body-text" rows="5" maxlength="3000" placeholder="Write the lesson content students will read here." required></textarea>
+                        <div class="text-format-toolbar" aria-label="Text formatting shortcuts">
+                            <button type="button" class="secondary-button lesson-action" data-format-action="heading">Heading</button>
+                            <button type="button" class="secondary-button lesson-action" data-format-action="bold">Bold</button>
+                            <button type="button" class="secondary-button lesson-action" data-format-action="bullet">Bullets</button>
+                            <button type="button" class="secondary-button lesson-action" data-format-action="link">Link</button>
+                        </div>
+                        <textarea name="body-text" rows="6" maxlength="5000" placeholder="Write lesson content. Use the buttons for headings, bold text, bullet lists, and links." required></textarea>
                     </label>
 
                     <label class="form-field" data-url-content-field hidden>
@@ -264,7 +271,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/lessons/builder.js?v=20260603-resource-library"></script>
+    <script type="module" src="../../scripts/lessons/builder.js?v=20260603-content-block-editor"></script>
 </body>
 
 </html>

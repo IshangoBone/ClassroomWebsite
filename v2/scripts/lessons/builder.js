@@ -41,6 +41,7 @@ const questionPreview = qs("[data-question-preview]");
 const correctAnswerField = qs("[data-correct-answer-field]");
 const responseRulesField = qs("[data-response-rules-field]");
 const questionOptionsField = qs("[data-question-options-field]");
+const textFormatButtons = [...document.querySelectorAll("[data-format-action]")];
 let loadedContentBlocks = [];
 let loadedQuestions = [];
 let loadedLessonResources = [];
@@ -119,7 +120,7 @@ function buildDetailsList(lesson, module, course) {
 }
 
 function formatContentBlockType(blockType) {
-    return ["file", "image", "link", "slides", "youtube"].includes(blockType) ? blockType : "text";
+    return ["file", "image", "audio", "link", "slides", "youtube"].includes(blockType) ? blockType : "text";
 }
 
 function getContentBlockFormType(contentBlock) {
@@ -127,11 +128,47 @@ function getContentBlockFormType(contentBlock) {
         return "image";
     }
 
+    if (contentBlock.block_type === "file" && contentBlock.file_type === "audio") {
+        return "audio";
+    }
+
     return formatContentBlockType(contentBlock.block_type);
 }
 
 function getStoredBlockType(formBlockType) {
-    return ["file", "image"].includes(formBlockType) ? "file" : formBlockType;
+    return ["file", "image", "audio"].includes(formBlockType) ? "file" : formBlockType;
+}
+
+function getDefaultContentBlockTitle(contentBlock) {
+    if (contentBlock.title) {
+        return contentBlock.title;
+    }
+
+    if (contentBlock.block_type === "text") {
+        return "Text content";
+    }
+
+    if (contentBlock.block_type === "youtube") {
+        return "YouTube video";
+    }
+
+    if (contentBlock.block_type === "slides") {
+        return "Slides";
+    }
+
+    if (contentBlock.block_type === "link") {
+        return "External link";
+    }
+
+    if (contentBlock.file_type === "image") {
+        return "Image resource";
+    }
+
+    if (contentBlock.file_type === "audio") {
+        return "Audio resource";
+    }
+
+    return "File resource";
 }
 
 function formatFileSize(bytes) {
@@ -199,8 +236,17 @@ function getUploadedFileType(file) {
 function getLibraryResourcesForBlockType(blockType) {
     return loadedLessonResources.filter((resource) => {
         const isImage = isImageMimeType(resource.mime_type || "");
+        const isAudio = isAudioMimeType(resource.mime_type || "");
 
-        return blockType === "image" ? isImage : !isImage;
+        if (blockType === "image") {
+            return isImage;
+        }
+
+        if (blockType === "audio") {
+            return isAudio;
+        }
+
+        return !isImage && !isAudio;
     });
 }
 
@@ -236,6 +282,39 @@ function getSelectedLessonResource(resourceId) {
     return loadedLessonResources.find((resource) => resource.id === resourceId) || null;
 }
 
+function insertTextFormatting(action) {
+    const textarea = contentBlockForm.elements["body-text"];
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.slice(start, end);
+    const before = textarea.value.slice(0, start);
+    const after = textarea.value.slice(end);
+    const leadingBreak = before && !before.endsWith("\n") ? "\n" : "";
+    const trailingBreak = after && !after.startsWith("\n") ? "\n" : "";
+    let replacement = "";
+
+    if (action === "heading") {
+        replacement = `${leadingBreak}## ${selectedText || "Heading"}${trailingBreak}`;
+    } else if (action === "bold") {
+        replacement = `**${selectedText || "bold text"}**`;
+    } else if (action === "bullet") {
+        const lines = (selectedText || "First point\nSecond point")
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => `- ${line}`)
+            .join("\n");
+
+        replacement = `${leadingBreak}${lines}${trailingBreak}`;
+    } else if (action === "link") {
+        replacement = `[${selectedText || "link text"}](https://example.com)`;
+    }
+
+    textarea.value = `${before}${replacement}${after}`;
+    textarea.focus();
+    textarea.setSelectionRange(start, start + replacement.length);
+}
+
 function getDragAfterElement(container, y, itemClass, draggingClass) {
     const draggableElements = [...container.children].filter((child) => {
         return child.classList.contains(itemClass) && !child.classList.contains(draggingClass);
@@ -262,32 +341,41 @@ function setContentBlockFormMode(blockType) {
     const isSlides = normalizedBlockType === "slides";
     const isYoutube = normalizedBlockType === "youtube";
     const isImage = normalizedBlockType === "image";
+    const isAudio = normalizedBlockType === "audio";
     const isFile = normalizedBlockType === "file";
-    const supportsUpload = isImage || isFile;
+    const supportsUpload = isImage || isAudio || isFile;
 
     contentBlockTypeSelect.value = normalizedBlockType;
     textContentField.hidden = !isText;
     urlContentField.hidden = isText;
     contentUploadField.hidden = !supportsUpload;
     resourceLibraryField.hidden = !supportsUpload;
-    fileTypeField.hidden = !isFile;
+    fileTypeField.hidden = !(isFile || isAudio);
     contentBlockForm.elements["body-text"].required = isText;
     contentBlockForm.elements["content-url"].required = !isText && !supportsUpload;
-    contentBlockForm.elements["file-type"].required = isFile;
-    contentTitleInput.placeholder = isText ? "What is a computer?" : isYoutube ? "Video title" : "Resource title";
+    contentBlockForm.elements["file-type"].required = isFile || isAudio;
+    if (isAudio) {
+        contentBlockForm.elements["file-type"].value = "audio";
+    }
+    contentBlockForm.elements["file-type"].disabled = isAudio;
+    contentTitleInput.placeholder = isText ? "What is a computer?" : isYoutube ? "Video title" : isAudio ? "Audio title" : "Resource title";
     urlContentLabel.textContent = isYoutube
         ? "YouTube URL"
         : isSlides
             ? "Slides URL"
             : isImage
                 ? "Image URL"
-                : isFile
+                : isAudio
+                    ? "Audio URL"
+                    : isFile
                     ? "File URL"
                     : "External URL";
-    contentUploadLabel.textContent = isImage ? "Upload image" : "Upload file";
+    contentUploadLabel.textContent = isImage ? "Upload image" : isAudio ? "Upload audio" : "Upload file";
     contentUploadInput.accept = isImage
         ? "image/png,image/jpeg,image/webp"
-        : "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/zip,audio/aac,audio/mp4,audio/mpeg,audio/ogg,audio/wav,audio/webm";
+        : isAudio
+            ? "audio/aac,audio/mp4,audio/mpeg,audio/ogg,audio/wav,audio/webm"
+            : "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/zip";
     setUploadStatus();
     populateResourceLibrary(normalizedBlockType);
     urlContentInput.placeholder = isYoutube
@@ -296,7 +384,9 @@ function setContentBlockFormMode(blockType) {
             ? "https://docs.google.com/presentation/..."
             : isImage
                 ? "https://example.com/image.png"
-                : isFile
+                : isAudio
+                    ? "https://example.com/audio.mp3 or upload below"
+                    : isFile
                     ? "https://example.com/worksheet.pdf or upload below"
                     : "https://example.com/resource";
 }
@@ -342,6 +432,14 @@ function validateLessonResource(file, blockType) {
 
     if (blockType === "file" && file.type.startsWith("image/")) {
         return "Use Image resource when uploading an image.";
+    }
+
+    if (blockType === "audio" && !file.type.startsWith("audio/")) {
+        return "Choose an audio file for an audio block.";
+    }
+
+    if (blockType === "file" && file.type.startsWith("audio/")) {
+        return "Use Audio block when uploading audio.";
     }
 
     return "";
@@ -418,6 +516,10 @@ function getContentBlockTypeLabel(contentBlock) {
         return contentBlock.is_visible ? "Image" : "Draft image";
     }
 
+    if (contentBlock.block_type === "file" && contentBlock.file_type === "audio") {
+        return contentBlock.is_visible ? "Audio" : "Draft audio";
+    }
+
     if (contentBlock.block_type === "file") {
         return contentBlock.is_visible ? "File" : "Draft file";
     }
@@ -458,7 +560,7 @@ function editContentBlock(contentBlock) {
     contentBlockForm.elements["content-url"].value = contentBlock.file_resource ? "" : contentBlock.file_url || contentBlock.external_url || "";
     contentBlockForm.elements["file-type"].value = contentBlock.file_type || "pdf";
     populateResourceLibrary(blockType, contentBlock.file_resource?.id || "");
-    contentBlockFormHeading.textContent = `Edit ${contentBlock.title || (blockType === "text" ? "text section" : "content block")}`;
+    contentBlockFormHeading.textContent = `Edit ${getDefaultContentBlockTitle(contentBlock)}`;
     contentBlockSubmit.textContent = blockType === "text" ? "Save text section" : "Save content block";
     cancelContentBlockEditButton.hidden = false;
     contentBlockForm.elements.title.focus();
@@ -466,7 +568,7 @@ function editContentBlock(contentBlock) {
 
 async function deleteContentBlock(contentBlock) {
     const confirmed = window.confirm(
-        `Delete content block "${contentBlock.title || "Untitled content"}"? This hides it from the lesson while preserving its history.`
+        `Delete content block "${getDefaultContentBlockTitle(contentBlock)}"? This hides it from the lesson while preserving its history.`
     );
 
     if (!confirmed) {
@@ -496,7 +598,7 @@ async function deleteContentBlock(contentBlock) {
 
 async function removeFileFromContentBlock(contentBlock) {
     const confirmed = window.confirm(
-        `Remove the attached file from "${contentBlock.title || "Untitled content"}"? The file stays in your resource library.`
+        `Remove the attached file from "${getDefaultContentBlockTitle(contentBlock)}"? The file stays in your resource library.`
     );
 
     if (!confirmed) {
@@ -562,6 +664,46 @@ async function moveContentBlock(contentBlock, direction) {
     }
 
     await loadContentBlocks();
+    setStatus("Lesson content order saved.", "success");
+}
+
+async function saveContentBlockOrder(list) {
+    const orderedIds = [...list.children].map((child) => child.dataset.contentBlockId).filter(Boolean);
+    const updates = orderedIds
+        .map((id, orderIndex) => ({ id, order_index: orderIndex }))
+        .filter((update) => {
+            const contentBlock = loadedContentBlocks.find((currentBlock) => currentBlock.id === update.id);
+            return contentBlock && contentBlock.order_index !== update.order_index;
+        });
+
+    if (!updates.length) {
+        return;
+    }
+
+    setStatus("Saving lesson content order...");
+
+    const results = await Promise.all(
+        updates.map((update) => {
+            return supabase
+                .from("lesson_content_blocks")
+                .update({ order_index: update.order_index })
+                .eq("id", update.id)
+                .eq("lesson_id", lessonId);
+        })
+    );
+    const failedUpdate = results.find((result) => result.error);
+
+    if (failedUpdate) {
+        setStatus(failedUpdate.error.message || "The lesson content order could not be saved.", "error");
+        await loadContentBlocks();
+        return;
+    }
+
+    loadedContentBlocks = loadedContentBlocks.map((contentBlock) => {
+        const orderIndex = orderedIds.indexOf(contentBlock.id);
+        return orderIndex === -1 ? contentBlock : { ...contentBlock, order_index: orderIndex };
+    });
+    renderContentBlocks(loadedContentBlocks);
     setStatus("Lesson content order saved.", "success");
 }
 
@@ -997,9 +1139,27 @@ function renderContentBlocks(contentBlocks) {
 
     const list = createElement("ol", "content-block-list");
 
+    list.addEventListener("dragover", (event) => {
+        event.preventDefault();
+
+        const draggingItem = list.querySelector(".content-block-card--dragging");
+
+        if (!draggingItem) {
+            return;
+        }
+
+        const afterElement = getDragAfterElement(list, event.clientY, "content-block-card", "content-block-card--dragging");
+
+        if (afterElement) {
+            list.insertBefore(draggingItem, afterElement);
+        } else {
+            list.append(draggingItem);
+        }
+    });
+
     contentBlocks.forEach((contentBlock, index) => {
         const item = createElement("li", "content-block-card");
-        const title = createElement("h3", "content-block-title", contentBlock.title || "Untitled content");
+        const title = createElement("h3", "content-block-title", getDefaultContentBlockTitle(contentBlock));
         const label = createElement("span", "badge badge--quiet", `${getContentBlockTypeLabel(contentBlock)} ${contentBlock.order_index + 1}`);
         const contentUrl = contentBlock.file_url || contentBlock.external_url || "";
         const isImageResource = contentBlock.block_type === "file" && contentBlock.file_type === "image";
@@ -1018,7 +1178,19 @@ function renderContentBlocks(contentBlocks) {
         const removeFileButton = createElement("button", "secondary-button destructive-button lesson-action", "Remove file");
         const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete content");
         const actions = createElement("div", "content-block-actions");
+        const dragHint = createElement("span", "content-block-drag-hint", "Drag to reorder");
 
+        item.draggable = true;
+        item.dataset.contentBlockId = contentBlock.id;
+        item.addEventListener("dragstart", (event) => {
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", contentBlock.id);
+            item.classList.add("content-block-card--dragging");
+        });
+        item.addEventListener("dragend", async () => {
+            item.classList.remove("content-block-card--dragging");
+            await saveContentBlockOrder(list);
+        });
         if (["file", "link", "slides", "youtube"].includes(contentBlock.block_type)) {
             contentPreview.href = contentUrl || "#";
             contentPreview.target = "_blank";
@@ -1054,7 +1226,7 @@ function renderContentBlocks(contentBlocks) {
         removeFileButton.addEventListener("click", () => removeFileFromContentBlock(contentBlock));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteContentBlock(contentBlock));
-        actions.append(moveUpButton, moveDownButton, visibilityButton, editButton);
+        actions.append(dragHint, moveUpButton, moveDownButton, visibilityButton, editButton);
         if (contentBlock.block_type === "file" && contentUrl) {
             actions.append(removeFileButton);
         }
@@ -1550,19 +1722,21 @@ contentBlockForm.addEventListener("submit", async (event) => {
     const selectedResourceId = String(formData.get("resource-library") || "").trim();
     const selectedResource = selectedResourceId ? getSelectedLessonResource(selectedResourceId) : null;
     const resourceValidationError = validateLessonResource(uploadedResource, blockType);
-    const fileType = uploadedResource
+    const fileType = blockType === "audio"
+        ? "audio"
+        : uploadedResource
         ? getUploadedFileType(uploadedResource)
         : selectedResource
             ? getResourceFileType(selectedResource)
             : String(formData.get("file-type") || "pdf");
     const submitButton = contentBlockForm.querySelector("button[type='submit']");
 
-    if (!title || (blockType === "text" && !bodyText) || (!["text", "file", "image"].includes(blockType) && !contentUrl)) {
-        setStatus(`Enter a title and ${blockType === "text" ? "written content" : "URL"} before saving.`, "error");
+    if ((blockType === "text" && !bodyText) || (!["text", "file", "image", "audio"].includes(blockType) && !contentUrl)) {
+        setStatus(`Enter ${blockType === "text" ? "written content" : "a URL"} before saving.`, "error");
         return;
     }
 
-    if (["file", "image"].includes(blockType) && !contentUrl && !uploadedResource && !selectedResource) {
+    if (["file", "image", "audio"].includes(blockType) && !contentUrl && !uploadedResource && !selectedResource) {
         setStatus("Paste a resource URL or choose a file to upload before saving.", "error");
         return;
     }
@@ -1620,11 +1794,11 @@ contentBlockForm.addEventListener("submit", async (event) => {
             .from("lesson_content_blocks")
             .update({
                 block_type: storedBlockType,
-                title,
+                title: title || null,
                 body_text: blockType === "text" ? bodyText : null,
                 external_url: ["link", "slides", "youtube"].includes(blockType) ? contentUrl : null,
-                file_url: ["file", "image"].includes(blockType) ? savedFileUrl : null,
-                file_type: blockType === "image" ? "image" : blockType === "file" ? fileType : null,
+                file_url: ["file", "image", "audio"].includes(blockType) ? savedFileUrl : null,
+                file_type: blockType === "image" ? "image" : ["file", "audio"].includes(blockType) ? fileType : null,
             })
             .eq("id", contentBlockId)
             .eq("lesson_id", lessonId);
@@ -1636,7 +1810,7 @@ contentBlockForm.addEventListener("submit", async (event) => {
             return;
         }
 
-        if (["file", "image"].includes(blockType)) {
+        if (["file", "image", "audio"].includes(blockType)) {
             try {
                 await clearLessonResourceLinks(contentBlockId);
                 if (savedFileRecord) {
@@ -1690,11 +1864,11 @@ contentBlockForm.addEventListener("submit", async (event) => {
     const { data: contentBlock, error } = await supabase.from("lesson_content_blocks").insert({
         lesson_id: lessonId,
         block_type: storedBlockType,
-        title,
+        title: title || null,
         body_text: blockType === "text" ? bodyText : null,
         external_url: ["link", "slides", "youtube"].includes(blockType) ? contentUrl : null,
-        file_url: ["file", "image"].includes(blockType) ? savedFileUrl : null,
-        file_type: blockType === "image" ? "image" : blockType === "file" ? fileType : null,
+        file_url: ["file", "image", "audio"].includes(blockType) ? savedFileUrl : null,
+        file_type: blockType === "image" ? "image" : ["file", "audio"].includes(blockType) ? fileType : null,
         order_index: nextOrder,
         is_visible: false,
     })
@@ -1725,6 +1899,12 @@ contentBlockForm.addEventListener("submit", async (event) => {
 
 contentBlockTypeSelect.addEventListener("change", () => {
     setContentBlockFormMode(contentBlockTypeSelect.value);
+});
+
+textFormatButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+        insertTextFormatting(button.dataset.formatAction || "");
+    });
 });
 
 contentUploadInput.addEventListener("change", () => {

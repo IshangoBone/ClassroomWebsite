@@ -275,6 +275,125 @@ function isPdfUrl(url) {
     return /\.pdf(\?.*)?$/i.test(url);
 }
 
+function getDefaultContentBlockTitle(contentBlock) {
+    if (contentBlock.title) {
+        return contentBlock.title;
+    }
+
+    if (contentBlock.block_type === "text") {
+        return "Text content";
+    }
+
+    if (contentBlock.block_type === "youtube") {
+        return "YouTube video";
+    }
+
+    if (contentBlock.block_type === "slides") {
+        return "Slides";
+    }
+
+    if (contentBlock.block_type === "link") {
+        return "External link";
+    }
+
+    if (contentBlock.file_type === "image") {
+        return "Image resource";
+    }
+
+    if (contentBlock.file_type === "audio") {
+        return "Audio resource";
+    }
+
+    return "File resource";
+}
+
+function appendInlineFormattedText(parent, text) {
+    const tokenPattern = /(\*\*[^*]+\*\*|\[[^\]]+\]\(https?:\/\/[^)\s]+\))/g;
+    let lastIndex = 0;
+    let match = tokenPattern.exec(text);
+
+    while (match) {
+        if (match.index > lastIndex) {
+            parent.append(document.createTextNode(text.slice(lastIndex, match.index)));
+        }
+
+        const token = match[0];
+
+        if (token.startsWith("**")) {
+            parent.append(createElement("strong", "", token.slice(2, -2)));
+        } else {
+            const linkMatch = token.match(/^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/);
+            const link = createElement("a", "lesson-inline-link", linkMatch?.[1] || "Link");
+
+            link.href = linkMatch?.[2] || "#";
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            parent.append(link);
+        }
+
+        lastIndex = match.index + token.length;
+        match = tokenPattern.exec(text);
+    }
+
+    if (lastIndex < text.length) {
+        parent.append(document.createTextNode(text.slice(lastIndex)));
+    }
+}
+
+function createFormattedTextContent(text = "") {
+    const wrapper = createElement("div", "lesson-render-text lesson-render-rich-text");
+    const lines = text.split("\n");
+    let activeList = null;
+
+    lines.forEach((rawLine) => {
+        const line = rawLine.trimEnd();
+
+        if (!line.trim()) {
+            activeList = null;
+            return;
+        }
+
+        if (line.startsWith("## ")) {
+            activeList = null;
+            const heading = createElement("h4", "lesson-render-subheading", "");
+            appendInlineFormattedText(heading, line.slice(3).trim());
+            wrapper.append(heading);
+            return;
+        }
+
+        if (line.startsWith("# ")) {
+            activeList = null;
+            const heading = createElement("h4", "lesson-render-subheading", "");
+            appendInlineFormattedText(heading, line.slice(2).trim());
+            wrapper.append(heading);
+            return;
+        }
+
+        if (line.startsWith("- ")) {
+            if (!activeList) {
+                activeList = createElement("ul", "lesson-render-list");
+                wrapper.append(activeList);
+            }
+
+            const item = createElement("li", "", "");
+            appendInlineFormattedText(item, line.slice(2).trim());
+            activeList.append(item);
+            return;
+        }
+
+        activeList = null;
+        const paragraph = createElement("p", "", "");
+        appendInlineFormattedText(paragraph, line.trim());
+        wrapper.append(paragraph);
+    });
+
+    if (!wrapper.children.length) {
+        wrapper.append(createElement("p", "", "No text content has been added yet."));
+    }
+
+    return wrapper;
+}
+
 function getYouTubeEmbedUrl(url) {
     try {
         const parsedUrl = new URL(url);
@@ -343,14 +462,14 @@ function createExternalLink(url, label = "Open resource") {
 
 async function createContentBlock(contentBlock) {
     const article = createElement("article", `lesson-render-block lesson-render-block--${contentBlock.block_type}`);
-    const title = createElement("h3", "", contentBlock.title || "Untitled content");
+    const title = createElement("h3", "", getDefaultContentBlockTitle(contentBlock));
     const label = createElement("span", "badge badge--quiet", `Block ${contentBlock.order_index + 1}`);
     const url = await getDisplayResourceUrl(contentBlock);
 
     article.append(title, label);
 
     if (contentBlock.block_type === "text") {
-        article.append(createElement("p", "lesson-render-text", contentBlock.body_text || ""));
+        article.append(createFormattedTextContent(contentBlock.body_text || ""));
         return article;
     }
 

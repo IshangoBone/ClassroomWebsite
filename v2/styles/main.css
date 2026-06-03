@@ -1494,6 +1494,12 @@ h2 {
     margin: 18px 0;
 }
 
+.text-format-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .section-subheading {
     margin: 4px 0 0;
 }
@@ -1734,15 +1740,18 @@ h2 {
     background: #f7faff;
 }
 
+.content-block-card[draggable="true"],
 .question-card[draggable="true"] {
     cursor: grab;
     transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
+.content-block-card[draggable="true"]:active,
 .question-card[draggable="true"]:active {
     cursor: grabbing;
 }
 
+.content-block-card--dragging,
 .question-card--dragging {
     border-style: dashed;
     opacity: 0.45;
@@ -1764,6 +1773,13 @@ h2 {
     flex-wrap: wrap;
     grid-column: 1 / -1;
     gap: 8px;
+}
+
+.content-block-drag-hint {
+    align-self: center;
+    color: #49617f;
+    font-size: 0.85rem;
+    font-weight: 700;
 }
 
 .content-block-image-preview {
@@ -2000,6 +2016,34 @@ h2 {
     margin: 0;
     color: #49617f;
     white-space: pre-wrap;
+}
+
+.lesson-render-rich-text {
+    display: grid;
+    gap: 10px;
+    white-space: normal;
+}
+
+.lesson-render-rich-text p,
+.lesson-render-list {
+    margin: 0;
+}
+
+.lesson-render-list {
+    display: grid;
+    gap: 6px;
+    padding-left: 22px;
+}
+
+.lesson-render-subheading {
+    margin: 0;
+    color: #16233f;
+    font-size: 1rem;
+}
+
+.lesson-inline-link {
+    color: #365a9b;
+    font-weight: 700;
 }
 
 .lesson-embed-shell {
