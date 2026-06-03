@@ -54,6 +54,7 @@ let loadedCourse = null;
 let currentProfile = null;
 let selectedCourseThumbnailUrl = "";
 const collapsedModuleIds = new Set();
+let hasAppliedInitialModuleCollapse = false;
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -956,6 +957,13 @@ async function loadModules() {
     loadedLessons = lessons;
     loadedContentBlocks = contentBlocks;
     loadedQuestions = questions;
+
+    if (!hasAppliedInitialModuleCollapse) {
+        collapsedModuleIds.clear();
+        modules.forEach((module) => collapsedModuleIds.add(module.id));
+        hasAppliedInitialModuleCollapse = true;
+    }
+
     renderModules(modules, lessons, contentBlocks, questions);
     renderCourseAccess(loadedCourse);
     moduleCount.textContent = String(modules.length);
