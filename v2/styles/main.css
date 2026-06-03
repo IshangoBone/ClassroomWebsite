@@ -1070,6 +1070,20 @@ h2 {
     color: #49617f;
 }
 
+.student-module-progress-badge {
+    min-width: 168px;
+    justify-content: center;
+    border: 1px solid #9cb5df;
+    background: #ffffff;
+    color: #183153;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    padding: 10px 14px;
+    text-align: center;
+    white-space: normal;
+}
+
 .module-card[draggable="true"] {
     cursor: grab;
     transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;

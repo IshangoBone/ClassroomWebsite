@@ -318,9 +318,9 @@ function renderModules(modules, lessons, submissions, enrollment) {
         const description = createElement("p", "course-muted", module.description || "No module description added yet.");
         const label = createElement(
             "span",
-            moduleProgress.isComplete ? "badge" : "badge badge--quiet",
+            moduleProgress.isComplete ? "badge student-module-progress-badge" : "badge badge--quiet student-module-progress-badge",
             moduleProgress.totalLessons
-                ? `Module ${module.order_index + 1} / ${moduleProgress.submittedCount} of ${moduleProgress.totalLessons}`
+                ? `Module ${module.order_index + 1} • ${moduleProgress.submittedCount}/${moduleProgress.totalLessons} complete`
                 : `Module ${module.order_index + 1}`
         );
         const lessonSection = createElement("section", "module-lessons");
