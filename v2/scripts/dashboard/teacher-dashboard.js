@@ -292,6 +292,31 @@ async function handlePublicCourseJoin(courseIdToJoin) {
     });
 }
 
+async function leaveEnrollment(enrollment) {
+    const label = enrollment.enrollment_type === "classroom" ? "classroom" : "course";
+    const confirmed = window.confirm(
+        `Leave this ${label}? It will be removed from your active courses, but your existing work history will be preserved.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus(`Leaving ${label}...`);
+
+    const { error } = await supabase.rpc("leave_student_enrollment", {
+        enrollment_id_input: enrollment.id,
+    });
+
+    if (error) {
+        setStatus(error.message || `You could not leave this ${label}.`, "error");
+        return;
+    }
+
+    await refreshDashboard();
+    setStatus(`You left this ${label}.`, "success");
+}
+
 async function loadTeachingCourses(profileId) {
     const { data: ownedCourses, error: ownedError } = await supabase
         .from("courses")
@@ -761,18 +786,26 @@ function renderStudentEnrollments(enrollments, courses, classrooms, lessons, sub
         const actions = createElement("div", "course-actions");
         const courseParams = new URLSearchParams({ course: enrollment.course_id });
         const openCourseAction = createElement("a", "secondary-button", "Open course");
+        const leaveAction = createElement(
+            "button",
+            "secondary-button destructive-button",
+            enrollment.enrollment_type === "classroom" ? "Leave classroom" : "Unenroll"
+        );
 
         if (enrollment.classroom_id) {
             courseParams.set("classroom", enrollment.classroom_id);
         }
 
         openCourseAction.href = `../courses/student.html?${courseParams.toString()}`;
+        leaveAction.type = "button";
+        leaveAction.addEventListener("click", () => leaveEnrollment(enrollment));
         actions.append(openCourseAction);
         if (continueLesson) {
             const continueAction = createElement("a", "primary-button", continueLesson.label);
             continueAction.href = continueLesson.href;
             actions.append(continueAction);
         }
+        actions.append(leaveAction);
 
         card.append(heading, details, teacher, progress, progressBar);
 
