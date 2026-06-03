@@ -37,6 +37,12 @@ function getDiscoveryErrorMessage(error) {
     return message || "Public courses could not be loaded.";
 }
 
+function getJoinPreviewLabel(preview) {
+    return preview.classroom_name
+        ? `${preview.course_title} / ${preview.classroom_name}`
+        : preview.course_title;
+}
+
 async function loadCurrentProfile() {
     return loadProtectedProfile({ statusElement });
 }
@@ -51,6 +57,73 @@ async function loadPublicCourses() {
     }
 
     return data || [];
+}
+
+async function joinClassroomWithCode(joinCode, form) {
+    const submitButton = form.querySelector("button[type='submit']");
+
+    if (!joinCode) {
+        setStatus("Enter a classroom join code.", "error");
+        return;
+    }
+
+    submitButton.disabled = true;
+    setStatus("Checking class code...");
+
+    const { data: previewData, error: previewError } = await supabase.rpc("preview_classroom_join_by_code", {
+        join_code_input: joinCode,
+    });
+
+    if (previewError) {
+        submitButton.disabled = false;
+        setStatus(previewError.message || "That class code could not be checked.", "error");
+        return;
+    }
+
+    const preview = previewData?.[0];
+
+    if (!preview) {
+        submitButton.disabled = false;
+        setStatus("That class code was not found.", "error");
+        return;
+    }
+
+    if (preview.already_enrolled) {
+        form.reset();
+        submitButton.disabled = false;
+        setStatus(`You are already enrolled in ${getJoinPreviewLabel(preview)}.`, "success");
+        return;
+    }
+
+    if (!preview.is_joining_open) {
+        submitButton.disabled = false;
+        setStatus("Joining is closed for this classroom.", "error");
+        return;
+    }
+
+    const confirmed = window.confirm(`Join ${getJoinPreviewLabel(preview)} with this class code?`);
+
+    if (!confirmed) {
+        submitButton.disabled = false;
+        setStatus("Join canceled.");
+        return;
+    }
+
+    setStatus("Joining classroom...");
+
+    const { error } = await supabase.rpc("join_classroom_by_code", {
+        join_code_input: joinCode,
+    });
+
+    if (error) {
+        submitButton.disabled = false;
+        setStatus(error.message || "That classroom could not be joined.", "error");
+        return;
+    }
+
+    form.reset();
+    await refreshDiscovery();
+    setStatus(`Joined ${getJoinPreviewLabel(preview)}.`, "success");
 }
 
 function createCourseCard(course) {
@@ -73,9 +146,17 @@ function createCourseCard(course) {
     };
     const description = createElement("p", "course-muted", course.description || "No course description has been added yet.");
     const actions = createElement("div", "course-actions");
+    const joinPanel = createElement("div", "catalog-join-panel");
+    const joinPanelHeading = createElement("h4", "", "How are you joining?");
+    const joinPanelCopy = createElement("p", "course-muted", "Use a class code for a teacher classroom, or join independently without a classroom.");
+    const classCodeForm = createElement("form", "catalog-class-code-form");
+    const codeLabel = createElement("label", "form-field");
+    const codeLabelText = createElement("span", "", "Class code");
+    const codeInput = document.createElement("input");
+    const classCodeButton = createElement("button", "secondary-button", "Join with class code");
     const primaryAction = course.already_enrolled
         ? createElement("a", "primary-button", "Open course")
-        : createElement("button", "primary-button", "Join course");
+        : createElement("button", "primary-button", "Join independently");
     const courseId = encodeURIComponent(course.course_id);
 
     badges.append(
@@ -107,8 +188,22 @@ function createCourseCard(course) {
         primaryAction.href = `student.html?course=${courseId}`;
     } else {
         primaryAction.type = "button";
-        primaryAction.textContent = course.has_classroom_access ? "Join independent course" : "Join course";
         primaryAction.addEventListener("click", () => joinCourse(course, primaryAction));
+        codeInput.type = "text";
+        codeInput.name = "join-code";
+        codeInput.autocomplete = "off";
+        codeInput.placeholder = "Example: ABC123";
+        classCodeButton.type = "submit";
+        codeLabel.append(codeLabelText, codeInput);
+        classCodeForm.append(codeLabel, classCodeButton);
+        classCodeForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const formData = new FormData(classCodeForm);
+            const joinCode = String(formData.get("join-code") || "").trim();
+
+            joinClassroomWithCode(joinCode, classCodeForm);
+        });
+        joinPanel.append(joinPanelHeading, joinPanelCopy, classCodeForm);
     }
 
     actions.append(primaryAction);
@@ -116,11 +211,17 @@ function createCourseCard(course) {
     if (course.has_classroom_access && !course.already_enrolled) {
         const accessNote = createElement("p", "course-muted", "You already have classroom access. Join here only if you also want independent course access.");
 
-        card.append(media, heading, details, teacher, description, accessNote, actions);
+        card.append(media, heading, details, teacher, description, accessNote, joinPanel, actions);
         return card;
     }
 
-    card.append(media, heading, details, teacher, description, actions);
+    card.append(media, heading, details, teacher, description);
+
+    if (!course.already_enrolled) {
+        card.append(joinPanel);
+    }
+
+    card.append(actions);
     return card;
 }
 

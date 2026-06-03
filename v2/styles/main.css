@@ -913,6 +913,30 @@ h2 {
     gap: 10px;
 }
 
+.catalog-join-panel {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid #dbe4f1;
+    border-radius: 14px;
+    background: #f7faff;
+}
+
+.catalog-join-panel h4 {
+    margin: 0;
+    color: #183153;
+}
+
+.catalog-class-code-form {
+    align-items: end;
+    display: flex;
+    gap: 10px;
+}
+
+.catalog-class-code-form .form-field {
+    flex: 1;
+}
+
 .submission-list {
     padding: 18px;
     border: 1px solid #dbe4f1;
@@ -2430,6 +2454,10 @@ h2 {
     .dashboard-join-form {
         display: grid;
         min-width: 0;
+    }
+
+    .catalog-class-code-form {
+        display: grid;
     }
 
     .dashboard-join-panel .secondary-button {
