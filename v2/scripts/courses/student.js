@@ -308,13 +308,7 @@ function renderModules(modules, lessons, submissions, enrollment) {
 
     const list = createElement("ol", "module-list");
 
-    const firstIncompleteModuleId = modules.find((module) => {
-        const moduleLessons = lessons.filter((lesson) => lesson.module_id === module.id);
-
-        return moduleLessons.some((lesson) => getLessonStatus(lesson, submissions) !== "submitted");
-    })?.id;
-
-    modules.forEach((module, moduleIndex) => {
+    modules.forEach((module) => {
         const moduleLessons = lessons.filter((lesson) => lesson.module_id === module.id);
         const moduleProgress = getModuleProgress(moduleLessons, submissions);
         const item = document.createElement("details");
@@ -332,7 +326,6 @@ function renderModules(modules, lessons, submissions, enrollment) {
         const lessonSection = createElement("section", "module-lessons");
 
         item.className = "module-card student-module-card";
-        item.open = firstIncompleteModuleId ? module.id === firstIncompleteModuleId : moduleIndex === 0;
         titleGroup.append(title, description);
         summary.append(titleGroup, label);
         lessonSection.append(createElement("h4", "", "Lessons"));

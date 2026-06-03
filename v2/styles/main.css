@@ -549,6 +549,22 @@ h2 {
     height: 14px;
 }
 
+.student-course-layout .lesson-card-header {
+    align-items: center;
+}
+
+.student-course-layout .lesson-header-actions {
+    align-self: center;
+}
+
+.student-course-layout .lesson-action {
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 12px;
+    box-shadow: none;
+    text-decoration: none;
+}
+
 .course-create-panel {
     padding: 22px;
     border: 1px solid #dbe4f1;
