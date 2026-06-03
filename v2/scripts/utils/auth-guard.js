@@ -1,4 +1,5 @@
 import { supabase } from "../../services/supabase/client.js";
+import { renderAppSidebar } from "./app-sidebar.js";
 
 export function isPlatformAdmin(role) {
     return role === "admin" || role === "supreme_admin";
@@ -59,6 +60,8 @@ export async function loadProtectedProfile({
         applyStatus(statusElement, adminMessage);
         return null;
     }
+
+    await renderAppSidebar(profile);
 
     return profile;
 }
