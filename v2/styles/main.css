@@ -914,9 +914,10 @@ h2 {
 }
 
 .course-actions--split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    gap: 14px;
 }
 
 .course-actions-group {
@@ -926,12 +927,20 @@ h2 {
     gap: 10px;
 }
 
+.course-actions-group--main {
+    justify-content: flex-start;
+}
+
 .course-actions-group--danger {
-    margin-left: auto;
+    justify-content: flex-end;
 }
 
 .course-actions--split .primary-button {
-    min-width: 220px;
+    width: auto;
+    min-width: min(280px, 100%);
+    min-height: 46px;
+    padding: 0 22px;
+    border-radius: 14px;
 }
 
 .catalog-join-panel {
@@ -2492,11 +2501,12 @@ h2 {
     .course-actions--split,
     .course-actions-group {
         display: grid;
+        grid-template-columns: 1fr;
         justify-content: stretch;
     }
 
     .course-actions-group--danger {
-        margin-left: 0;
+        justify-content: stretch;
     }
 
     .course-actions--split .primary-button,
