@@ -565,6 +565,18 @@ h2 {
     text-decoration: none;
 }
 
+.student-lesson-number-badge {
+    min-width: 96px;
+    justify-content: center;
+    border: 1px solid #183153;
+    background: #183153;
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    padding: 8px 12px;
+}
+
 .course-create-panel {
     padding: 22px;
     border: 1px solid #dbe4f1;

@@ -348,7 +348,7 @@ function renderModules(modules, lessons, submissions, enrollment) {
 
                 lessonLink.href = getLessonHref(lesson, enrollment);
                 metaRow.append(
-                    createElement("span", "badge badge--quiet", `Lesson ${lesson.order_index + 1}`),
+                    createElement("span", "badge student-lesson-number-badge", `Lesson ${lesson.order_index + 1}`),
                     createElement("span", "badge badge--quiet", lesson.estimated_time || "No time estimate"),
                     createElement("span", status === "submitted" ? "badge" : "badge badge--quiet", formatStatus(status))
                 );
