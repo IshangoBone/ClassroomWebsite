@@ -185,8 +185,8 @@ main {
 }
 
 .app-sidebar-footer {
-    display: grid;
-    gap: 8px;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .app-sidebar-link--quiet {
@@ -202,8 +202,7 @@ main {
 }
 
 .app-shell--collapsed .app-sidebar-brand,
-.app-shell--collapsed .app-sidebar-link,
-.app-shell--collapsed .app-sidebar-toggle {
+.app-shell--collapsed .app-sidebar-link {
     justify-content: center;
 }
 
@@ -213,26 +212,25 @@ main {
     display: none;
 }
 
-.app-shell--collapsed .app-sidebar-toggle {
-    width: 100%;
+.app-sidebar-toggle {
+    justify-content: center;
+    width: 42px;
     min-height: 42px;
-    color: transparent;
-    font-size: 0;
+    padding: 0;
+    border-color: #dbe4f1;
+    background: #ffffff;
 }
 
-.app-shell--collapsed .app-sidebar-toggle::before {
-    content: ">";
-    color: #274a7f;
-    font-size: 1rem;
+.app-sidebar-toggle-icon {
+    width: 10px;
+    height: 10px;
+    border-top: 2px solid currentColor;
+    border-left: 2px solid currentColor;
+    transform: rotate(-45deg);
 }
 
-.app-shell:not(.app-shell--collapsed) .app-sidebar-toggle::before {
-    content: "<";
-    color: #274a7f;
-}
-
-.app-shell:not(.app-shell--collapsed) .app-sidebar-toggle {
-    justify-content: flex-start;
+.app-shell--collapsed .app-sidebar-toggle-icon {
+    transform: rotate(135deg);
 }
 
 .auth-layout {
@@ -2666,14 +2664,8 @@ h2 {
         display: grid;
     }
 
-    .app-shell--collapsed .app-sidebar-brand,
-    .app-shell--collapsed .app-sidebar-toggle {
+    .app-shell--collapsed .app-sidebar-brand {
         justify-content: flex-start;
-    }
-
-    .app-shell--collapsed .app-sidebar-toggle {
-        color: #274a7f;
-        font-size: inherit;
     }
 
     .dashboard-header {

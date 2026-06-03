@@ -157,7 +157,8 @@ function wrapPage(sidebar) {
 function applyCollapsedState(shell, toggle, isCollapsed) {
     shell.classList.toggle("app-shell--collapsed", isCollapsed);
     toggle.setAttribute("aria-expanded", String(!isCollapsed));
-    toggle.textContent = isCollapsed ? "Expand navigation" : "Collapse navigation";
+    toggle.setAttribute("aria-label", isCollapsed ? "Expand navigation" : "Collapse navigation");
+    toggle.title = isCollapsed ? "Expand navigation" : "Collapse navigation";
 }
 
 export async function renderAppSidebar(profile) {
@@ -175,6 +176,7 @@ export async function renderAppSidebar(profile) {
     const title = createElement("strong", "app-sidebar-title", "CodeTheCurrent");
     const role = createElement("span", "app-sidebar-role", getRoleLabel(profile, hasTeachingAccess));
     const toggle = createElement("button", "app-sidebar-toggle");
+    const toggleIcon = createElement("span", "app-sidebar-toggle-icon");
     const shell = wrapPage(sidebar);
 
     if (!shell) {
@@ -185,6 +187,8 @@ export async function renderAppSidebar(profile) {
     mark.href = `${pagesRoot}/dashboard/index.html`;
     toggle.type = "button";
     toggle.setAttribute("aria-controls", "app-sidebar-navigation");
+    toggleIcon.setAttribute("aria-hidden", "true");
+    toggle.append(toggleIcon);
     titleGroup.append(title, role);
     brand.append(mark, titleGroup);
 
