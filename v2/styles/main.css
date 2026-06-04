@@ -2142,7 +2142,19 @@ h2 {
     text-align: center;
 }
 
-.lesson-inline-media-slot > span {
+.lesson-inline-media-prompt {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 10px;
+    padding: 24px;
+    pointer-events: none;
+}
+
+.lesson-inline-media-prompt > span {
     display: block;
     width: 100%;
     color: #667892;
@@ -2157,7 +2169,6 @@ h2 {
 
 .lesson-inline-plus {
     position: relative;
-    z-index: 2;
     display: inline-grid;
     place-items: center;
     width: 44px;
@@ -2171,6 +2182,7 @@ h2 {
     cursor: pointer;
     font: inherit;
     font-size: 1.6rem;
+    pointer-events: auto;
 }
 
 .lesson-inline-media-slot--filled .lesson-inline-plus {

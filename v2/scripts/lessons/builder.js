@@ -682,6 +682,7 @@ function addInlineUrl(slot, type) {
 
 function createInlineMediaSlot(label = "Add media", allowedTypes = ["image", "youtube", "slides", "file"]) {
     const slot = createElement("div", "lesson-inline-media-slot");
+    const prompt = createElement("div", "lesson-inline-media-prompt");
     const plusButton = createElement("button", "lesson-inline-plus", "+");
     const labelElement = createElement("span", "", label);
     const preview = createElement("div", "lesson-inline-media-preview");
@@ -719,7 +720,8 @@ function createInlineMediaSlot(label = "Add media", allowedTypes = ["image", "yo
         menu.hidden = !menu.hidden;
     });
     menu.hidden = true;
-    slot.append(plusButton, labelElement, preview, menu);
+    prompt.append(plusButton, labelElement);
+    slot.append(prompt, preview, menu);
     return slot;
 }
 
