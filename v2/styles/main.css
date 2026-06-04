@@ -1912,7 +1912,7 @@ h2 {
 
 .lesson-page-sheet {
     display: grid;
-    min-height: 680px;
+    min-height: 640px;
     padding: 0;
     border: 0;
     border-radius: 0;
@@ -1923,8 +1923,8 @@ h2 {
 
 .lesson-page-hero {
     display: grid;
-    gap: 18px;
-    padding: 56px 64px 34px;
+    gap: 16px;
+    padding: 42px 52px 30px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);
     background: #26313a;
     color: #ffffff;
@@ -1938,7 +1938,7 @@ h2 {
 .lesson-page-hero h2 {
     margin: 0;
     color: #ffffff;
-    font-size: 3.4rem;
+    font-size: 2.65rem;
     font-weight: 500;
     line-height: 1.12;
 }
@@ -1975,10 +1975,10 @@ h2 {
 
 .lesson-page-body {
     display: grid;
-    gap: 24px;
+    gap: 20px;
     align-content: start;
     min-height: 420px;
-    padding: 36px 64px 72px;
+    padding: 32px 52px 60px;
 }
 
 .lesson-page-question-canvas,
@@ -3130,7 +3130,8 @@ h2 {
 }
 
 .lesson-view-layout {
-    max-width: 1180px;
+    max-width: 1080px;
+    padding-inline: 28px;
 }
 
 .lesson-builder-nav {
@@ -3160,6 +3161,7 @@ h2 {
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
     align-items: start;
+    padding-bottom: 32px;
 }
 
 .lesson-view-content,
@@ -3203,8 +3205,8 @@ h2 {
     gap: 8px 24px;
     align-items: end;
     max-width: none;
-    margin: 28px -64px -72px;
-    padding: 24px 64px 32px;
+    margin: 28px -52px -60px;
+    padding: 24px 52px 32px;
     border: 0;
     border-top: 4px solid #183153;
     border-radius: 0;
@@ -4338,6 +4340,10 @@ h2 {
 
     .lesson-page-hero {
         padding: 28px 24px;
+    }
+
+    .lesson-page-hero h2 {
+        font-size: 2.15rem;
     }
 
     .lesson-page-lesson-meta {
