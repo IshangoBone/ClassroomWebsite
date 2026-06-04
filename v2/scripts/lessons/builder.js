@@ -33,6 +33,7 @@ const resourceLibrarySelect = qs("[data-resource-library-select]");
 const resourceLibraryStatus = qs("[data-resource-library-status]");
 const fileTypeField = qs("[data-file-type-field]");
 const contentBlockList = qs("[data-content-block-list]");
+const contentEditorCard = qs("#lesson-content-editor");
 const contentToolButtons = [...document.querySelectorAll("[data-content-tool]")];
 const contentToolLabel = qs("[data-content-tool-label]");
 const questionForm = qs("[data-question-form]");
@@ -41,8 +42,11 @@ const questionSubmit = qs("[data-question-submit]");
 const cancelQuestionEditButton = qs("[data-cancel-question-edit]");
 const questionList = qs("[data-question-list]");
 const questionPreview = qs("[data-question-preview]");
+const questionEditorCard = qs("#lesson-question-editor");
 const questionToolButtons = [...document.querySelectorAll("[data-question-tool]")];
 const questionToolLabel = qs("[data-question-tool-label]");
+const builderCanvas = qs("[data-builder-canvas]");
+const builderDropZone = qs("[data-builder-drop-zone]");
 const correctAnswerField = qs("[data-correct-answer-field]");
 const responseRulesField = qs("[data-response-rules-field]");
 const questionOptionsField = qs("[data-question-options-field]");
@@ -370,6 +374,63 @@ function focusEditor(editorId) {
     editor.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+function showBuilderEditor(editor) {
+    [contentEditorCard, questionEditorCard].forEach((card) => {
+        if (card) {
+            card.hidden = card !== editor;
+        }
+    });
+
+    if (editor) {
+        editor.hidden = false;
+    }
+}
+
+function hideBuilderEditors({ scrollToCanvas = true } = {}) {
+    [contentEditorCard, questionEditorCard].forEach((card) => {
+        if (card) {
+            card.hidden = true;
+        }
+    });
+    setToolButtonState([...contentToolButtons, ...questionToolButtons], "");
+    if (scrollToCanvas) {
+        builderCanvas?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+}
+
+function openContentTool(blockType = "text") {
+    setContentBlockFormMode(blockType);
+    showBuilderEditor(contentEditorCard);
+    focusEditor("lesson-content-editor");
+    contentTitleInput.focus();
+}
+
+function openQuestionTool(questionType = "short_response") {
+    setQuestionFormMode(questionType);
+    showBuilderEditor(questionEditorCard);
+    focusEditor("lesson-question-editor");
+    questionForm.elements.prompt.focus();
+}
+
+function openBuilderTool(toolType, value) {
+    if (toolType === "content") {
+        openContentTool(value);
+        return;
+    }
+
+    if (toolType === "question") {
+        openQuestionTool(value);
+    }
+}
+
+function getBuilderToolFromTransfer(event) {
+    try {
+        return JSON.parse(event.dataTransfer.getData("application/x-builder-tool") || "{}");
+    } catch {
+        return {};
+    }
+}
+
 function setContentBlockFormMode(blockType) {
     const normalizedBlockType = formatContentBlockType(blockType);
     const isText = normalizedBlockType === "text";
@@ -591,6 +652,7 @@ function editContentBlock(contentBlock) {
     const blockType = getContentBlockFormType(contentBlock);
 
     setContentBlockFormMode(blockType);
+    showBuilderEditor(contentEditorCard);
     contentBlockForm.elements["content-block-id"].value = contentBlock.id;
     contentBlockForm.elements.title.value = contentBlock.title || "";
     contentBlockForm.elements["body-text"].value = contentBlock.body_text || "";
@@ -600,6 +662,7 @@ function editContentBlock(contentBlock) {
     contentBlockFormHeading.textContent = `Edit ${getDefaultContentBlockTitle(contentBlock)}`;
     contentBlockSubmit.textContent = blockType === "text" ? "Save text section" : "Save content block";
     cancelContentBlockEditButton.hidden = false;
+    focusEditor("lesson-content-editor");
     contentBlockForm.elements.title.focus();
 }
 
@@ -995,6 +1058,7 @@ function editQuestion(question) {
     questionForm.elements["question-id"].value = question.id;
     questionForm.elements.phase.value = question.phase || "before";
     setQuestionFormMode(question.question_type || "short_response");
+    showBuilderEditor(questionEditorCard);
     questionForm.elements.prompt.value = question.prompt || "";
     questionForm.elements["student-instructions"].value = question.student_instructions || "";
     questionForm.elements.hint.value = question.hint || "";
@@ -1025,6 +1089,7 @@ function editQuestion(question) {
     questionFormHeading.textContent = "Edit draft question";
     questionSubmit.textContent = "Save draft question";
     cancelQuestionEditButton.hidden = false;
+    focusEditor("lesson-question-editor");
     questionForm.elements.prompt.focus();
 }
 
@@ -1758,6 +1823,7 @@ async function initializePage() {
     lessonDetails.replaceChildren(buildDetailsList(lesson, module, course));
     setContentBlockFormMode(contentBlockTypeSelect.value);
     setQuestionFormMode(questionForm.elements["question-type"].value);
+    hideBuilderEditors({ scrollToCanvas: false });
     showContent();
     await loadLessonResources();
     const [contentLoaded, questionsLoaded] = await Promise.all([loadContentBlocks(), loadQuestions()]);
@@ -1891,6 +1957,7 @@ contentBlockForm.addEventListener("submit", async (event) => {
         resetContentBlockForm();
         await loadLessonResources();
         await loadContentBlocks();
+        hideBuilderEditors();
         setStatus("Lesson content saved.", "success");
         return;
     }
@@ -1953,6 +2020,7 @@ contentBlockForm.addEventListener("submit", async (event) => {
     resetContentBlockForm();
     await loadLessonResources();
     await loadContentBlocks();
+    hideBuilderEditors();
     setStatus("Lesson content created.", "success");
 });
 
@@ -1962,9 +2030,15 @@ contentBlockTypeSelect.addEventListener("change", () => {
 
 contentToolButtons.forEach((button) => {
     button.addEventListener("click", () => {
-        setContentBlockFormMode(button.dataset.contentTool || "text");
-        focusEditor("lesson-content-editor");
-        contentTitleInput.focus();
+        openContentTool(button.dataset.contentTool || "text");
+    });
+    button.draggable = true;
+    button.addEventListener("dragstart", (event) => {
+        event.dataTransfer.effectAllowed = "copy";
+        event.dataTransfer.setData("application/x-builder-tool", JSON.stringify({
+            toolType: "content",
+            value: button.dataset.contentTool || "text",
+        }));
     });
 });
 
@@ -2001,7 +2075,10 @@ resourceLibrarySelect.addEventListener("change", () => {
     }
 });
 
-cancelContentBlockEditButton.addEventListener("click", resetContentBlockForm);
+cancelContentBlockEditButton.addEventListener("click", () => {
+    resetContentBlockForm();
+    hideBuilderEditors();
+});
 
 questionForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -2106,6 +2183,7 @@ questionForm.addEventListener("submit", async (event) => {
 
         resetQuestionForm();
         await loadQuestions();
+        hideBuilderEditors();
         setStatus("Draft question saved.", "success");
         return;
     }
@@ -2148,6 +2226,7 @@ questionForm.addEventListener("submit", async (event) => {
 
     resetQuestionForm();
     await loadQuestions();
+    hideBuilderEditors();
     setStatus("Draft question created.", "success");
 });
 
@@ -2171,13 +2250,40 @@ questionForm.elements["question-type"].addEventListener("change", (event) => {
 
 questionToolButtons.forEach((button) => {
     button.addEventListener("click", () => {
-        setQuestionFormMode(button.dataset.questionTool || "short_response");
-        focusEditor("lesson-question-editor");
-        questionForm.elements.prompt.focus();
+        openQuestionTool(button.dataset.questionTool || "short_response");
+    });
+    button.draggable = true;
+    button.addEventListener("dragstart", (event) => {
+        event.dataTransfer.effectAllowed = "copy";
+        event.dataTransfer.setData("application/x-builder-tool", JSON.stringify({
+            toolType: "question",
+            value: button.dataset.questionTool || "short_response",
+        }));
     });
 });
 
 questionForm.elements["is-required"].addEventListener("change", updateNewQuestionPointDefault);
-cancelQuestionEditButton.addEventListener("click", resetQuestionForm);
+cancelQuestionEditButton.addEventListener("click", () => {
+    resetQuestionForm();
+    hideBuilderEditors();
+});
+
+builderDropZone?.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    builderDropZone.classList.add("lesson-canvas-drop-zone--active");
+});
+
+builderDropZone?.addEventListener("dragleave", () => {
+    builderDropZone.classList.remove("lesson-canvas-drop-zone--active");
+});
+
+builderDropZone?.addEventListener("drop", (event) => {
+    event.preventDefault();
+    builderDropZone.classList.remove("lesson-canvas-drop-zone--active");
+
+    const tool = getBuilderToolFromTransfer(event);
+    openBuilderTool(tool.toolType, tool.value);
+});
 
 await initializePage();

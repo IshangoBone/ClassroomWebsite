@@ -55,7 +55,48 @@
 
             <div class="lesson-builder-workspace">
                 <div class="lesson-builder-main">
-                    <article class="lesson-builder-editor-card" id="lesson-content-editor">
+                    <section class="lesson-canvas" data-builder-canvas aria-labelledby="lesson-canvas-heading">
+                        <div class="lesson-canvas-header">
+                            <div>
+                                <p class="eyebrow">Lesson canvas</p>
+                                <h3 id="lesson-canvas-heading">Build the student lesson flow</h3>
+                                <p class="section-copy">Drag a tool here or choose one from the right to create a distinct lesson block.</p>
+                            </div>
+                            <span class="badge badge--quiet">Student view draft</span>
+                        </div>
+
+                        <div class="lesson-canvas-drop-zone" data-builder-drop-zone>
+                            <strong>Drop a content or assessment tool here</strong>
+                            <span>The editor opens below this canvas so you can fill out the selected block.</span>
+                        </div>
+
+                        <div class="lesson-canvas-surface">
+                            <section class="lesson-canvas-column lesson-canvas-column--content" aria-labelledby="canvas-content-heading">
+                                <div class="lesson-canvas-column-header">
+                                    <h4 id="canvas-content-heading">Student content</h4>
+                                    <span class="badge badge--quiet">Blocks</span>
+                                </div>
+                                <div data-content-block-list>
+                                    <p class="empty-state">Loading lesson content...</p>
+                                </div>
+                            </section>
+
+                            <section class="lesson-canvas-column lesson-canvas-column--flow" aria-labelledby="canvas-flow-heading">
+                                <div class="lesson-canvas-column-header">
+                                    <h4 id="canvas-flow-heading">Lesson flow</h4>
+                                    <span class="badge badge--quiet">Questions</span>
+                                </div>
+                                <div class="lesson-content" data-question-preview>
+                                    <div class="lesson-content-header">
+                                        <h6>Student preview</h6>
+                                    </div>
+                                    <p class="empty-state empty-state--compact">Draft question preview will appear after questions load.</p>
+                                </div>
+                            </section>
+                        </div>
+                    </section>
+
+                    <article class="lesson-builder-editor-card" id="lesson-content-editor" hidden>
                         <div class="lesson-builder-editor-header">
                             <div>
                                 <p class="eyebrow">Content</p>
@@ -135,11 +176,7 @@
                         </form>
                     </article>
 
-                    <div data-content-block-list>
-                        <p class="empty-state">Loading lesson content...</p>
-                    </div>
-
-                    <article class="lesson-builder-editor-card" id="lesson-question-editor">
+                    <article class="lesson-builder-editor-card" id="lesson-question-editor" hidden>
                         <div class="lesson-builder-editor-header">
                             <div>
                                 <p class="eyebrow">Assessment</p>
@@ -262,16 +299,19 @@
                         </form>
                     </article>
 
-                    <div data-question-list>
-                        <p class="empty-state">Loading draft questions...</p>
-                    </div>
-
-                    <div class="lesson-content" data-question-preview>
-                        <div class="lesson-content-header">
-                            <h6>Student preview</h6>
+                    <section class="lesson-builder-draft-list" aria-labelledby="draft-questions-heading">
+                        <div class="lesson-canvas-column-header">
+                            <div>
+                                <p class="eyebrow">Assessment settings</p>
+                                <h3 id="draft-questions-heading">Draft question controls</h3>
+                            </div>
+                            <span class="badge badge--quiet">Teacher only</span>
                         </div>
-                        <p class="empty-state empty-state--compact">Draft question preview will appear after questions load.</p>
-                    </div>
+                        <p class="section-copy">Edit visibility, order, points, and answer keys before questions appear to students.</p>
+                        <div data-question-list>
+                        <p class="empty-state">Loading draft questions...</p>
+                        </div>
+                    </section>
                 </div>
 
                 <aside class="lesson-builder-toolbox" aria-label="Lesson builder tools">
