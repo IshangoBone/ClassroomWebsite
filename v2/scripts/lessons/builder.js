@@ -34,6 +34,7 @@ const resourceLibraryStatus = qs("[data-resource-library-status]");
 const fileTypeField = qs("[data-file-type-field]");
 const contentBlockList = qs("[data-content-block-list]");
 const contentEditorCard = qs("#lesson-content-editor");
+const closeContentEditorButton = qs("[data-close-content-editor]");
 const contentToolButtons = [...document.querySelectorAll("[data-content-tool]")];
 const contentToolLabel = qs("[data-content-tool-label]");
 const questionForm = qs("[data-question-form]");
@@ -43,10 +44,14 @@ const cancelQuestionEditButton = qs("[data-cancel-question-edit]");
 const questionList = qs("[data-question-list]");
 const questionPreview = qs("[data-question-preview]");
 const questionEditorCard = qs("#lesson-question-editor");
+const closeQuestionEditorButton = qs("[data-close-question-editor]");
 const questionToolButtons = [...document.querySelectorAll("[data-question-tool]")];
 const questionToolLabel = qs("[data-question-tool-label]");
 const builderCanvas = qs("[data-builder-canvas]");
 const builderDropZone = qs("[data-builder-drop-zone]");
+const canvasContextElement = qs("[data-canvas-context]");
+const canvasTitleElement = qs("[data-canvas-title]");
+const canvasObjectiveElement = qs("[data-canvas-objective]");
 const correctAnswerField = qs("[data-correct-answer-field]");
 const responseRulesField = qs("[data-response-rules-field]");
 const questionOptionsField = qs("[data-question-options-field]");
@@ -1814,6 +1819,15 @@ async function initializePage() {
 
     headingElement.textContent = lesson.title || "Untitled lesson";
     contextElement.textContent = `${course.title || "Untitled course"} / ${module.title || "Untitled module"}`;
+    if (canvasContextElement) {
+        canvasContextElement.textContent = `${course.title || "Untitled course"} / ${module.title || "Untitled module"}`;
+    }
+    if (canvasTitleElement) {
+        canvasTitleElement.textContent = lesson.title || "Untitled lesson";
+    }
+    if (canvasObjectiveElement) {
+        canvasObjectiveElement.textContent = lesson.objective || lesson.summary || "Add an objective or overview so students know what this lesson is about.";
+    }
     courseEditorLink.href = `../courses/editor.html?course=${encodeURIComponent(course.id)}`;
     courseEditorLink.textContent = "Back to course editor";
     studentViewLink.href = `view.html?lesson=${encodeURIComponent(lesson.id)}`;
@@ -2271,19 +2285,29 @@ cancelQuestionEditButton.addEventListener("click", () => {
 builderDropZone?.addEventListener("dragover", (event) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "copy";
-    builderDropZone.classList.add("lesson-canvas-drop-zone--active");
+    builderDropZone.classList.add("lesson-page-insert-zone--active");
 });
 
 builderDropZone?.addEventListener("dragleave", () => {
-    builderDropZone.classList.remove("lesson-canvas-drop-zone--active");
+    builderDropZone.classList.remove("lesson-page-insert-zone--active");
 });
 
 builderDropZone?.addEventListener("drop", (event) => {
     event.preventDefault();
-    builderDropZone.classList.remove("lesson-canvas-drop-zone--active");
+    builderDropZone.classList.remove("lesson-page-insert-zone--active");
 
     const tool = getBuilderToolFromTransfer(event);
     openBuilderTool(tool.toolType, tool.value);
+});
+
+closeContentEditorButton?.addEventListener("click", () => {
+    resetContentBlockForm();
+    hideBuilderEditors();
+});
+
+closeQuestionEditorButton?.addEventListener("click", () => {
+    resetQuestionForm();
+    hideBuilderEditors();
 });
 
 await initializePage();

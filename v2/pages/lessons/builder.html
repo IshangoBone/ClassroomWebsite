@@ -50,50 +50,55 @@
         <section class="management-section management-section--pending" data-lesson-content hidden>
             <div class="section-header">
                 <h2>Authoring workspace</h2>
-                <p class="section-copy">Choose a tool, then build the selected content or assessment in the main editor.</p>
+                <p class="section-copy">Use the insert panel to add content and checkpoints to the lesson page.</p>
             </div>
 
             <div class="lesson-builder-workspace">
                 <div class="lesson-builder-main">
-                    <section class="lesson-canvas" data-builder-canvas aria-labelledby="lesson-canvas-heading">
-                        <div class="lesson-canvas-header">
+                    <section class="lesson-page-canvas" data-builder-canvas aria-labelledby="lesson-canvas-heading">
+                        <div class="lesson-page-toolbar">
                             <div>
-                                <p class="eyebrow">Lesson canvas</p>
-                                <h3 id="lesson-canvas-heading">Build the student lesson flow</h3>
-                                <p class="section-copy">Drag a tool here or choose one from the right to create a distinct lesson block.</p>
+                                <p class="eyebrow">Lesson page</p>
+                                <h3 id="lesson-canvas-heading">Student view draft</h3>
                             </div>
-                            <span class="badge badge--quiet">Student view draft</span>
+                            <span class="badge badge--quiet">Canvas</span>
                         </div>
 
-                        <div class="lesson-canvas-drop-zone" data-builder-drop-zone>
-                            <strong>Drop a content or assessment tool here</strong>
-                            <span>The editor opens below this canvas so you can fill out the selected block.</span>
-                        </div>
+                        <article class="lesson-page-sheet">
+                            <header class="lesson-page-hero">
+                                <p class="eyebrow" data-canvas-context>Course / module</p>
+                                <h2 data-canvas-title>Lesson title</h2>
+                                <p data-canvas-objective>Lesson objective will appear here.</p>
+                            </header>
 
-                        <div class="lesson-canvas-surface">
-                            <section class="lesson-canvas-column lesson-canvas-column--content" aria-labelledby="canvas-content-heading">
-                                <div class="lesson-canvas-column-header">
-                                    <h4 id="canvas-content-heading">Student content</h4>
-                                    <span class="badge badge--quiet">Blocks</span>
+                            <div class="lesson-page-insert-zone" data-builder-drop-zone>
+                                <span class="lesson-page-plus" aria-hidden="true">+</span>
+                                <div>
+                                    <strong>Add a section</strong>
+                                    <span>Drop a tool here or choose one from the insert panel.</span>
+                                </div>
+                            </div>
+
+                            <section class="lesson-page-section" aria-labelledby="canvas-content-heading">
+                                <div class="lesson-page-section-header">
+                                    <h4 id="canvas-content-heading">Lesson content</h4>
+                                    <span class="badge badge--quiet">Student page</span>
                                 </div>
                                 <div data-content-block-list>
                                     <p class="empty-state">Loading lesson content...</p>
                                 </div>
                             </section>
 
-                            <section class="lesson-canvas-column lesson-canvas-column--flow" aria-labelledby="canvas-flow-heading">
-                                <div class="lesson-canvas-column-header">
-                                    <h4 id="canvas-flow-heading">Lesson flow</h4>
-                                    <span class="badge badge--quiet">Questions</span>
+                            <section class="lesson-page-section lesson-page-section--checkpoints" aria-labelledby="canvas-flow-heading">
+                                <div class="lesson-page-section-header">
+                                    <h4 id="canvas-flow-heading">Checkpoints</h4>
+                                    <span class="badge badge--quiet">Student responses</span>
                                 </div>
                                 <div class="lesson-content" data-question-preview>
-                                    <div class="lesson-content-header">
-                                        <h6>Student preview</h6>
-                                    </div>
                                     <p class="empty-state empty-state--compact">Draft question preview will appear after questions load.</p>
                                 </div>
                             </section>
-                        </div>
+                        </article>
                     </section>
 
                     <article class="lesson-builder-editor-card" id="lesson-content-editor" hidden>
@@ -102,7 +107,10 @@
                                 <p class="eyebrow">Content</p>
                                 <h3 data-content-block-form-heading>Add lesson content</h3>
                             </div>
-                            <span class="badge badge--quiet" data-content-tool-label>Text section</span>
+                            <div class="lesson-builder-editor-actions">
+                                <span class="badge badge--quiet" data-content-tool-label>Text section</span>
+                                <button type="button" class="secondary-button lesson-editor-close" data-close-content-editor>Close</button>
+                            </div>
                         </div>
 
                         <form class="management-create-form management-create-form--embedded" data-content-block-form>
@@ -182,7 +190,10 @@
                                 <p class="eyebrow">Assessment</p>
                                 <h3 data-question-form-heading>Add draft question</h3>
                             </div>
-                            <span class="badge badge--quiet" data-question-tool-label>Short response</span>
+                            <div class="lesson-builder-editor-actions">
+                                <span class="badge badge--quiet" data-question-tool-label>Short response</span>
+                                <button type="button" class="secondary-button lesson-editor-close" data-close-question-editor>Close</button>
+                            </div>
                         </div>
 
                         <form class="management-create-form management-create-form--embedded" data-question-form>
@@ -299,19 +310,19 @@
                         </form>
                     </article>
 
-                    <section class="lesson-builder-draft-list" aria-labelledby="draft-questions-heading">
-                        <div class="lesson-canvas-column-header">
+                    <details class="lesson-builder-draft-list">
+                        <summary>
                             <div>
-                                <p class="eyebrow">Assessment settings</p>
-                                <h3 id="draft-questions-heading">Draft question controls</h3>
+                                <p class="eyebrow">Teacher only</p>
+                                <strong>Draft question controls</strong>
                             </div>
-                            <span class="badge badge--quiet">Teacher only</span>
-                        </div>
+                            <span class="badge badge--quiet">Settings</span>
+                        </summary>
                         <p class="section-copy">Edit visibility, order, points, and answer keys before questions appear to students.</p>
                         <div data-question-list>
-                        <p class="empty-state">Loading draft questions...</p>
+                            <p class="empty-state">Loading draft questions...</p>
                         </div>
-                    </section>
+                    </details>
                 </div>
 
                 <aside class="lesson-builder-toolbox" aria-label="Lesson builder tools">
@@ -395,7 +406,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/lessons/builder.js?v=20260604-builder-toolbox"></script>
+    <script type="module" src="../../scripts/lessons/builder.js?v=20260604-sites-canvas"></script>
 </body>
 
 </html>
