@@ -52,6 +52,8 @@ const builderDropZone = qs("[data-builder-drop-zone]");
 const canvasContextElement = qs("[data-canvas-context]");
 const canvasTitleElement = qs("[data-canvas-title]");
 const canvasObjectiveElement = qs("[data-canvas-objective]");
+const canvasOverviewElement = qs("[data-canvas-overview]");
+const canvasDurationElement = qs("[data-canvas-duration]");
 const correctAnswerField = qs("[data-correct-answer-field]");
 const responseRulesField = qs("[data-response-rules-field]");
 const questionOptionsField = qs("[data-question-options-field]");
@@ -1259,7 +1261,7 @@ async function toggleQuestionVisibility(question) {
 function renderContentBlocks(contentBlocks) {
     if (!contentBlocks.length) {
         contentBlockList.replaceChildren(
-            createElement("p", "empty-state", "No written content has been added yet.")
+            createElement("p", "empty-state lesson-page-empty", "Start with a content block or insert item from the panel.")
         );
         return;
     }
@@ -1826,7 +1828,13 @@ async function initializePage() {
         canvasTitleElement.textContent = lesson.title || "Untitled lesson";
     }
     if (canvasObjectiveElement) {
-        canvasObjectiveElement.textContent = lesson.objective || lesson.summary || "Add an objective or overview so students know what this lesson is about.";
+        canvasObjectiveElement.textContent = lesson.objective || "Add an objective so students know what they are working toward.";
+    }
+    if (canvasOverviewElement) {
+        canvasOverviewElement.textContent = lesson.summary || "Add a short overview for this lesson.";
+    }
+    if (canvasDurationElement) {
+        canvasDurationElement.textContent = lesson.estimated_time || "Not set";
     }
     courseEditorLink.href = `../courses/editor.html?course=${encodeURIComponent(course.id)}`;
     courseEditorLink.textContent = "Back to course editor";
