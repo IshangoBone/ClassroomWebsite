@@ -2048,11 +2048,18 @@ h2 {
 
 .lesson-inline-block {
     position: relative;
+    z-index: 0;
+    isolation: isolate;
     display: grid;
     gap: 14px;
     padding: 26px 0;
     border-top: 1px dashed #d8dee8;
     background: #ffffff;
+}
+
+.lesson-inline-block:hover,
+.lesson-inline-block:focus-within {
+    z-index: 5;
 }
 
 .lesson-inline-block:first-child {
@@ -2061,23 +2068,26 @@ h2 {
 
 .lesson-inline-toolbar {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    z-index: 20;
+    top: 12px;
+    right: 12px;
     display: flex;
     gap: 8px;
     align-items: center;
-    padding: 6px;
+    padding: 7px;
     border: 1px solid #d8dee8;
     border-radius: 4px;
     background: #ffffff;
-    box-shadow: 0 8px 22px rgba(24, 49, 83, 0.12);
+    box-shadow: 0 14px 34px rgba(24, 49, 83, 0.18);
     opacity: 0;
-    transition: opacity 0.15s ease;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 .lesson-inline-block:hover .lesson-inline-toolbar,
 .lesson-inline-block:focus-within .lesson-inline-toolbar {
     opacity: 1;
+    pointer-events: auto;
 }
 
 .lesson-inline-toolbar span {
@@ -2088,8 +2098,10 @@ h2 {
 }
 
 .lesson-inline-remove {
-    border: 0;
-    background: transparent;
+    padding: 8px 10px;
+    border: 1px solid #efc3c0;
+    border-radius: 4px;
+    background: #fff7f6;
     color: #9d3528;
     cursor: pointer;
     font: inherit;
@@ -2119,12 +2131,23 @@ h2 {
     position: relative;
     display: grid;
     place-items: center;
+    align-content: center;
+    justify-items: center;
+    gap: 10px;
     min-height: 150px;
     overflow: hidden;
     border: 1px dashed #cfd8e6;
     background: #fafbfc;
     color: #667892;
     text-align: center;
+}
+
+.lesson-inline-media-slot > span {
+    display: block;
+    width: 100%;
+    color: #667892;
+    font-weight: 800;
+    line-height: 1.35;
 }
 
 .lesson-inline-media-slot--filled {
@@ -2139,7 +2162,7 @@ h2 {
     place-items: center;
     width: 44px;
     height: 44px;
-    margin-bottom: 8px;
+    margin: 0 auto;
     border: 0;
     border-radius: 999px;
     background: #ffffff;
