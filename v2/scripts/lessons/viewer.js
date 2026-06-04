@@ -14,6 +14,11 @@ const contextElement = qs("[data-lesson-context]");
 const statusElement = qs("[data-lesson-status]");
 const shellElement = qs("[data-lesson-shell]");
 const objectiveElement = qs("[data-lesson-objective]");
+const canvasContextElement = qs("[data-canvas-context]");
+const canvasTitleElement = qs("[data-canvas-title]");
+const canvasObjectiveElement = qs("[data-canvas-objective]");
+const canvasOverviewElement = qs("[data-canvas-overview]");
+const canvasDurationElement = qs("[data-canvas-duration]");
 const contentRenderer = qs("[data-content-renderer]");
 const questionFlow = qs("[data-question-flow]");
 const submitPanel = qs("[data-submit-panel]");
@@ -83,6 +88,21 @@ function setLockedLessonStatus(courseId, message) {
     headingElement.textContent = "Lesson locked";
     contextElement.textContent = "This lesson is not available yet.";
     statusElement.replaceChildren(message, " ", courseLink, " ", dashboardLink);
+    statusElement.dataset.tone = "error";
+}
+
+function setHiddenLessonStatus(courseId) {
+    const courseHref = courseId
+        ? `../courses/student.html?course=${encodeURIComponent(courseId)}${classroomId ? `&classroom=${encodeURIComponent(classroomId)}` : ""}`
+        : "../dashboard/index.html";
+    const courseLink = createElement("a", "status-link", "Open course");
+    const dashboardLink = createElement("a", "status-link", "Back to dashboard");
+
+    courseLink.href = courseHref;
+    dashboardLink.href = "../dashboard/index.html";
+    headingElement.textContent = "Lesson hidden";
+    contextElement.textContent = "This lesson is not visible to students yet.";
+    statusElement.replaceChildren("Your teacher has not made this lesson visible yet.", " ", courseLink, " ", dashboardLink);
     statusElement.dataset.tone = "error";
 }
 
@@ -503,7 +523,17 @@ function getSlidesEmbedUrl(url) {
         const parsedUrl = new URL(url);
 
         if (parsedUrl.hostname.includes("docs.google.com") && parsedUrl.pathname.includes("/presentation/")) {
-            return url.includes("/embed") ? url : url.replace(/\/edit.*$/, "/embed");
+            if (parsedUrl.pathname.includes("/embed")) {
+                return url;
+            }
+
+            const parts = parsedUrl.pathname.split("/").filter(Boolean);
+            const deckIndex = parts.indexOf("d");
+            const deckId = deckIndex >= 0 ? parts[deckIndex + 1] : "";
+
+            return deckId
+                ? `https://docs.google.com/presentation/d/${deckId}/embed?start=false&loop=false&delayms=3000`
+                : "";
         }
     } catch {
         return "";
@@ -848,7 +878,7 @@ async function loadLessonContext() {
 
     const { data: lesson, error: lessonError } = await supabase
         .from("lessons")
-        .select("id, module_id, title, objective, summary, estimated_time, order_index, is_locked")
+        .select("id, module_id, title, objective, summary, estimated_time, order_index, is_locked, is_visible")
         .eq("id", lessonId)
         .is("archived_at", null)
         .single();
@@ -1361,6 +1391,9 @@ async function initializePage() {
         updateTeacherPreviewBackLink(course.id);
     } else if (!(await canAccessLessonContext(context))) {
         return;
+    } else if (!lesson.is_visible) {
+        setHiddenLessonStatus(course.id);
+        return;
     } else if (!(await loadStudentLessonAvailability(context))) {
         return;
     }
@@ -1369,6 +1402,21 @@ async function initializePage() {
         ? `Teacher preview / ${course.title || "Untitled course"} / ${module.title || "Untitled module"}`
         : `${course.title || "Untitled course"} / ${module.title || "Untitled module"}`;
     objectiveElement.textContent = lesson.objective || lesson.summary || "No objective has been added for this lesson yet.";
+    if (canvasContextElement) {
+        canvasContextElement.textContent = contextElement.textContent;
+    }
+    if (canvasTitleElement) {
+        canvasTitleElement.textContent = lesson.title || "Untitled lesson";
+    }
+    if (canvasObjectiveElement) {
+        canvasObjectiveElement.textContent = lesson.objective || "No objective has been added for this lesson yet.";
+    }
+    if (canvasOverviewElement) {
+        canvasOverviewElement.textContent = lesson.summary || "No overview has been added for this lesson yet.";
+    }
+    if (canvasDurationElement) {
+        canvasDurationElement.textContent = lesson.estimated_time || "Not set";
+    }
     shellElement.hidden = false;
     submitPanel.hidden = false;
 

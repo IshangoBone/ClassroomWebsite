@@ -19,15 +19,33 @@
         </header>
 
         <div class="lesson-view-shell" data-lesson-shell hidden>
-            <section class="lesson-view-content" aria-labelledby="lesson-content-heading">
-                <div class="lesson-view-panel-heading">
-                    <h2 id="lesson-content-heading">Lesson content</h2>
-                    <p class="section-copy">Work through each block in order.</p>
-                </div>
+            <section class="lesson-page-canvas lesson-view-page" aria-labelledby="lesson-content-heading">
+                <article class="lesson-page-sheet">
+                    <header class="lesson-page-hero">
+                        <p class="eyebrow" data-canvas-context>Course / module</p>
+                        <h2 id="lesson-content-heading" data-canvas-title>Lesson title</h2>
+                        <div class="lesson-page-lesson-meta">
+                            <article>
+                                <span>Objective</span>
+                                <p data-canvas-objective>Lesson objective will appear here.</p>
+                            </article>
+                            <article>
+                                <span>Overview</span>
+                                <p data-canvas-overview>Lesson overview will appear here.</p>
+                            </article>
+                            <article>
+                                <span>Duration</span>
+                                <p data-canvas-duration>Not set</p>
+                            </article>
+                        </div>
+                    </header>
 
-                <div class="lesson-renderer" data-content-renderer>
-                    <p class="empty-state">Loading lesson content...</p>
-                </div>
+                    <div class="lesson-page-body">
+                        <div class="lesson-renderer" data-content-renderer>
+                            <p class="empty-state">Loading lesson content...</p>
+                        </div>
+                    </div>
+                </article>
             </section>
 
             <aside class="lesson-view-sidebar" aria-labelledby="lesson-flow-heading">
@@ -71,7 +89,7 @@
         </div>
     </main>
 
-    <script type="module" src="../../scripts/lessons/viewer.js?v=20260604-lesson-locking"></script>
+    <script type="module" src="../../scripts/lessons/viewer.js?v=20260604-lesson-page-visible"></script>
 </body>
 
 </html>

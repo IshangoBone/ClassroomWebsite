@@ -49,7 +49,6 @@ const closeQuestionEditorButton = qs("[data-close-question-editor]");
 const questionToolButtons = [...document.querySelectorAll("[data-question-tool]")];
 const questionToolLabel = qs("[data-question-tool-label]");
 const builderCanvas = qs("[data-builder-canvas]");
-const builderDropZone = qs("[data-builder-drop-zone]");
 const canvasContextElement = qs("[data-canvas-context]");
 const canvasTitleElement = qs("[data-canvas-title]");
 const canvasObjectiveElement = qs("[data-canvas-objective]");
@@ -66,6 +65,7 @@ let loadedQuestions = [];
 let loadedLessonResources = [];
 let currentProfile = null;
 let currentLessonContext = null;
+let lessonIsVisible = false;
 const lessonResourceBucket = "lesson-resources";
 const maxLessonResourceSize = 50 * 1024 * 1024;
 const lessonResourceMimeTypes = new Set([
@@ -461,6 +461,30 @@ function getYouTubeEmbedUrl(value = "") {
     }
 }
 
+function getSlidesEmbedUrl(value = "") {
+    try {
+        const url = new URL(value.trim());
+
+        if (url.hostname.includes("docs.google.com") && url.pathname.includes("/presentation/")) {
+            if (url.pathname.includes("/embed")) {
+                return value.trim();
+            }
+
+            const parts = url.pathname.split("/").filter(Boolean);
+            const deckIndex = parts.indexOf("d");
+            const deckId = deckIndex >= 0 ? parts[deckIndex + 1] : "";
+
+            return deckId
+                ? `https://docs.google.com/presentation/d/${deckId}/embed?start=false&loop=false&delayms=3000`
+                : "";
+        }
+
+        return "";
+    } catch {
+        return "";
+    }
+}
+
 function setInlineSlotContent(slot, content) {
     const plusButton = slot.querySelector(".lesson-inline-plus");
     const labelElement = slot.querySelector("[data-inline-slot-label]");
@@ -480,12 +504,19 @@ function chooseInlineFile(slot, type) {
         ? "image/png,image/jpeg,image/webp"
         : type === "pdf"
             ? "application/pdf"
-            : "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            : "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
-    input.addEventListener("change", () => {
+    input.addEventListener("change", async () => {
         const file = input.files?.[0];
 
         if (!file) {
+            return;
+        }
+
+        const validationError = validateLessonResource(file, type === "image" ? "image" : "file");
+
+        if (validationError) {
+            setStatus(validationError, "error");
             return;
         }
 
@@ -496,7 +527,20 @@ function chooseInlineFile(slot, type) {
             image.src = objectUrl;
             image.alt = file.name;
             setInlineSlotContent(slot, image);
-            setStatus("Image added to the draft canvas.", "success");
+            setStatus("Uploading image...");
+            try {
+                const fileRecord = await uploadLessonResource(file, file.name);
+                await createSavedContentBlock({
+                    blockType: "file",
+                    title: file.name,
+                    fileUrl: fileRecord.storage_path,
+                    fileType: "image",
+                    fileRecord,
+                });
+                setStatus("Image added to the lesson.", "success");
+            } catch (error) {
+                setStatus(`Image could not be saved: ${error.message}`, "error");
+            }
             return;
         }
 
@@ -505,7 +549,20 @@ function chooseInlineFile(slot, type) {
         link.target = "_blank";
         link.rel = "noopener noreferrer";
         setInlineSlotContent(slot, link);
-        setStatus("Upload added to the draft canvas.", "success");
+        setStatus("Uploading file...");
+        try {
+            const fileRecord = await uploadLessonResource(file, file.name);
+            await createSavedContentBlock({
+                blockType: "file",
+                title: file.name,
+                fileUrl: fileRecord.storage_path,
+                fileType: getFileTypeForInlineUpload(file, type),
+                fileRecord,
+            });
+            setStatus("Upload added to the lesson.", "success");
+        } catch (error) {
+            setStatus(`Upload could not be saved: ${error.message}`, "error");
+        }
     });
 
     input.click();
@@ -538,7 +595,13 @@ function addInlineUrl(slot, type) {
         frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
         frame.allowFullscreen = true;
         setInlineSlotContent(slot, frame);
-        setStatus("YouTube video embedded in the draft canvas.", "success");
+        createSavedContentBlock({
+            blockType: "youtube",
+            title: "YouTube video",
+            externalUrl: value,
+        })
+            .then(() => setStatus("YouTube video embedded in the lesson.", "success"))
+            .catch((error) => setStatus(`YouTube video could not be saved: ${error.message}`, "error"));
         return;
     }
 
@@ -547,16 +610,52 @@ function addInlineUrl(slot, type) {
         image.src = value;
         image.alt = "Lesson image";
         setInlineSlotContent(slot, image);
-        setStatus("Image added to the draft canvas.", "success");
+        createSavedContentBlock({
+            blockType: "file",
+            title: "Image",
+            fileUrl: value,
+            fileType: "image",
+        })
+            .then(() => setStatus("Image added to the lesson.", "success"))
+            .catch((error) => setStatus(`Image could not be saved: ${error.message}`, "error"));
         return;
     }
 
-    const link = createElement("a", "lesson-inline-file-preview", type === "slides" ? "Open slides" : value);
+    if (type === "slides") {
+        const embedUrl = getSlidesEmbedUrl(value);
+
+        if (!embedUrl) {
+            setStatus("Paste a Google Slides presentation link so it can be embedded.", "error");
+            return;
+        }
+
+        const frame = createElement("iframe", "lesson-inline-video-preview");
+        frame.src = embedUrl;
+        frame.title = "Slides";
+        frame.allowFullscreen = true;
+        setInlineSlotContent(slot, frame);
+        createSavedContentBlock({
+            blockType: "slides",
+            title: "Slides",
+            externalUrl: value,
+        })
+            .then(() => setStatus("Slides embedded in the lesson.", "success"))
+            .catch((error) => setStatus(`Slides could not be saved: ${error.message}`, "error"));
+        return;
+    }
+
+    const link = createElement("a", "lesson-inline-file-preview", value);
     link.href = value;
     link.target = "_blank";
     link.rel = "noopener noreferrer";
     setInlineSlotContent(slot, link);
-    setStatus(`${type === "slides" ? "Slides" : "Link"} added to the draft canvas.`, "success");
+    createSavedContentBlock({
+        blockType: "link",
+        title: "Link",
+        externalUrl: value,
+    })
+        .then(() => setStatus("Link added to the lesson.", "success"))
+        .catch((error) => setStatus(`Link could not be saved: ${error.message}`, "error"));
 }
 
 function createInlineMediaSlot(label = "Add media", allowedTypes = ["image", "youtube", "slides", "file"]) {
@@ -571,7 +670,10 @@ function createInlineMediaSlot(label = "Add media", allowedTypes = ["image", "yo
             ["Image URL", () => addInlineUrl(slot, "image")],
         ],
         youtube: [["YouTube link", () => addInlineUrl(slot, "youtube")]],
-        slides: [["Slides link", () => addInlineUrl(slot, "slides")]],
+        slides: [
+            ["Slides link", () => addInlineUrl(slot, "slides")],
+            ["Upload slides", () => chooseInlineFile(slot, "file")],
+        ],
         file: [["Upload PDF or doc", () => chooseInlineFile(slot, "file")]],
         pdf: [["Upload PDF", () => chooseInlineFile(slot, "pdf")]],
         link: [["Link", () => addInlineUrl(slot, "link")]],
@@ -606,6 +708,60 @@ function createInlineTextStack(titlePlaceholder = "Click to edit text", bodyPlac
         makeEditableText("lesson-inline-body", bodyPlaceholder, "p")
     );
     return stack;
+}
+
+function getNextContentOrderIndex() {
+    return loadedContentBlocks.reduce(
+        (highest, contentBlock) => Math.max(highest, Number(contentBlock.order_index || 0)),
+        -1
+    ) + 1;
+}
+
+function getFileTypeForInlineUpload(file, requestedType) {
+    if (requestedType === "image" || file.type.startsWith("image/")) {
+        return "image";
+    }
+
+    if (requestedType === "pdf" || file.type === "application/pdf") {
+        return "pdf";
+    }
+
+    return "file";
+}
+
+async function createSavedContentBlock({
+    blockType = "text",
+    title = "",
+    bodyText = "",
+    externalUrl = null,
+    fileUrl = null,
+    fileType = null,
+    fileRecord = null,
+}) {
+    const { data: contentBlock, error } = await supabase.from("lesson_content_blocks").insert({
+        lesson_id: lessonId,
+        block_type: getStoredBlockType(blockType),
+        title: title || null,
+        body_text: blockType === "text" ? bodyText : null,
+        external_url: ["link", "slides", "youtube"].includes(blockType) ? externalUrl : null,
+        file_url: blockType === "file" ? fileUrl : null,
+        file_type: blockType === "file" ? fileType : null,
+        order_index: getNextContentOrderIndex(),
+        is_visible: lessonIsVisible,
+    })
+        .select("id")
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    if (fileRecord) {
+        await linkLessonResource(fileRecord, contentBlock.id);
+    }
+
+    await loadContentBlocks();
+    return contentBlock;
 }
 
 function createInlineDraftBlock(button) {
@@ -681,14 +837,6 @@ function createInlineDraftBlock(button) {
     hideBuilderEditors({ scrollToCanvas: false });
     block.scrollIntoView({ behavior: "smooth", block: "center" });
     block.querySelector("[contenteditable='true']")?.focus();
-}
-
-function getBuilderToolFromTransfer(event) {
-    try {
-        return JSON.parse(event.dataTransfer.getData("application/x-builder-tool") || "{}");
-    } catch {
-        return {};
-    }
 }
 
 function setContentBlockFormMode(blockType) {
@@ -1067,67 +1215,27 @@ async function saveContentBlockOrder(list) {
     setStatus("Lesson content order saved.", "success");
 }
 
-function getLessonVisibilitySummary() {
-    const records = [...loadedContentBlocks, ...loadedQuestions];
-    const total = records.length;
-    const visibleCount = records.filter((record) => record.is_visible).length;
-
-    return {
-        total,
-        visibleCount,
-        isHidden: visibleCount === 0,
-        isFullyVisible: total > 0 && visibleCount === total,
-        isPartlyVisible: visibleCount > 0 && visibleCount < total,
-    };
-}
-
 function updateLessonVisibilityControls() {
     if (!lessonVisibilityState || !lessonVisibilityToggle) {
         return;
     }
 
-    const summary = getLessonVisibilitySummary();
-
-    if (!summary.total) {
-        lessonVisibilityState.textContent = "No saved lesson blocks yet";
-        lessonVisibilityToggle.textContent = "Make visible";
-        lessonVisibilityToggle.disabled = true;
-        lessonVisibilityToggle.classList.remove("destructive-button");
-        lessonVisibilityToggle.title = "Save lesson content or questions before making the lesson visible.";
-        return;
-    }
-
-    if (summary.isFullyVisible) {
-        lessonVisibilityState.textContent = "Visible to students";
-        lessonVisibilityToggle.textContent = "Hide from students";
-        lessonVisibilityToggle.classList.add("destructive-button");
-    } else if (summary.isPartlyVisible) {
-        lessonVisibilityState.textContent = "Partly visible";
-        lessonVisibilityToggle.textContent = "Make visible";
-        lessonVisibilityToggle.classList.remove("destructive-button");
-    } else {
-        lessonVisibilityState.textContent = "Hidden from students";
-        lessonVisibilityToggle.textContent = "Make visible";
-        lessonVisibilityToggle.classList.remove("destructive-button");
-    }
-
+    lessonVisibilityState.textContent = lessonIsVisible ? "Visible to students" : "Hidden from students";
+    lessonVisibilityToggle.textContent = lessonIsVisible ? "Hide from students" : "Make visible";
+    lessonVisibilityToggle.classList.toggle("destructive-button", lessonIsVisible);
     lessonVisibilityToggle.disabled = false;
     lessonVisibilityToggle.title = "";
 }
 
 async function setLessonVisibility(nextVisibility) {
-    const summary = getLessonVisibilitySummary();
-
-    if (!summary.total) {
-        setStatus("Add lesson content or questions before making this lesson visible.", "error");
-        updateLessonVisibilityControls();
-        return;
-    }
-
     setStatus(nextVisibility ? "Making lesson visible to students..." : "Hiding lesson from students...");
     lessonVisibilityToggle.disabled = true;
 
-    const [contentResult, questionResult] = await Promise.all([
+    const [lessonResult, contentResult, questionResult] = await Promise.all([
+        supabase
+            .from("lessons")
+            .update({ is_visible: nextVisibility })
+            .eq("id", lessonId),
         supabase
             .from("lesson_content_blocks")
             .update({ is_visible: nextVisibility })
@@ -1139,7 +1247,7 @@ async function setLessonVisibility(nextVisibility) {
             .eq("lesson_id", lessonId)
             .is("archived_at", null),
     ]);
-    const error = contentResult.error || questionResult.error;
+    const error = lessonResult.error || contentResult.error || questionResult.error;
 
     if (error) {
         setStatus(error.message || "The lesson visibility could not be updated.", "error");
@@ -1147,7 +1255,12 @@ async function setLessonVisibility(nextVisibility) {
         return;
     }
 
+    lessonIsVisible = nextVisibility;
+    if (currentLessonContext?.lesson) {
+        currentLessonContext.lesson.is_visible = nextVisibility;
+    }
     await Promise.all([loadContentBlocks(), loadQuestions()]);
+    updateLessonVisibilityControls();
     setStatus(nextVisibility ? "Lesson is visible to students." : "Lesson is hidden from students.", "success");
 }
 
@@ -2040,7 +2153,7 @@ async function loadLessonContext() {
 
     const { data: lesson, error: lessonError } = await supabase
         .from("lessons")
-        .select("id, module_id, title, objective, summary, estimated_time, order_index")
+        .select("id, module_id, title, objective, summary, estimated_time, order_index, is_visible")
         .eq("id", lessonId)
         .is("archived_at", null)
         .single();
@@ -2105,6 +2218,7 @@ async function initializePage() {
 
     currentLessonContext = context;
     const { lesson, module, course } = context;
+    lessonIsVisible = Boolean(lesson.is_visible);
 
     headingElement.textContent = lesson.title || "Untitled lesson";
     contextElement.textContent = `${course.title || "Untitled course"} / ${module.title || "Untitled module"}`;
@@ -2305,7 +2419,7 @@ contentBlockForm.addEventListener("submit", async (event) => {
         file_url: ["file", "image", "audio"].includes(blockType) ? savedFileUrl : null,
         file_type: blockType === "image" ? "image" : ["file", "audio"].includes(blockType) ? fileType : null,
         order_index: nextOrder,
-        is_visible: getLessonVisibilitySummary().isFullyVisible,
+        is_visible: lessonIsVisible,
     })
         .select("id")
         .single();
@@ -2516,7 +2630,7 @@ questionForm.addEventListener("submit", async (event) => {
         correct_answer: correctAnswer,
         points,
         is_required: isRequired,
-        is_visible: getLessonVisibilitySummary().isFullyVisible,
+        is_visible: lessonIsVisible,
         order_index: nextOrder,
     }).select("id").single();
 
@@ -2578,33 +2692,6 @@ cancelQuestionEditButton.addEventListener("click", () => {
     hideBuilderEditors();
 });
 
-builderDropZone?.addEventListener("dragover", (event) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
-    builderDropZone.classList.add("lesson-page-insert-zone--active");
-});
-
-builderDropZone?.addEventListener("dragleave", () => {
-    builderDropZone.classList.remove("lesson-page-insert-zone--active");
-});
-
-builderDropZone?.addEventListener("drop", (event) => {
-    event.preventDefault();
-    builderDropZone.classList.remove("lesson-page-insert-zone--active");
-
-    const tool = getBuilderToolFromTransfer(event);
-    if (tool.toolType === "content") {
-        createInlineDraftBlock({
-            dataset: {
-                contentTool: tool.value || "text",
-                layoutTemplate: tool.template || tool.value || "text",
-            },
-        });
-        return;
-    }
-    openBuilderTool(tool.toolType, tool.value);
-});
-
 closeContentEditorButton?.addEventListener("click", () => {
     resetContentBlockForm();
     hideBuilderEditors();
@@ -2616,8 +2703,7 @@ closeQuestionEditorButton?.addEventListener("click", () => {
 });
 
 lessonVisibilityToggle?.addEventListener("click", () => {
-    const summary = getLessonVisibilitySummary();
-    setLessonVisibility(!summary.isFullyVisible);
+    setLessonVisibility(!lessonIsVisible);
 });
 
 await initializePage();
