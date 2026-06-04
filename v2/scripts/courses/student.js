@@ -100,26 +100,95 @@ function getLessonNumberMap(modules, lessons) {
     return new Map(getOrderedCourseLessons(modules, lessons).map((lesson, index) => [lesson.id, index + 1]));
 }
 
-function getNextLesson(modules, lessons, submissions) {
+function getLocalDate(dateLike) {
+    if (!dateLike) {
+        return null;
+    }
+
+    const date = new Date(dateLike);
+
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getPacingStartDate(course, enrollment, classroom) {
+    return getLocalDate(course.lesson_release_start_date)
+        || getLocalDate(classroom?.start_date)
+        || getLocalDate(enrollment.joined_at)
+        || getLocalDate(new Date());
+}
+
+function getUnlockedLessonCount(course, enrollment, classroom, totalLessons) {
+    if (course.lesson_release_mode !== "daily") {
+        return totalLessons;
+    }
+
+    const startDate = getPacingStartDate(course, enrollment, classroom);
+    const today = getLocalDate(new Date());
+    const intervalDays = Math.max(Number(course.lesson_release_interval_days || 1), 1);
+    const elapsedDays = Math.floor((today - startDate) / 86400000);
+
+    if (elapsedDays < 0) {
+        return 0;
+    }
+
+    return Math.min(Math.floor(elapsedDays / intervalDays) + 1, totalLessons);
+}
+
+function getLessonAvailability(lesson, lessonNumberMap, course, enrollment, classroom, lessons) {
+    if (lesson.is_locked) {
+        return {
+            isAvailable: false,
+            label: "Locked by teacher",
+            message: "Your teacher has locked this lesson for now.",
+        };
+    }
+
+    const lessonNumber = lessonNumberMap.get(lesson.id) || lesson.order_index + 1;
+    const unlockedLessonCount = getUnlockedLessonCount(course, enrollment, classroom, lessons.length);
+
+    if (lessonNumber > unlockedLessonCount) {
+        return {
+            isAvailable: false,
+            label: "Scheduled",
+            message: `This lesson unlocks after lesson ${unlockedLessonCount || 0}.`,
+        };
+    }
+
+    return {
+        isAvailable: true,
+        label: "Available",
+        message: "",
+    };
+}
+
+function getNextLesson(modules, lessons, submissions, course, enrollment, classroom) {
     const orderedLessons = getOrderedCourseLessons(modules, lessons);
+    const lessonNumberMap = getLessonNumberMap(modules, lessons);
+    const availableLessons = orderedLessons.filter((lesson) => {
+        return getLessonAvailability(lesson, lessonNumberMap, course, enrollment, classroom, orderedLessons).isAvailable;
+    });
     const draftSubmission = submissions.find((submission) => submission.status === "draft");
 
     if (draftSubmission) {
-        const draftLesson = orderedLessons.find((lesson) => lesson.id === draftSubmission.lesson_id);
+        const draftLesson = availableLessons.find((lesson) => lesson.id === draftSubmission.lesson_id);
 
         if (draftLesson) {
             return { lesson: draftLesson, label: "Continue draft" };
         }
     }
 
-    const nextLesson = orderedLessons.find((lesson) => getLessonStatus(lesson, submissions) !== "submitted");
+    const nextLesson = availableLessons.find((lesson) => getLessonStatus(lesson, submissions) !== "submitted");
 
     if (nextLesson) {
         return { lesson: nextLesson, label: "Continue lesson" };
     }
 
-    return orderedLessons.length
-        ? { lesson: orderedLessons[orderedLessons.length - 1], label: "Review lesson" }
+    return availableLessons.length
+        ? { lesson: availableLessons[availableLessons.length - 1], label: "Review lesson" }
         : null;
 }
 
@@ -219,7 +288,7 @@ async function loadEnrollment() {
 async function loadCourse() {
     const { data, error } = await supabase
         .from("courses")
-        .select("id, title, description, subject_area, estimated_length, status")
+        .select("id, title, description, subject_area, estimated_length, status, lesson_release_mode, lesson_release_start_date, lesson_release_interval_days")
         .eq("id", courseId)
         .single();
 
@@ -272,7 +341,7 @@ async function loadLessons(moduleIds) {
 
     const { data, error } = await supabase
         .from("lessons")
-        .select("id, module_id, title, objective, summary, estimated_time, order_index")
+        .select("id, module_id, title, objective, summary, estimated_time, order_index, is_locked")
         .in("module_id", moduleIds)
         .is("archived_at", null)
         .order("order_index", { ascending: true });
@@ -317,9 +386,9 @@ async function loadTeacherName(enrollment) {
     return teacher ? formatTeacherName(teacher) : "Teacher";
 }
 
-function renderSummary(enrollment, modules, lessons, submissions) {
+function renderSummary(enrollment, course, classroom, modules, lessons, submissions) {
     const { points, progressPercent, submittedCount, totalLessons } = getProgress(lessons, submissions);
-    const nextLesson = getNextLesson(modules, lessons, submissions);
+    const nextLesson = getNextLesson(modules, lessons, submissions, course, enrollment, classroom);
     const isComplete = Boolean(totalLessons) && submittedCount === totalLessons;
 
     progressElement.textContent = `${progressPercent}%`;
@@ -347,7 +416,7 @@ function renderSummary(enrollment, modules, lessons, submissions) {
     progressSection.hidden = false;
 }
 
-function renderModules(modules, lessons, submissions, enrollment) {
+function renderModules(modules, lessons, submissions, enrollment, course, classroom) {
     if (!modules.length) {
         moduleListElement.replaceChildren(createElement("p", "empty-state", "Modules will appear here when this course is ready."));
         return;
@@ -355,6 +424,7 @@ function renderModules(modules, lessons, submissions, enrollment) {
 
     const list = createElement("ol", "module-list");
     const lessonNumberMap = getLessonNumberMap(modules, lessons);
+    const orderedLessons = getOrderedCourseLessons(modules, lessons);
 
     modules.forEach((module) => {
         const moduleLessons = lessons.filter((lesson) => lesson.module_id === module.id);
@@ -385,6 +455,7 @@ function renderModules(modules, lessons, submissions, enrollment) {
 
             moduleLessons.forEach((lesson) => {
                 const status = getLessonStatus(lesson, submissions);
+                const availability = getLessonAvailability(lesson, lessonNumberMap, course, enrollment, classroom, orderedLessons);
                 const lessonItem = createElement("li", "lesson-card");
                 const header = createElement("div", "lesson-card-header");
                 const content = createElement("div");
@@ -392,14 +463,25 @@ function renderModules(modules, lessons, submissions, enrollment) {
                 const lessonSummary = createElement("p", "course-muted", lesson.summary || lesson.objective || "No lesson overview added yet.");
                 const metaRow = createElement("div", "badge-row lesson-meta-row");
                 const actions = createElement("div", "lesson-header-actions");
-                const lessonLink = createElement("a", status === "submitted" ? "secondary-button lesson-action" : "primary-button lesson-action", status === "submitted" ? "Review" : "Open");
+                const lessonLink = availability.isAvailable
+                    ? createElement("a", status === "submitted" ? "secondary-button lesson-action" : "primary-button lesson-action", status === "submitted" ? "Review" : "Open")
+                    : createElement("span", "secondary-button lesson-action lesson-action--disabled", "Locked");
 
-                lessonLink.href = getLessonHref(lesson, enrollment);
+                if (availability.isAvailable) {
+                    lessonLink.href = getLessonHref(lesson, enrollment);
+                } else {
+                    lessonItem.classList.add("lesson-card--locked");
+                    lessonLink.setAttribute("aria-disabled", "true");
+                }
                 metaRow.append(
                     createElement("span", "badge student-lesson-number-badge", `Lesson ${lessonNumberMap.get(lesson.id) || lesson.order_index + 1}`),
                     createElement("span", "badge badge--quiet", lesson.estimated_time || "No time estimate"),
-                    createElement("span", status === "submitted" ? "badge" : "badge badge--quiet", formatStatus(status))
+                    createElement("span", status === "submitted" ? "badge" : "badge badge--quiet", formatStatus(status)),
+                    createElement("span", availability.isAvailable ? "badge badge--quiet" : "badge lesson-lock-badge lesson-lock-badge--locked", availability.label)
                 );
+                if (!availability.isAvailable) {
+                    lessonSummary.append(` ${availability.message}`);
+                }
                 content.append(lessonTitle, lessonSummary, metaRow);
                 actions.append(lessonLink);
                 header.append(content, actions);
@@ -456,8 +538,8 @@ async function initializePage() {
         contextElement.textContent = `${classroomLabel} / ${teacherName} / ${course.description || "No course description added yet."}`;
         unenrollButton.textContent = enrollment.enrollment_type === "classroom" ? "Leave classroom" : "Unenroll";
         unenrollButton.hidden = false;
-        renderSummary(enrollment, modules, lessons, submissions);
-        renderModules(modules, lessons, submissions, enrollment);
+        renderSummary(enrollment, course, classroom, modules, lessons, submissions);
+        renderModules(modules, lessons, submissions, enrollment, course, classroom);
         shellElement.hidden = false;
         setStatus("");
     } catch (error) {

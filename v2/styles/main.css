@@ -1240,6 +1240,32 @@ h2 {
     text-decoration: none;
 }
 
+.lesson-card--locked {
+    background: #f8fafc;
+}
+
+.lesson-card--locked .lesson-title,
+.lesson-card--locked .course-muted {
+    color: #61718a;
+}
+
+.lesson-action--disabled {
+    cursor: not-allowed;
+    opacity: 0.72;
+}
+
+.lesson-lock-badge {
+    border: 1px solid #b8c8df;
+    background: #eef4fb;
+    color: #274a7f;
+}
+
+.lesson-lock-badge--locked {
+    border-color: #d8b9b5;
+    background: #fff0ee;
+    color: #9b3c2f;
+}
+
 .student-lesson-number-badge {
     min-width: 96px;
     justify-content: center;

@@ -9,6 +9,7 @@ const headingElement = qs("[data-course-heading]");
 const statusElement = qs("[data-course-status]");
 const contentSections = [...document.querySelectorAll("[data-course-content]")];
 const editorForm = qs("[data-course-editor-form]");
+const pacingForm = qs("[data-course-pacing-form]");
 const moduleCount = qs("[data-module-count]");
 const lessonCount = qs("[data-lesson-count]");
 const moduleList = qs("[data-module-list]");
@@ -43,6 +44,9 @@ const courseSelectColumns = [
     "thumbnail_type",
     "status",
     "is_publicly_discoverable",
+    "lesson_release_mode",
+    "lesson_release_start_date",
+    "lesson_release_interval_days",
 ].join(", ");
 const courseThumbnailBucket = "course-public-assets";
 const maxCourseThumbnailSize = 10 * 1024 * 1024;
@@ -80,6 +84,16 @@ function fillCourseForm(course) {
         courseThumbnailPreviewName.textContent = "Current course thumbnail";
         courseThumbnailPreview.hidden = false;
     }
+}
+
+function fillPacingForm(course) {
+    if (!pacingForm) {
+        return;
+    }
+
+    pacingForm.elements["pacing-enabled"].checked = course.lesson_release_mode === "daily";
+    pacingForm.elements["release-start-date"].value = course.lesson_release_start_date || "";
+    pacingForm.elements["release-interval-days"].value = String(course.lesson_release_interval_days || 1);
 }
 
 function getFileExtension(file) {
@@ -663,6 +677,25 @@ async function deleteLesson(lesson) {
     setStatus("Lesson deleted.", "success");
 }
 
+async function toggleLessonLock(lesson) {
+    const nextLockState = !lesson.is_locked;
+
+    setStatus(`${nextLockState ? "Locking" : "Unlocking"} lesson...`);
+
+    const { error } = await supabase
+        .from("lessons")
+        .update({ is_locked: nextLockState })
+        .eq("id", lesson.id);
+
+    if (error) {
+        setStatus(error.message || "The lesson lock could not be updated.", "error");
+        return;
+    }
+
+    await loadModules();
+    setStatus(`Lesson ${nextLockState ? "locked" : "unlocked"}.`, "success");
+}
+
 async function deleteModule(module) {
     const confirmed = window.confirm(
         `Delete module "${module.title}"? This hides the module and its lessons while preserving their existing content.`
@@ -735,6 +768,11 @@ function renderLessons(module, lessons, contentBlocks, questions) {
         const positionSelect = document.createElement("select");
         const moveButton = createElement("button", "secondary-button lesson-action", "Move");
         const openLessonBuilderLink = createElement("a", "secondary-button lesson-action", "Open lesson builder");
+        const toggleLessonLockButton = createElement(
+            "button",
+            lesson.is_locked ? "secondary-button lesson-action" : "secondary-button lesson-action",
+            lesson.is_locked ? "Unlock lesson" : "Lock lesson"
+        );
         const deleteLessonButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete lesson");
         const lessonContentBlocks = contentBlocks.filter((contentBlock) => contentBlock.lesson_id === lesson.id);
         const lessonQuestions = questions.filter((question) => question.lesson_id === lesson.id);
@@ -743,6 +781,11 @@ function renderLessons(module, lessons, contentBlocks, questions) {
         const questionCountText = lessonQuestions.length === 1 ? "1 draft question" : `${lessonQuestions.length} draft questions`;
         const contentCount = createElement("span", "badge badge--quiet", contentCountText);
         const questionCount = createElement("span", "badge badge--quiet", questionCountText);
+        const lockStatus = createElement(
+            "span",
+            lesson.is_locked ? "badge lesson-lock-badge lesson-lock-badge--locked" : "badge lesson-lock-badge",
+            lesson.is_locked ? "Locked" : "Open"
+        );
 
         item.draggable = true;
         item.dataset.lessonId = lesson.id;
@@ -772,12 +815,14 @@ function renderLessons(module, lessons, contentBlocks, questions) {
         moveButton.addEventListener("click", () => {
             moveLessonToPosition(module.id, lesson.id, Number(positionSelect.value));
         });
+        toggleLessonLockButton.type = "button";
+        toggleLessonLockButton.addEventListener("click", () => toggleLessonLock(lesson));
         deleteLessonButton.type = "button";
         deleteLessonButton.addEventListener("click", () => deleteLesson(lesson));
         reorderControls.append(moveLabel, positionSelect, moveButton);
-        metaRow.append(contentCount, questionCount);
+        metaRow.append(contentCount, questionCount, lockStatus);
         content.append(title, objective, metaRow);
-        headerActions.append(dragHint, reorderControls, label, openLessonBuilderLink, deleteLessonButton);
+        headerActions.append(dragHint, reorderControls, label, openLessonBuilderLink, toggleLessonLockButton, deleteLessonButton);
         header.append(content, headerActions);
         item.append(header);
         list.append(item);
@@ -909,7 +954,7 @@ async function loadModules() {
     if (modules.length) {
         const { data, error: lessonsError } = await supabase
             .from("lessons")
-            .select("id, module_id, title, objective, summary, estimated_time, order_index")
+            .select("id, module_id, title, objective, summary, estimated_time, order_index, is_locked")
             .in("module_id", modules.map((module) => module.id))
             .is("archived_at", null)
             .order("order_index", { ascending: true });
@@ -1020,6 +1065,7 @@ async function initializePage() {
     headingElement.textContent = course.title || "Untitled course";
     loadedCourse = course;
     fillCourseForm(course);
+    fillPacingForm(course);
     renderCourseAccess(course);
     showContent();
     const modules = await loadModules();
@@ -1082,7 +1128,44 @@ editorForm.addEventListener("submit", async (event) => {
     courseThumbnailInput.value = "";
     renderCourseAccess(course);
     fillCourseForm(course);
+    fillPacingForm(course);
     setStatus("Course basics saved.", "success");
+});
+
+pacingForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const formData = new FormData(pacingForm);
+    const isEnabled = formData.get("pacing-enabled") === "on";
+    const releaseStartDate = String(formData.get("release-start-date") || "").trim();
+    const releaseIntervalDays = Number(formData.get("release-interval-days") || 1);
+
+    if (!Number.isInteger(releaseIntervalDays) || releaseIntervalDays < 1 || releaseIntervalDays > 30) {
+        setStatus("Choose an unlock interval from 1 to 30 days.", "error");
+        return;
+    }
+
+    setStatus("Saving lesson pacing...");
+
+    const { data: course, error } = await supabase
+        .from("courses")
+        .update({
+            lesson_release_mode: isEnabled ? "daily" : "all_available",
+            lesson_release_start_date: releaseStartDate || null,
+            lesson_release_interval_days: releaseIntervalDays,
+        })
+        .eq("id", courseId)
+        .select(courseSelectColumns)
+        .single();
+
+    if (error) {
+        setStatus(error.message || "Lesson pacing could not be saved.", "error");
+        return;
+    }
+
+    loadedCourse = course;
+    fillPacingForm(course);
+    setStatus(isEnabled ? "Lesson pacing saved. Students will unlock lessons over time." : "Lesson pacing disabled. Lessons are available unless manually locked.", "success");
 });
 
 if (courseThumbnailInput) {

@@ -41,6 +41,7 @@ let autoSaveTimer = null;
 let isSubmitted = false;
 let lastSavedAt = null;
 let submittedAt = null;
+let currentAvailabilityContext = null;
 const lessonResourceBucket = "lesson-resources";
 
 function setStatus(message, tone = "info") {
@@ -67,6 +68,21 @@ function setAccessStatus(courseId) {
         " ",
         dashboardLink
     );
+    statusElement.dataset.tone = "error";
+}
+
+function setLockedLessonStatus(courseId, message) {
+    const courseHref = courseId
+        ? `../courses/student.html?course=${encodeURIComponent(courseId)}${classroomId ? `&classroom=${encodeURIComponent(classroomId)}` : ""}`
+        : "../dashboard/index.html";
+    const courseLink = createElement("a", "status-link", "Open course");
+    const dashboardLink = createElement("a", "status-link", "Back to dashboard");
+
+    courseLink.href = courseHref;
+    dashboardLink.href = "../dashboard/index.html";
+    headingElement.textContent = "Lesson locked";
+    contextElement.textContent = "This lesson is not available yet.";
+    statusElement.replaceChildren(message, " ", courseLink, " ", dashboardLink);
     statusElement.dataset.tone = "error";
 }
 
@@ -169,6 +185,57 @@ function getSubmissionFilter(query) {
 
     filteredQuery = classroomId ? filteredQuery.eq("classroom_id", classroomId) : filteredQuery.is("classroom_id", null);
     return filteredQuery;
+}
+
+function getLocalDate(dateLike) {
+    if (!dateLike) {
+        return null;
+    }
+
+    const date = new Date(dateLike);
+
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getPacingStartDate(course, enrollment, classroom) {
+    return getLocalDate(course.lesson_release_start_date)
+        || getLocalDate(classroom?.start_date)
+        || getLocalDate(enrollment?.joined_at)
+        || getLocalDate(new Date());
+}
+
+function getUnlockedLessonCount(course, enrollment, classroom, totalLessons) {
+    if (course.lesson_release_mode !== "daily") {
+        return totalLessons;
+    }
+
+    const startDate = getPacingStartDate(course, enrollment, classroom);
+    const today = getLocalDate(new Date());
+    const intervalDays = Math.max(Number(course.lesson_release_interval_days || 1), 1);
+    const elapsedDays = Math.floor((today - startDate) / 86400000);
+
+    if (elapsedDays < 0) {
+        return 0;
+    }
+
+    return Math.min(Math.floor(elapsedDays / intervalDays) + 1, totalLessons);
+}
+
+function getLessonViewHref(nextLesson) {
+    const nextParams = new URLSearchParams({ lesson: nextLesson.id });
+
+    if (classroomId) {
+        nextParams.set("classroom", classroomId);
+    }
+    if (isTeacherPreview) {
+        nextParams.set("preview", "teacher");
+    }
+
+    return `view.html?${nextParams.toString()}`;
 }
 
 async function loadCurrentProfile() {
@@ -781,7 +848,7 @@ async function loadLessonContext() {
 
     const { data: lesson, error: lessonError } = await supabase
         .from("lessons")
-        .select("id, module_id, title, objective, summary, estimated_time, order_index")
+        .select("id, module_id, title, objective, summary, estimated_time, order_index, is_locked")
         .eq("id", lessonId)
         .is("archived_at", null)
         .single();
@@ -809,7 +876,7 @@ async function loadLessonContext() {
 
     const { data: course, error: courseError } = await supabase
         .from("courses")
-        .select("id, title")
+        .select("id, title, lesson_release_mode, lesson_release_start_date, lesson_release_interval_days")
         .eq("id", module.course_id)
         .single();
 
@@ -836,6 +903,99 @@ async function canAccessLessonContext(context) {
 
     if (!data) {
         setAccessStatus(context.course.id);
+        return false;
+    }
+
+    return true;
+}
+
+async function loadStudentLessonAvailability(context) {
+    let enrollmentQuery = supabase
+        .from("enrollments")
+        .select("id, course_id, classroom_id, enrollment_type, enrollment_status, joined_at")
+        .eq("user_id", currentProfileId)
+        .eq("course_id", context.course.id)
+        .neq("enrollment_status", "removed");
+
+    enrollmentQuery = classroomId ? enrollmentQuery.eq("classroom_id", classroomId) : enrollmentQuery;
+
+    const { data: enrollments, error: enrollmentError } = await enrollmentQuery;
+
+    if (enrollmentError) {
+        setStatus("Lesson availability could not be checked.", "error");
+        return false;
+    }
+
+    const enrollment = classroomId
+        ? enrollments?.[0]
+        : enrollments?.find((row) => row.enrollment_type === "course" && !row.classroom_id) || enrollments?.[0];
+
+    if (!enrollment) {
+        setAccessStatus(context.course.id);
+        return false;
+    }
+
+    const { data: classroom, error: classroomError } = enrollment.classroom_id
+        ? await supabase
+            .from("classrooms")
+            .select("id, start_date")
+            .eq("id", enrollment.classroom_id)
+            .maybeSingle()
+        : { data: null, error: null };
+
+    if (classroomError) {
+        setStatus("Classroom pacing details could not be checked.", "error");
+        return false;
+    }
+
+    const { data: modules, error: modulesError } = await supabase
+        .from("modules")
+        .select("id, order_index")
+        .eq("course_id", context.course.id)
+        .is("archived_at", null)
+        .order("order_index", { ascending: true });
+
+    if (modulesError) {
+        setStatus("Course pacing details could not be loaded.", "error");
+        return false;
+    }
+
+    const { data: lessons, error: lessonsError } = modules.length
+        ? await supabase
+            .from("lessons")
+            .select("id, module_id, title, order_index, is_locked")
+            .in("module_id", modules.map((module) => module.id))
+            .is("archived_at", null)
+            .order("order_index", { ascending: true })
+        : { data: [], error: null };
+
+    if (lessonsError) {
+        setStatus("Lesson pacing details could not be loaded.", "error");
+        return false;
+    }
+
+    const orderedLessons = modules.flatMap((module) => {
+        return lessons
+            .filter((lesson) => lesson.module_id === module.id)
+            .sort((first, second) => first.order_index - second.order_index);
+    });
+    const currentLessonIndex = orderedLessons.findIndex((lesson) => lesson.id === context.lesson.id);
+    const unlockedLessonCount = getUnlockedLessonCount(context.course, enrollment, classroom, orderedLessons.length);
+
+    currentAvailabilityContext = {
+        classroom,
+        enrollment,
+        orderedLessons,
+        unlockedLessonCount,
+    };
+
+    if (context.lesson.is_locked) {
+        setLockedLessonStatus(context.course.id, "Your teacher has locked this lesson for now.");
+        return false;
+    }
+
+    if (currentLessonIndex >= unlockedLessonCount) {
+        setLockedLessonStatus(context.course.id, `This lesson is scheduled to unlock later. ${unlockedLessonCount || 0} lesson${unlockedLessonCount === 1 ? "" : "s"} currently available.`);
         return false;
     }
 
@@ -1083,6 +1243,26 @@ async function resetDraft() {
 
 async function loadNextLesson() {
     const { lesson } = currentLessonContext;
+
+    if (currentAvailabilityContext) {
+        const currentIndex = currentAvailabilityContext.orderedLessons.findIndex((currentLesson) => currentLesson.id === lesson.id);
+        const nextAvailableLesson = currentAvailabilityContext.orderedLessons.find((candidate, index) => {
+            return index > currentIndex
+                && index < currentAvailabilityContext.unlockedLessonCount
+                && !candidate.is_locked;
+        });
+
+        if (nextAvailableLesson) {
+            nextLessonLink.href = getLessonViewHref(nextAvailableLesson);
+            nextLessonLink.textContent = `Next lesson: ${nextAvailableLesson.title || "Continue"}`;
+        } else {
+            nextLessonLink.href = `../courses/student.html?course=${encodeURIComponent(currentLessonContext.course.id)}${classroomId ? `&classroom=${encodeURIComponent(classroomId)}` : ""}`;
+            nextLessonLink.textContent = "Back to course";
+        }
+        nextLessonLink.hidden = false;
+        return;
+    }
+
     const { data, error } = await supabase
         .from("lessons")
         .select("id, title")
@@ -1100,16 +1280,7 @@ async function loadNextLesson() {
         return;
     }
 
-    const nextParams = new URLSearchParams({ lesson: data.id });
-
-    if (classroomId) {
-        nextParams.set("classroom", classroomId);
-    }
-    if (isTeacherPreview) {
-        nextParams.set("preview", "teacher");
-    }
-
-    nextLessonLink.href = `view.html?${nextParams.toString()}`;
+    nextLessonLink.href = getLessonViewHref(data);
     nextLessonLink.textContent = `Next lesson: ${data.title || "Continue"}`;
     nextLessonLink.hidden = false;
 }
@@ -1189,6 +1360,8 @@ async function initializePage() {
     if (isTeacherPreview) {
         updateTeacherPreviewBackLink(course.id);
     } else if (!(await canAccessLessonContext(context))) {
+        return;
+    } else if (!(await loadStudentLessonAvailability(context))) {
         return;
     }
     headingElement.textContent = lesson.title || "Untitled lesson";

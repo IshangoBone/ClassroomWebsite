@@ -93,6 +93,36 @@
             </form>
         </section>
 
+        <section class="management-section" data-course-content hidden aria-labelledby="course-pacing-heading">
+            <div class="section-header">
+                <h2 id="course-pacing-heading">Lesson pacing</h2>
+                <p class="section-copy">Control whether students can open every lesson immediately or unlock lessons over time.</p>
+            </div>
+
+            <form class="course-form course-form--pacing" data-course-pacing-form>
+                <label class="form-field form-field--checkbox form-field--wide">
+                    <input type="checkbox" name="pacing-enabled" />
+                    <span>Unlock lessons on a schedule</span>
+                </label>
+
+                <label class="form-field">
+                    <span>Schedule start date</span>
+                    <input type="date" name="release-start-date" />
+                    <small class="form-hint">If blank, classroom start date or student join date is used.</small>
+                </label>
+
+                <label class="form-field">
+                    <span>Unlock every</span>
+                    <input type="number" name="release-interval-days" min="1" max="30" step="1" value="1" />
+                    <small class="form-hint">Use 1 for one new lesson per day.</small>
+                </label>
+
+                <div class="course-form-actions form-field--wide">
+                    <button type="submit" class="primary-button">Save pacing settings</button>
+                </div>
+            </form>
+        </section>
+
         <section class="management-section" data-course-content hidden aria-labelledby="course-modules-heading">
             <div class="section-header section-header--actions">
                 <div>
@@ -182,7 +212,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/courses/editor.js?v=20260603-collapsed-modules"></script>
+    <script type="module" src="../../scripts/courses/editor.js?v=20260604-lesson-locking"></script>
 </body>
 
 </html>
