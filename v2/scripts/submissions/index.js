@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { notifyStatus } from "../utils/ui-components.js";
 
 const statusElement = qs("[data-review-status]");
 const shellElement = qs("[data-review-shell]");
@@ -23,6 +24,7 @@ let studentNames = new Map();
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
+    notifyStatus(message, tone);
 }
 
 function formatShortId(id) {

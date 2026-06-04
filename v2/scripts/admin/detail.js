@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { isPlatformAdmin, loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { notifyStatus } from "../utils/ui-components.js";
 
 const detailParams = new URLSearchParams(window.location.search);
 const statusElement = qs("[data-admin-detail-status]");
@@ -15,6 +16,7 @@ const activityLink = qs("[data-admin-detail-activity]");
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
+    notifyStatus(message, tone);
 }
 
 function formatShortId(id) {

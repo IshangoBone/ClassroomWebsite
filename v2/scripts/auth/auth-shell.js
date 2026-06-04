@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { supabaseConfig } from "../../services/supabase/config.local.js";
 import { qs } from "../utils/dom.js";
+import { notifyStatus } from "../utils/ui-components.js";
 
 const authModes = {
     login: {
@@ -77,6 +78,7 @@ function setStatus(mode, message, tone = "info") {
 
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
+    notifyStatus(message, tone);
 }
 
 function clearInactiveStatuses(mode) {

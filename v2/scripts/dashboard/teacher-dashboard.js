@@ -2,6 +2,7 @@ import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
 import { createProfileAvatar } from "../utils/profile-images.js";
+import { notifyStatus } from "../utils/ui-components.js";
 
 const dashboardStatus = qs("[data-dashboard-status]");
 const greetingElement = qs("[data-dashboard-greeting]");
@@ -49,6 +50,7 @@ let dashboardStudentTeachers = new Map();
 function setStatus(message, tone = "info") {
     dashboardStatus.textContent = message;
     dashboardStatus.dataset.tone = tone;
+    notifyStatus(message, tone);
 }
 
 function formatStatus(status) {

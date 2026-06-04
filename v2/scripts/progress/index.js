@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { notifyStatus } from "../utils/ui-components.js";
 
 const statusElement = qs("[data-progress-status]");
 const summaryElement = qs("[data-progress-summary]");
@@ -28,6 +29,7 @@ let loadedSubmissions = [];
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
+    notifyStatus(message, tone);
 }
 
 function formatStatus(status) {

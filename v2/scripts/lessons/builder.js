@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { notifyStatus } from "../utils/ui-components.js";
 
 const params = new URLSearchParams(window.location.search);
 const lessonId = params.get("lesson");
@@ -89,6 +90,7 @@ const questionPhases = [
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
+    notifyStatus(message, tone);
 }
 
 function showContent() {
@@ -253,6 +255,7 @@ function getLibraryResourcesForBlockType(blockType) {
 function setUploadStatus(message = "Optional. PDF, DOCX, PPTX, images, ZIP, and audio up to 50 MB.", tone = "info") {
     contentUploadStatus.textContent = message;
     contentUploadStatus.dataset.tone = tone;
+    notifyStatus(message, tone);
 }
 
 function populateResourceLibrary(blockType, selectedResourceId = "") {

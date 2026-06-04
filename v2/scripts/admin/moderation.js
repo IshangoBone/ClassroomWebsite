@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { isPlatformAdmin, loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { notifyStatus } from "../utils/ui-components.js";
 
 const statusElement = qs("[data-moderation-status]");
 const shellElements = [...document.querySelectorAll("[data-moderation-shell]")];
@@ -21,6 +22,7 @@ let currentProfileRole = "";
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
+    notifyStatus(message, tone);
 }
 
 function formatNumber(value) {

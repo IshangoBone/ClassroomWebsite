@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { notifyStatus } from "../utils/ui-components.js";
 
 const params = new URLSearchParams(window.location.search);
 const lessonId = params.get("lesson");
@@ -45,6 +46,7 @@ const lessonResourceBucket = "lesson-resources";
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
+    notifyStatus(message, tone);
 }
 
 function setAccessStatus(courseId) {
@@ -71,6 +73,7 @@ function setAccessStatus(courseId) {
 function setSubmitStatus(message, tone = "info") {
     submitStatusElement.textContent = message;
     submitStatusElement.dataset.tone = tone;
+    notifyStatus(message, tone);
 }
 
 function getSubmissionErrorMessage(error, fallback) {

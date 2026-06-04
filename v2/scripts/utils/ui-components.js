@@ -1,6 +1,8 @@
 import { createElement } from "./dom.js";
 
 let modalId = 0;
+let toastId = 0;
+let toastContainer = null;
 
 export function createBadge(text, { quiet = false } = {}) {
     return createElement("span", quiet ? "badge badge--quiet" : "badge", text);
@@ -66,6 +68,98 @@ export function setStatusMessage(element, message = "", tone = "") {
     } else {
         delete element.dataset.tone;
     }
+
+    notifyStatus(message, tone);
+}
+
+function getToastContainer() {
+    if (toastContainer) {
+        return toastContainer;
+    }
+
+    toastContainer = document.querySelector("[data-toast-container]");
+
+    if (!toastContainer) {
+        toastContainer = createElement("div", "ui-toast-container");
+        toastContainer.dataset.toastContainer = "true";
+        toastContainer.setAttribute("aria-live", "polite");
+        toastContainer.setAttribute("aria-atomic", "false");
+        document.body.append(toastContainer);
+    }
+
+    return toastContainer;
+}
+
+function getToastTitle(tone) {
+    if (tone === "success") {
+        return "Done";
+    }
+
+    if (tone === "error") {
+        return "Needs attention";
+    }
+
+    if (tone === "warning") {
+        return "Check this";
+    }
+
+    return "Working";
+}
+
+export function showToast(message = "", { tone = "info", title = "", duration = 4200 } = {}) {
+    const trimmedMessage = String(message || "").trim();
+
+    if (!trimmedMessage) {
+        return null;
+    }
+
+    const container = getToastContainer();
+    const toast = createElement("article", `ui-toast ui-toast--${tone}`);
+    const content = createElement("div", "ui-toast__content");
+    const closeButton = createElement("button", "ui-toast__close", "Dismiss");
+    const toastTitle = createElement("strong", "ui-toast__title", title || getToastTitle(tone));
+    const toastMessage = createElement("p", "ui-toast__message", trimmedMessage);
+    const toastLabelId = `ui-toast-title-${toastId += 1}`;
+    let timeoutId = null;
+
+    toast.setAttribute("role", tone === "error" ? "alert" : "status");
+    toast.setAttribute("aria-labelledby", toastLabelId);
+    toastTitle.id = toastLabelId;
+    closeButton.type = "button";
+    closeButton.setAttribute("aria-label", "Dismiss notification");
+
+    function dismiss() {
+        window.clearTimeout(timeoutId);
+        toast.classList.add("ui-toast--dismissed");
+        window.setTimeout(() => toast.remove(), 180);
+    }
+
+    closeButton.addEventListener("click", dismiss);
+    content.append(toastTitle, toastMessage);
+    toast.append(content, closeButton);
+    container.append(toast);
+
+    if (duration > 0) {
+        timeoutId = window.setTimeout(dismiss, duration);
+    }
+
+    return toast;
+}
+
+export function notifyStatus(message = "", tone = "info", options = {}) {
+    const normalizedTone = tone || "info";
+    const shouldToast = options.toast
+        ?? ["success", "error", "warning"].includes(normalizedTone);
+
+    if (!shouldToast || !message) {
+        return null;
+    }
+
+    return showToast(message, {
+        tone: normalizedTone,
+        duration: normalizedTone === "error" ? 6500 : 4200,
+        ...options,
+    });
 }
 
 export function createStatusAlert(message, { tone = "info" } = {}) {

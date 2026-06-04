@@ -2,6 +2,7 @@ import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
 import { createProfileAvatar } from "../utils/profile-images.js";
+import { notifyStatus } from "../utils/ui-components.js";
 
 const statusElement = qs("[data-discovery-status]");
 const shellElements = [...document.querySelectorAll("[data-discovery-shell]")];
@@ -15,6 +16,7 @@ let searchText = discoveryParams.get("q")?.trim() || "";
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
+    notifyStatus(message, tone);
 }
 
 function formatLessonCount(count) {

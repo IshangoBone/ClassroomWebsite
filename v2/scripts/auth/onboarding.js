@@ -1,5 +1,6 @@
 import { supabase } from "../../services/supabase/client.js";
 import { qs } from "../utils/dom.js";
+import { notifyStatus } from "../utils/ui-components.js";
 
 const onboardingForm = qs("[data-onboarding-form]");
 const statusElement = qs("[data-onboarding-status]");
@@ -15,6 +16,7 @@ let selectedProfilePhotoUrl = "";
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
+    notifyStatus(message, tone);
 }
 
 function fillForm(profile) {
