@@ -731,11 +731,29 @@ function resetQuestionForm() {
     questionForm.reset();
     questionForm.elements["question-id"].value = "";
     setQuestionFormMode("short_response");
-    questionForm.elements.points.value = "1";
     questionForm.elements["is-required"].checked = false;
+    questionForm.elements.points.value = "0";
     questionFormHeading.textContent = "Add draft question";
     questionSubmit.textContent = "Create draft question";
     cancelQuestionEditButton.hidden = true;
+}
+
+function updateNewQuestionPointDefault() {
+    if (questionForm.elements["question-id"].value) {
+        return;
+    }
+
+    const pointsInput = questionForm.elements.points;
+    const currentPoints = Number(pointsInput.value || 0);
+    const isRequired = questionForm.elements["is-required"].checked;
+
+    if (isRequired && currentPoints === 0) {
+        pointsInput.value = "1";
+    }
+
+    if (!isRequired && currentPoints === 1) {
+        pointsInput.value = "0";
+    }
 }
 
 function hasQuestionAnswerConfig(question) {
@@ -941,7 +959,7 @@ function editQuestion(question) {
     questionForm.elements.prompt.value = question.prompt || "";
     questionForm.elements["student-instructions"].value = question.student_instructions || "";
     questionForm.elements.hint.value = question.hint || "";
-    questionForm.elements.points.value = String(question.points ?? 1);
+    questionForm.elements.points.value = String(question.points ?? (question.is_required ? 1 : 0));
     questionForm.elements["is-required"].checked = Boolean(question.is_required);
     questionForm.elements["correct-text"].value = textCorrectAnswerTypes.includes(question.question_type)
         ? formatCorrectAnswer(question)
@@ -1349,7 +1367,7 @@ function renderQuestions(questions) {
             "badge badge--quiet",
             question.is_required ? "Required" : "Optional"
         );
-        const pointsLabel = createElement("span", "badge badge--quiet", `${Number(question.points ?? 1)} pt`);
+        const pointsLabel = createElement("span", "badge badge--quiet", `${Number(question.points ?? (question.is_required ? 1 : 0))} pt`);
         const instructions = createElement(
             "p",
             "course-muted question-instructions",
@@ -2102,6 +2120,7 @@ questionForm.elements["question-type"].addEventListener("change", (event) => {
     setQuestionFormMode(event.target.value);
 });
 
+questionForm.elements["is-required"].addEventListener("change", updateNewQuestionPointDefault);
 cancelQuestionEditButton.addEventListener("click", resetQuestionForm);
 
 await initializePage();

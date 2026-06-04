@@ -235,11 +235,25 @@ function highlightMissingQuestions(missingQuestions) {
     });
 }
 
-function showCompletionState(date = new Date()) {
+function formatPoints(value) {
+    return Number(value || 0).toLocaleString([], {
+        maximumFractionDigits: 1,
+    });
+}
+
+function getSubmissionPointsMessage(submission) {
+    if (!submission || submission.points_possible === undefined || submission.points_earned === undefined) {
+        return "Lesson turned in successfully. Your answers are locked.";
+    }
+
+    return `Lesson turned in successfully. You earned ${formatPoints(submission.points_earned)} of ${formatPoints(submission.points_possible)} engagement points. Your answers are locked.`;
+}
+
+function showCompletionState(date = new Date(), submission = currentSubmission) {
     const submittedDate = date instanceof Date ? date : new Date(date);
 
     saveStatusElement.textContent = `Submitted ${formatSavedTime(submittedDate)}.`;
-    setSubmitStatus("Lesson turned in successfully. Your answers are locked.", "success");
+    setSubmitStatus(getSubmissionPointsMessage(submission), "success");
     turnInButton.hidden = true;
     setDraftControlsDisabled(true);
     setQuestionInputsDisabled(true);
@@ -927,7 +941,7 @@ async function loadSubmissionDraft() {
     const { data, error } = await getSubmissionFilter(
         supabase
             .from("lesson_submissions")
-            .select("id, answers_json, status, submitted_at, updated_at")
+            .select("id, answers_json, status, submitted_at, updated_at, points_earned, points_possible")
     ).maybeSingle();
 
     if (error) {
@@ -956,7 +970,7 @@ async function createSubmissionDraft() {
             lesson_id: currentLessonContext.lesson.id,
             answers_json: answerState,
         })
-        .select("id, answers_json, status, submitted_at, updated_at")
+        .select("id, answers_json, status, submitted_at, updated_at, points_earned, points_possible")
         .single();
 
     if (error) {
@@ -982,7 +996,7 @@ async function saveDraftAnswers() {
                 .from("lesson_submissions")
                 .update({ answers_json: answerState })
                 .eq("id", currentSubmission.id)
-                .select("id, answers_json, status, submitted_at, updated_at")
+                .select("id, answers_json, status, submitted_at, updated_at, points_earned, points_possible")
                 .single();
 
             if (error) {
@@ -1132,13 +1146,11 @@ async function turnInLesson() {
         .from("lesson_submissions")
         .update({
             answers_json: answerState,
-            total_questions: loadedQuestions.length,
-            points_possible: loadedQuestions.reduce((total, question) => total + Number(question.points || 0), 0),
             status: "submitted",
             submitted_at: submittedAtValue,
         })
         .eq("id", currentSubmission.id)
-        .select("id, answers_json, status, submitted_at, updated_at")
+        .select("id, answers_json, status, submitted_at, updated_at, points_earned, points_possible")
         .single();
 
     if (error) {
@@ -1150,7 +1162,7 @@ async function turnInLesson() {
     currentSubmission = data;
     isSubmitted = true;
     submittedAt = new Date(data?.submitted_at || submittedAtValue);
-    showCompletionState(submittedAt);
+    showCompletionState(submittedAt, currentSubmission);
     await loadNextLesson();
 }
 
