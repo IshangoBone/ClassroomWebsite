@@ -9,6 +9,8 @@ Storage buckets.
 
 ## Frontend Configuration
 
+For the full local startup flow, see `LOCAL_DEVELOPMENT.md`.
+
 The browser app reads its Supabase client settings from:
 
 ```text
@@ -134,3 +136,6 @@ The current MVP uses one Supabase project. To add staging or production later:
 - create a separate ignored config file for each local target
 - configure environment-specific auth redirect URLs
 - never share service-role keys with the static frontend
+
+Use `v2/.env.example` as the template for future local/staging notes and keep
+real environment files ignored.
