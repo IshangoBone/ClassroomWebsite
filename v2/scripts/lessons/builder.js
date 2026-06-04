@@ -33,12 +33,16 @@ const resourceLibrarySelect = qs("[data-resource-library-select]");
 const resourceLibraryStatus = qs("[data-resource-library-status]");
 const fileTypeField = qs("[data-file-type-field]");
 const contentBlockList = qs("[data-content-block-list]");
+const contentToolButtons = [...document.querySelectorAll("[data-content-tool]")];
+const contentToolLabel = qs("[data-content-tool-label]");
 const questionForm = qs("[data-question-form]");
 const questionFormHeading = qs("[data-question-form-heading]");
 const questionSubmit = qs("[data-question-submit]");
 const cancelQuestionEditButton = qs("[data-cancel-question-edit]");
 const questionList = qs("[data-question-list]");
 const questionPreview = qs("[data-question-preview]");
+const questionToolButtons = [...document.querySelectorAll("[data-question-tool]")];
+const questionToolLabel = qs("[data-question-tool-label]");
 const correctAnswerField = qs("[data-correct-answer-field]");
 const responseRulesField = qs("[data-response-rules-field]");
 const questionOptionsField = qs("[data-question-options-field]");
@@ -76,6 +80,15 @@ const questionTypeLabels = {
     fill_in_the_blank: "Fill in the blank",
     matching: "Matching",
     ordering: "Ordering",
+};
+const contentTypeLabels = {
+    text: "Text section",
+    link: "External link",
+    youtube: "YouTube video",
+    slides: "Slides embed",
+    image: "Image resource",
+    audio: "Audio block",
+    file: "File download",
 };
 const choiceQuestionTypes = ["multiple_choice", "select_all_that_apply"];
 const optionQuestionTypes = [...choiceQuestionTypes, "matching", "ordering"];
@@ -338,6 +351,25 @@ function getDragAfterElement(container, y, itemClass, draggingClass) {
     ).element;
 }
 
+function setToolButtonState(buttons, activeValue) {
+    buttons.forEach((button) => {
+        const isActive = button.dataset.contentTool === activeValue || button.dataset.questionTool === activeValue;
+
+        button.classList.toggle("lesson-tool-button--active", isActive);
+        button.setAttribute("aria-pressed", String(isActive));
+    });
+}
+
+function focusEditor(editorId) {
+    const editor = document.getElementById(editorId);
+
+    if (!editor) {
+        return;
+    }
+
+    editor.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function setContentBlockFormMode(blockType) {
     const normalizedBlockType = formatContentBlockType(blockType);
     const isText = normalizedBlockType === "text";
@@ -349,6 +381,8 @@ function setContentBlockFormMode(blockType) {
     const supportsUpload = isImage || isAudio || isFile;
 
     contentBlockTypeSelect.value = normalizedBlockType;
+    contentToolLabel.textContent = contentTypeLabels[normalizedBlockType] || "Content";
+    setToolButtonState(contentToolButtons, normalizedBlockType);
     textContentField.hidden = !isText;
     urlContentField.hidden = isText;
     contentUploadField.hidden = !supportsUpload;
@@ -785,6 +819,8 @@ function setQuestionFormMode(questionType) {
     const usesRatingCorrectAnswer = questionType === "rating_scale";
 
     questionForm.elements["question-type"].value = questionType;
+    questionToolLabel.textContent = questionTypeLabels[questionType] || "Assessment";
+    setToolButtonState(questionToolButtons, questionType);
     correctAnswerField.hidden = !usesScalarCorrectAnswer;
     responseRulesField.hidden = !usesTextCorrectAnswer;
     correctTextInput.hidden = !usesTextCorrectAnswer;
@@ -1720,6 +1756,8 @@ async function initializePage() {
     modulePosition.textContent = String(module.order_index + 1);
     lessonPosition.textContent = String(lesson.order_index + 1);
     lessonDetails.replaceChildren(buildDetailsList(lesson, module, course));
+    setContentBlockFormMode(contentBlockTypeSelect.value);
+    setQuestionFormMode(questionForm.elements["question-type"].value);
     showContent();
     await loadLessonResources();
     const [contentLoaded, questionsLoaded] = await Promise.all([loadContentBlocks(), loadQuestions()]);
@@ -1922,6 +1960,14 @@ contentBlockTypeSelect.addEventListener("change", () => {
     setContentBlockFormMode(contentBlockTypeSelect.value);
 });
 
+contentToolButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+        setContentBlockFormMode(button.dataset.contentTool || "text");
+        focusEditor("lesson-content-editor");
+        contentTitleInput.focus();
+    });
+});
+
 textFormatButtons.forEach((button) => {
     button.addEventListener("click", () => {
         insertTextFormatting(button.dataset.formatAction || "");
@@ -2121,6 +2167,14 @@ questionForm.elements["question-type"].addEventListener("change", (event) => {
     }
 
     setQuestionFormMode(event.target.value);
+});
+
+questionToolButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+        setQuestionFormMode(button.dataset.questionTool || "short_response");
+        focusEditor("lesson-question-editor");
+        questionForm.elements.prompt.focus();
+    });
 });
 
 questionForm.elements["is-required"].addEventListener("change", updateNewQuestionPointDefault);

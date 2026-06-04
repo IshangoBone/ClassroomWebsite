@@ -1835,6 +1835,132 @@ h2 {
     margin: 18px 0;
 }
 
+.lesson-builder-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 270px;
+    gap: 18px;
+    align-items: start;
+}
+
+.lesson-builder-main {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+}
+
+.lesson-builder-editor-card,
+.lesson-tool-card {
+    display: grid;
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid #dbe4f1;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.lesson-builder-editor-card {
+    scroll-margin-top: 24px;
+}
+
+.lesson-builder-editor-header {
+    display: flex;
+    gap: 14px;
+    align-items: start;
+    justify-content: space-between;
+}
+
+.lesson-builder-editor-header h3,
+.lesson-tool-card h3 {
+    margin: 0;
+}
+
+.management-create-form--embedded {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.builder-mode-field {
+    max-width: 280px;
+}
+
+.lesson-builder-toolbox {
+    position: sticky;
+    top: 24px;
+    display: grid;
+    gap: 14px;
+}
+
+.lesson-tool-card {
+    gap: 12px;
+    background: #f9fbff;
+}
+
+.lesson-tool-list {
+    display: grid;
+    gap: 8px;
+}
+
+.lesson-tool-button {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 10px;
+    align-items: center;
+    min-height: 54px;
+    padding: 10px;
+    border: 1px solid #dbe4f1;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #183153;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.lesson-tool-button:hover,
+.lesson-tool-button:focus-visible {
+    border-color: #9eb5d7;
+    background: #edf4ff;
+}
+
+.lesson-tool-button--active {
+    border-color: #3569d9;
+    background: #eaf2ff;
+    box-shadow: inset 3px 0 0 #3569d9;
+}
+
+.lesson-tool-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: #e6efff;
+    color: #274a7f;
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
+.lesson-tool-button strong,
+.lesson-tool-button small {
+    display: block;
+}
+
+.lesson-tool-button strong {
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+.lesson-tool-button small {
+    color: #49617f;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
 .text-format-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -3405,6 +3531,23 @@ h2 {
 
     .management-action {
         width: 100%;
+    }
+
+    .lesson-builder-workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .lesson-builder-toolbox {
+        position: static;
+        order: -1;
+    }
+
+    .lesson-tool-card {
+        padding: 14px;
+    }
+
+    .lesson-tool-list {
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     }
 
     .management-form-grid,

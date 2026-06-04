@@ -49,27 +49,37 @@
 
         <section class="management-section management-section--pending" data-lesson-content hidden>
             <div class="section-header">
-                <h2>Lesson content</h2>
-                <p class="section-copy">Create draft text, links, videos, slides, images, and file resources for this lesson. Draft content stays hidden from students until publishing is built.</p>
+                <h2>Authoring workspace</h2>
+                <p class="section-copy">Choose a tool, then build the selected content or assessment in the main editor.</p>
             </div>
 
-            <form class="management-create-form" data-content-block-form>
-                <h3 data-content-block-form-heading>Add lesson content</h3>
-                <input type="hidden" name="content-block-id" />
+            <div class="lesson-builder-workspace">
+                <div class="lesson-builder-main">
+                    <article class="lesson-builder-editor-card" id="lesson-content-editor">
+                        <div class="lesson-builder-editor-header">
+                            <div>
+                                <p class="eyebrow">Content</p>
+                                <h3 data-content-block-form-heading>Add lesson content</h3>
+                            </div>
+                            <span class="badge badge--quiet" data-content-tool-label>Text section</span>
+                        </div>
 
-                <div class="content-block-form-grid">
-                    <label class="form-field">
-                        <span>Content type</span>
-                        <select name="block-type" data-content-block-type required>
-                            <option value="text">Text section</option>
-                            <option value="link">External link</option>
-                            <option value="youtube">YouTube video</option>
-                            <option value="slides">Slides embed</option>
-                            <option value="image">Image resource</option>
-                            <option value="audio">Audio block</option>
-                            <option value="file">File/resource download</option>
-                        </select>
-                    </label>
+                        <form class="management-create-form management-create-form--embedded" data-content-block-form>
+                            <input type="hidden" name="content-block-id" />
+
+                            <div class="content-block-form-grid">
+                                <label class="form-field builder-mode-field">
+                                    <span>Content type</span>
+                                    <select name="block-type" data-content-block-type required>
+                                        <option value="text">Text section</option>
+                                        <option value="link">External link</option>
+                                        <option value="youtube">YouTube video</option>
+                                        <option value="slides">Slides embed</option>
+                                        <option value="image">Image resource</option>
+                                        <option value="audio">Audio block</option>
+                                        <option value="file">File/resource download</option>
+                                    </select>
+                                </label>
 
                     <label class="form-field">
                         <span>Optional label</span>
@@ -116,53 +126,55 @@
                             <option value="audio">Audio</option>
                         </select>
                     </label>
-                </div>
+                            </div>
 
-                <div class="course-form-actions">
-                    <button type="submit" class="primary-button" data-content-block-submit>Create content block</button>
-                    <button type="button" class="secondary-button" data-cancel-content-block-edit hidden>Cancel edit</button>
-                </div>
-            </form>
+                            <div class="course-form-actions">
+                                <button type="submit" class="primary-button" data-content-block-submit>Create content block</button>
+                                <button type="button" class="secondary-button" data-cancel-content-block-edit hidden>Cancel edit</button>
+                            </div>
+                        </form>
+                    </article>
 
-            <div data-content-block-list>
-                <p class="empty-state">Loading lesson content...</p>
-            </div>
-        </section>
+                    <div data-content-block-list>
+                        <p class="empty-state">Loading lesson content...</p>
+                    </div>
 
-        <section class="management-section management-section--pending" data-lesson-content hidden>
-            <div class="section-header">
-                <h2>Draft questions</h2>
-                <p class="section-copy">Create response questions, choice questions, and preview what students will answer.</p>
-            </div>
+                    <article class="lesson-builder-editor-card" id="lesson-question-editor">
+                        <div class="lesson-builder-editor-header">
+                            <div>
+                                <p class="eyebrow">Assessment</p>
+                                <h3 data-question-form-heading>Add draft question</h3>
+                            </div>
+                            <span class="badge badge--quiet" data-question-tool-label>Short response</span>
+                        </div>
 
-            <form class="management-create-form" data-question-form>
-                <h3 data-question-form-heading>Add draft question</h3>
-                <input type="hidden" name="question-id" />
+                        <form class="management-create-form management-create-form--embedded" data-question-form>
+                            <input type="hidden" name="question-id" />
 
-                <div class="content-block-form-grid">
-                    <label class="form-field">
-                        <span>Phase</span>
-                        <select name="phase" required>
-                            <option value="before">Before lesson</option>
-                            <option value="during">During lesson</option>
-                            <option value="reflection">Reflection</option>
-                        </select>
-                    </label>
+                            <div class="content-block-form-grid">
+                                <label class="form-field">
+                                    <span>Phase</span>
+                                    <select name="phase" required>
+                                        <option value="before">Before lesson</option>
+                                        <option value="during">During lesson</option>
+                                        <option value="reflection">Reflection</option>
+                                    </select>
+                                </label>
 
-                    <label class="form-field">
-                        <span>Question type</span>
-                        <select name="question-type" required>
-                            <option value="short_response">Short response</option>
-                            <option value="long_response">Long response</option>
-                            <option value="multiple_choice">Multiple choice</option>
-                            <option value="select_all_that_apply">Select all that apply</option>
-                            <option value="true_false">True / false</option>
-                            <option value="rating_scale">Rating scale</option>
-                            <option value="fill_in_the_blank">Fill in the blank</option>
-                            <option value="matching">Matching</option>
-                            <option value="ordering">Ordering</option>
-                        </select>
-                    </label>
+                                <label class="form-field builder-mode-field">
+                                    <span>Question type</span>
+                                    <select name="question-type" required>
+                                        <option value="short_response">Short response</option>
+                                        <option value="long_response">Long response</option>
+                                        <option value="multiple_choice">Multiple choice</option>
+                                        <option value="select_all_that_apply">Select all that apply</option>
+                                        <option value="true_false">True / false</option>
+                                        <option value="rating_scale">Rating scale</option>
+                                        <option value="fill_in_the_blank">Fill in the blank</option>
+                                        <option value="matching">Matching</option>
+                                        <option value="ordering">Ordering</option>
+                                    </select>
+                                </label>
 
                     <label class="form-field">
                         <span>Prompt</span>
@@ -241,37 +253,109 @@
                             </label>
                         </div>
                     </fieldset>
+                            </div>
+
+                            <div class="course-form-actions">
+                                <button type="submit" class="primary-button" data-question-submit>Create draft question</button>
+                                <button type="button" class="secondary-button" data-cancel-question-edit hidden>Cancel edit</button>
+                            </div>
+                        </form>
+                    </article>
+
+                    <div data-question-list>
+                        <p class="empty-state">Loading draft questions...</p>
+                    </div>
+
+                    <div class="lesson-content" data-question-preview>
+                        <div class="lesson-content-header">
+                            <h6>Student preview</h6>
+                        </div>
+                        <p class="empty-state empty-state--compact">Draft question preview will appear after questions load.</p>
+                    </div>
                 </div>
 
-                <div class="course-form-actions">
-                    <button type="submit" class="primary-button" data-question-submit>Create draft question</button>
-                    <button type="button" class="secondary-button" data-cancel-question-edit hidden>Cancel edit</button>
-                </div>
-            </form>
+                <aside class="lesson-builder-toolbox" aria-label="Lesson builder tools">
+                    <section class="lesson-tool-card" aria-labelledby="content-tools-heading">
+                        <h3 id="content-tools-heading">Content tools</h3>
+                        <div class="lesson-tool-list">
+                            <button type="button" class="lesson-tool-button" data-content-tool="text" aria-controls="lesson-content-editor">
+                                <span class="lesson-tool-icon">T</span>
+                                <span><strong>Text section</strong><small>Write lesson notes</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-content-tool="link" aria-controls="lesson-content-editor">
+                                <span class="lesson-tool-icon">L</span>
+                                <span><strong>External link</strong><small>Attach a website</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-content-tool="youtube" aria-controls="lesson-content-editor">
+                                <span class="lesson-tool-icon">Y</span>
+                                <span><strong>YouTube video</strong><small>Add video instruction</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-content-tool="slides" aria-controls="lesson-content-editor">
+                                <span class="lesson-tool-icon">S</span>
+                                <span><strong>Slides embed</strong><small>Link presentation</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-content-tool="image" aria-controls="lesson-content-editor">
+                                <span class="lesson-tool-icon">I</span>
+                                <span><strong>Image resource</strong><small>Upload or link image</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-content-tool="audio" aria-controls="lesson-content-editor">
+                                <span class="lesson-tool-icon">A</span>
+                                <span><strong>Audio block</strong><small>Upload or link audio</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-content-tool="file" aria-controls="lesson-content-editor">
+                                <span class="lesson-tool-icon">F</span>
+                                <span><strong>File download</strong><small>Attach resources</small></span>
+                            </button>
+                        </div>
+                    </section>
 
-            <div data-question-list>
-                <p class="empty-state">Loading draft questions...</p>
+                    <section class="lesson-tool-card" aria-labelledby="assessment-tools-heading">
+                        <h3 id="assessment-tools-heading">Assessment tools</h3>
+                        <div class="lesson-tool-list">
+                            <button type="button" class="lesson-tool-button" data-question-tool="short_response" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">S</span>
+                                <span><strong>Short response</strong><small>Quick written answer</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-question-tool="long_response" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">L</span>
+                                <span><strong>Long response</strong><small>Extended reflection</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-question-tool="multiple_choice" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">M</span>
+                                <span><strong>Multiple choice</strong><small>One correct answer</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-question-tool="select_all_that_apply" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">C</span>
+                                <span><strong>Select all</strong><small>Multiple correct answers</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-question-tool="true_false" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">TF</span>
+                                <span><strong>True / false</strong><small>Binary check</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-question-tool="rating_scale" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">R</span>
+                                <span><strong>Rating scale</strong><small>1 to 5 response</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-question-tool="fill_in_the_blank" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">B</span>
+                                <span><strong>Fill blank</strong><small>Targeted term check</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-question-tool="matching" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">P</span>
+                                <span><strong>Matching</strong><small>Pair terms and meanings</small></span>
+                            </button>
+                            <button type="button" class="lesson-tool-button" data-question-tool="ordering" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">O</span>
+                                <span><strong>Ordering</strong><small>Sequence steps</small></span>
+                            </button>
+                        </div>
+                    </section>
+                </aside>
             </div>
-
-            <div class="lesson-content" data-question-preview>
-                <div class="lesson-content-header">
-                    <h6>Student preview</h6>
-                </div>
-                <p class="empty-state empty-state--compact">Draft question preview will appear after questions load.</p>
-            </div>
-        </section>
-
-        <section class="management-section management-section--pending" data-lesson-content hidden>
-            <h2>Coming next</h2>
-            <ul class="feature-list">
-                <li>Edit and reorder lesson content</li>
-                <li>Edit, reorder, and score draft questions</li>
-                <li>Add media resources and preview lesson flow before publishing</li>
-            </ul>
         </section>
     </main>
 
-    <script type="module" src="../../scripts/lessons/builder.js?v=20260604-engagement-points"></script>
+    <script type="module" src="../../scripts/lessons/builder.js?v=20260604-builder-toolbox"></script>
 </body>
 
 </html>
