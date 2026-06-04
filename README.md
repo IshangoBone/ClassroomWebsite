@@ -6,6 +6,7 @@ Current public Version 1 files live at the repository root. Version 2 lives in
 Useful Version 2 docs:
 
 - `v2/LOCAL_DEVELOPMENT.md`
+- `v2/V2_WORKFLOW.md`
 - `v2/SUPABASE_SETUP.md`
 - `v2/ROLE_PERMISSIONS.md`
 - `v2/FILE_ACCESS_RULES.md`
