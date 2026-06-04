@@ -198,31 +198,13 @@
                         <form class="management-create-form management-create-form--embedded" data-question-form>
                             <input type="hidden" name="question-id" />
                             <input type="hidden" name="phase" value="during" />
+                            <input type="hidden" name="question-type" value="short_response" />
+                            <input type="hidden" name="student-instructions" value="" />
 
                             <div class="content-block-form-grid">
-                                <label class="form-field builder-mode-field">
-                                    <span>Question type</span>
-                                    <select name="question-type" required>
-                                        <option value="short_response">Short response</option>
-                                        <option value="long_response">Long response</option>
-                                        <option value="multiple_choice">Multiple choice</option>
-                                        <option value="select_all_that_apply">Select all that apply</option>
-                                        <option value="true_false">True / false</option>
-                                        <option value="rating_scale">Rating scale</option>
-                                        <option value="fill_in_the_blank">Fill in the blank</option>
-                                        <option value="matching">Matching</option>
-                                        <option value="ordering">Ordering</option>
-                                    </select>
-                                </label>
-
-                                <label class="form-field">
-                                    <span>Prompt</span>
-                                    <textarea name="prompt" rows="2" maxlength="1000" placeholder="What should students answer?" required></textarea>
-                                </label>
-
                                 <label class="form-field form-field--wide">
-                                    <span>Student instructions</span>
-                                    <textarea name="student-instructions" rows="2" maxlength="800" placeholder="Explain your answer in two or three complete sentences."></textarea>
+                                    <span>Question</span>
+                                    <textarea name="prompt" rows="4" maxlength="1000" placeholder="What should students answer?" required></textarea>
                                 </label>
 
                                 <details class="question-settings-panel form-field--wide">
@@ -243,7 +225,7 @@
                                             <span>Require students to answer before turning in the lesson</span>
                                         </label>
 
-                                        <fieldset class="form-field form-field--wide correct-answer-field" data-correct-answer-field>
+                                        <fieldset class="form-field form-field--wide correct-answer-field" data-correct-answer-field hidden>
                                             <legend>Optional correct answer</legend>
                                             <input type="text" name="correct-text" maxlength="500" placeholder="Sample correct answer" data-correct-text />
                                             <select name="correct-boolean" data-correct-boolean hidden>
@@ -254,7 +236,7 @@
                                             <input type="number" name="correct-rating" min="1" max="5" step="1" placeholder="1-5" data-correct-rating hidden />
                                         </fieldset>
 
-                                        <fieldset class="form-field form-field--wide response-rules-field" data-response-rules-field>
+                                        <fieldset class="form-field form-field--wide response-rules-field" data-response-rules-field hidden>
                                             <legend>Optional response length rules</legend>
                                             <input type="number" name="min-length" min="0" max="5000" step="1" placeholder="Minimum characters" />
                                             <input type="number" name="max-length" min="0" max="5000" step="1" placeholder="Maximum characters" />

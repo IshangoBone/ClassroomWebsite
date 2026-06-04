@@ -1345,8 +1345,8 @@ function setQuestionFormMode(questionType) {
     questionForm.elements["question-type"].value = questionType;
     questionToolLabel.textContent = questionTypeLabels[questionType] || "Question";
     setToolButtonState(questionToolButtons, questionType);
-    correctAnswerField.hidden = !usesScalarCorrectAnswer;
-    responseRulesField.hidden = !usesTextCorrectAnswer;
+    correctAnswerField.hidden = true;
+    responseRulesField.hidden = true;
     correctTextInput.hidden = !usesTextCorrectAnswer;
     correctBooleanInput.hidden = !usesBooleanCorrectAnswer;
     correctRatingInput.hidden = !usesRatingCorrectAnswer;
