@@ -65,7 +65,7 @@ main {
     grid-template-rows: auto 1fr auto;
     gap: 18px;
     min-height: calc(100vh - 48px);
-    padding: 16px;
+    padding: 18px 16px 14px;
     border: 1px solid #dbe4f1;
     border-radius: 20px;
     background: rgba(255, 255, 255, 0.94);
@@ -121,12 +121,19 @@ main {
 .app-sidebar-content {
     display: grid;
     align-content: start;
-    gap: 18px;
+    gap: 0;
 }
 
 .app-sidebar-section {
     display: grid;
     gap: 8px;
+    padding: 14px 0;
+    border-top: 1px solid #edf2f8;
+}
+
+.app-sidebar-section:first-child {
+    padding-top: 4px;
+    border-top: 0;
 }
 
 .app-sidebar-heading {
@@ -147,10 +154,10 @@ main {
     display: flex;
     align-items: center;
     gap: 10px;
-    min-height: 38px;
-    padding: 0 10px;
+    min-height: 40px;
+    padding: 0 11px;
     border: 1px solid transparent;
-    border-radius: 12px;
+    border-radius: 10px;
     background: transparent;
     color: #274a7f;
     font: inherit;
@@ -173,6 +180,7 @@ main {
     border-color: #bfd0ec;
     background: #eaf2ff;
     color: #183153;
+    box-shadow: inset 3px 0 0 #3569d9;
 }
 
 .app-sidebar-icon {
@@ -182,16 +190,18 @@ main {
     width: 28px;
     height: 28px;
     flex: 0 0 28px;
-    border-radius: 8px;
-    background: #e6efff;
-    color: #183153;
+    border-radius: 10px;
+    background: #eef4ff;
+    color: #274a7f;
     font-size: 0.78rem;
     font-weight: 900;
 }
 
 .app-sidebar-footer {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
+    padding-top: 12px;
+    border-top: 1px solid #edf2f8;
 }
 
 .app-sidebar-link--quiet {
@@ -219,11 +229,14 @@ main {
 
 .app-sidebar-toggle {
     justify-content: center;
-    width: 42px;
-    min-height: 42px;
+    width: 44px;
+    min-height: 44px;
     padding: 0;
     border-color: #dbe4f1;
-    background: #ffffff;
+    border-radius: 999px;
+    background: #f8fbff;
+    color: #274a7f;
+    box-shadow: 0 10px 22px rgba(24, 49, 83, 0.08);
 }
 
 .app-sidebar-toggle-icon {

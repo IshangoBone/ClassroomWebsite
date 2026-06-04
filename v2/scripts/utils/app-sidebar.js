@@ -44,13 +44,16 @@ function getRoleLabel(profile, hasTeachingTools) {
 function createNavLink(item, pagesRoot, currentPath) {
     const link = createElement("a", "app-sidebar-link");
     const itemPath = item.path.replace(/^\/+/, "");
+    const [pagePath, hash = ""] = itemPath.split("#");
+    const isAnchorLink = Boolean(hash);
+    const currentHash = window.location.hash.replace(/^#/, "");
 
     link.href = `${pagesRoot}/${itemPath}`;
     link.dataset.sidebarLabel = item.label;
     link.setAttribute("aria-label", item.label);
     link.innerHTML = `<span class="app-sidebar-icon" aria-hidden="true">${item.icon}</span><span class="app-sidebar-label">${item.label}</span>`;
 
-    if (currentPath === itemPath) {
+    if (currentPath === pagePath && (isAnchorLink ? currentHash === hash : !currentHash)) {
         link.classList.add("app-sidebar-link--active");
         link.setAttribute("aria-current", "page");
     }
@@ -87,16 +90,17 @@ function getSidebarSections(profile, hasTeachingAccess) {
         {
             title: "Workspace",
             items: [
-                { label: "Dashboard", path: "dashboard/index.html", icon: "D" },
+                { label: "Home", path: "dashboard/index.html", icon: "H" },
                 { label: "Profile", path: "profile/index.html", icon: "U" },
-                { label: "Course catalog", path: "courses/discover.html", icon: "C" },
             ],
         },
         {
             title: "Learning",
             items: [
-                { label: "My progress", path: "progress/index.html", icon: "P" },
-                { label: "My submissions", path: "submissions/index.html", icon: "S" },
+                { label: "Course catalog", path: "courses/discover.html", icon: "C" },
+                { label: "My courses", path: "dashboard/index.html#enrolled-courses-heading", icon: "M" },
+                { label: "Progress", path: "progress/index.html", icon: "P" },
+                { label: "My work", path: "submissions/index.html", icon: "W" },
             ],
         },
     ];
@@ -105,29 +109,27 @@ function getSidebarSections(profile, hasTeachingAccess) {
         sections.push({
             title: "Teaching",
             items: [
-                { label: "Teacher analytics", path: "analytics/index.html", icon: "A" },
-                { label: "Review submissions", path: "submissions/index.html", icon: "R" },
+                { label: "My courses", path: "dashboard/index.html#courses-heading", icon: "C" },
+                { label: "Student work", path: "submissions/index.html", icon: "S" },
+                { label: "Analytics", path: "analytics/index.html", icon: "A" },
             ],
         });
     }
 
     if (isPlatformAdminRole(profile.platform_role)) {
-        sections.push({
-            title: "Admin",
-            items: [
-                { label: "Admin dashboard", path: "admin/index.html", icon: "A" },
-                { label: "Platform analytics", path: "admin/analytics.html", icon: "N" },
-                { label: "Activity logs", path: "activity/index.html", icon: "L" },
-            ],
-        });
-    }
+        const adminItems = [
+            { label: "Admin overview", path: "admin/index.html", icon: "A" },
+            { label: "Platform analytics", path: "admin/analytics.html", icon: "N" },
+            { label: "Activity logs", path: "activity/index.html", icon: "L" },
+        ];
 
-    if (profile.platform_role === "supreme_admin") {
+        if (profile.platform_role === "supreme_admin") {
+            adminItems.push({ label: "Moderation", path: "admin/moderation.html", icon: "M" });
+        }
+
         sections.push({
-            title: "Supreme",
-            items: [
-                { label: "Moderation", path: "admin/moderation.html", icon: "M" },
-            ],
+            title: "Administration",
+            items: adminItems,
         });
     }
 
