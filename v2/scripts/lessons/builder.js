@@ -55,6 +55,8 @@ const canvasTitleElement = qs("[data-canvas-title]");
 const canvasObjectiveElement = qs("[data-canvas-objective]");
 const canvasOverviewElement = qs("[data-canvas-overview]");
 const canvasDurationElement = qs("[data-canvas-duration]");
+const lessonVisibilityState = qs("[data-lesson-visibility-state]");
+const lessonVisibilityToggle = qs("[data-lesson-visibility-toggle]");
 const correctAnswerField = qs("[data-correct-answer-field]");
 const responseRulesField = qs("[data-response-rules-field]");
 const questionOptionsField = qs("[data-question-options-field]");
@@ -935,24 +937,88 @@ async function saveContentBlockOrder(list) {
     setStatus("Lesson content order saved.", "success");
 }
 
-async function toggleContentBlockVisibility(contentBlock) {
-    const nextVisibility = !contentBlock.is_visible;
+function getLessonVisibilitySummary() {
+    const records = [...loadedContentBlocks, ...loadedQuestions];
+    const total = records.length;
+    const visibleCount = records.filter((record) => record.is_visible).length;
 
-    setStatus(`${nextVisibility ? "Showing" : "Hiding"} lesson content...`);
+    return {
+        total,
+        visibleCount,
+        isHidden: visibleCount === 0,
+        isFullyVisible: total > 0 && visibleCount === total,
+        isPartlyVisible: visibleCount > 0 && visibleCount < total,
+    };
+}
 
-    const { error } = await supabase
-        .from("lesson_content_blocks")
-        .update({ is_visible: nextVisibility })
-        .eq("id", contentBlock.id)
-        .eq("lesson_id", lessonId);
-
-    if (error) {
-        setStatus(error.message || "The lesson content visibility could not be updated.", "error");
+function updateLessonVisibilityControls() {
+    if (!lessonVisibilityState || !lessonVisibilityToggle) {
         return;
     }
 
-    await loadContentBlocks();
-    setStatus(`Lesson content ${nextVisibility ? "shown" : "hidden"}.`, "success");
+    const summary = getLessonVisibilitySummary();
+
+    if (!summary.total) {
+        lessonVisibilityState.textContent = "No saved lesson blocks yet";
+        lessonVisibilityToggle.textContent = "Make visible";
+        lessonVisibilityToggle.disabled = true;
+        lessonVisibilityToggle.classList.remove("destructive-button");
+        lessonVisibilityToggle.title = "Save lesson content or questions before making the lesson visible.";
+        return;
+    }
+
+    if (summary.isFullyVisible) {
+        lessonVisibilityState.textContent = "Visible to students";
+        lessonVisibilityToggle.textContent = "Hide from students";
+        lessonVisibilityToggle.classList.add("destructive-button");
+    } else if (summary.isPartlyVisible) {
+        lessonVisibilityState.textContent = "Partly visible";
+        lessonVisibilityToggle.textContent = "Make visible";
+        lessonVisibilityToggle.classList.remove("destructive-button");
+    } else {
+        lessonVisibilityState.textContent = "Hidden from students";
+        lessonVisibilityToggle.textContent = "Make visible";
+        lessonVisibilityToggle.classList.remove("destructive-button");
+    }
+
+    lessonVisibilityToggle.disabled = false;
+    lessonVisibilityToggle.title = "";
+}
+
+async function setLessonVisibility(nextVisibility) {
+    const summary = getLessonVisibilitySummary();
+
+    if (!summary.total) {
+        setStatus("Add lesson content or questions before making this lesson visible.", "error");
+        updateLessonVisibilityControls();
+        return;
+    }
+
+    setStatus(nextVisibility ? "Making lesson visible to students..." : "Hiding lesson from students...");
+    lessonVisibilityToggle.disabled = true;
+
+    const [contentResult, questionResult] = await Promise.all([
+        supabase
+            .from("lesson_content_blocks")
+            .update({ is_visible: nextVisibility })
+            .eq("lesson_id", lessonId)
+            .is("archived_at", null),
+        supabase
+            .from("questions")
+            .update({ is_visible: nextVisibility })
+            .eq("lesson_id", lessonId)
+            .is("archived_at", null),
+    ]);
+    const error = contentResult.error || questionResult.error;
+
+    if (error) {
+        setStatus(error.message || "The lesson visibility could not be updated.", "error");
+        updateLessonVisibilityControls();
+        return;
+    }
+
+    await Promise.all([loadContentBlocks(), loadQuestions()]);
+    setStatus(nextVisibility ? "Lesson is visible to students." : "Lesson is hidden from students.", "success");
 }
 
 function resetQuestionForm() {
@@ -1359,31 +1425,12 @@ async function saveQuestionOrder(list, phase) {
     setStatus("Draft question order saved.", "success");
 }
 
-async function toggleQuestionVisibility(question) {
-    const nextVisibility = !question.is_visible;
-
-    setStatus(`${nextVisibility ? "Showing" : "Hiding"} draft question...`);
-
-    const { error } = await supabase
-        .from("questions")
-        .update({ is_visible: nextVisibility })
-        .eq("id", question.id)
-        .eq("lesson_id", lessonId);
-
-    if (error) {
-        setStatus(error.message || "The draft question visibility could not be updated.", "error");
-        return;
-    }
-
-    await loadQuestions();
-    setStatus(`Draft question ${nextVisibility ? "shown" : "hidden"}.`, "success");
-}
-
 function renderContentBlocks(contentBlocks) {
     if (!contentBlocks.length) {
         contentBlockList.replaceChildren(
             createElement("p", "empty-state lesson-page-empty", "Start with a content block or insert item from the panel.")
         );
+        updateLessonVisibilityControls();
         return;
     }
 
@@ -1419,11 +1466,6 @@ function renderContentBlocks(contentBlocks) {
             : createElement("p", "course-muted content-block-body", contentBlock.body_text || "");
         const moveUpButton = createElement("button", "secondary-button lesson-action", "Move up");
         const moveDownButton = createElement("button", "secondary-button lesson-action", "Move down");
-        const visibilityButton = createElement(
-            "button",
-            "secondary-button lesson-action",
-            contentBlock.is_visible ? "Hide content" : "Show content"
-        );
         const editButton = createElement("button", "secondary-button lesson-action", "Edit content");
         const removeFileButton = createElement("button", "secondary-button destructive-button lesson-action", "Remove file");
         const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete content");
@@ -1468,15 +1510,13 @@ function renderContentBlocks(contentBlocks) {
         moveDownButton.type = "button";
         moveDownButton.disabled = index === contentBlocks.length - 1;
         moveDownButton.addEventListener("click", () => moveContentBlock(contentBlock, "down"));
-        visibilityButton.type = "button";
-        visibilityButton.addEventListener("click", () => toggleContentBlockVisibility(contentBlock));
         editButton.type = "button";
         editButton.addEventListener("click", () => editContentBlock(contentBlock));
         removeFileButton.type = "button";
         removeFileButton.addEventListener("click", () => removeFileFromContentBlock(contentBlock));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteContentBlock(contentBlock));
-        actions.append(dragHint, moveUpButton, moveDownButton, visibilityButton, editButton);
+        actions.append(dragHint, moveUpButton, moveDownButton, editButton);
         if (contentBlock.block_type === "file" && contentUrl) {
             actions.append(removeFileButton);
         }
@@ -1486,6 +1526,7 @@ function renderContentBlocks(contentBlocks) {
     });
 
     contentBlockList.replaceChildren(list);
+    updateLessonVisibilityControls();
 }
 
 async function loadContentBlocks() {
@@ -1547,6 +1588,7 @@ async function loadLessonResources() {
 function renderQuestions(questions) {
     if (!questions.length) {
         questionList.replaceChildren(createElement("p", "empty-state", "No draft questions have been added yet."));
+        updateLessonVisibilityControls();
         return;
     }
 
@@ -1616,11 +1658,6 @@ function renderQuestions(questions) {
         const dragHint = createElement("span", "question-drag-hint", "Drag to reorder");
         const moveUpButton = createElement("button", "secondary-button lesson-action", "Move up");
         const moveDownButton = createElement("button", "secondary-button lesson-action", "Move down");
-        const visibilityButton = createElement(
-            "button",
-            "secondary-button lesson-action",
-            question.is_visible ? "Hide question" : "Show question"
-        );
         const editButton = createElement("button", "secondary-button lesson-action", "Edit question");
         const deleteButton = createElement(
             "button",
@@ -1657,13 +1694,11 @@ function renderQuestions(questions) {
         moveDownButton.type = "button";
         moveDownButton.disabled = phaseIndex === phaseQuestions.length - 1;
         moveDownButton.addEventListener("click", () => moveQuestion(question, "down"));
-        visibilityButton.type = "button";
-        visibilityButton.addEventListener("click", () => toggleQuestionVisibility(question));
         editButton.type = "button";
         editButton.addEventListener("click", () => editQuestion(question));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteQuestion(question));
-        actions.append(dragHint, moveUpButton, moveDownButton, visibilityButton, editButton, deleteButton);
+        actions.append(dragHint, moveUpButton, moveDownButton, editButton, deleteButton);
         item.append(prompt, label, typeLabel, requiredLabel, pointsLabel, instructions, hint);
         if (correctAnswerText) {
             item.append(correctAnswer);
@@ -1683,6 +1718,7 @@ function renderQuestions(questions) {
     });
 
     questionList.replaceChildren(...sections);
+    updateLessonVisibilityControls();
 }
 
 function renderQuestionPreview(questions) {
@@ -2139,7 +2175,7 @@ contentBlockForm.addEventListener("submit", async (event) => {
         file_url: ["file", "image", "audio"].includes(blockType) ? savedFileUrl : null,
         file_type: blockType === "image" ? "image" : ["file", "audio"].includes(blockType) ? fileType : null,
         order_index: nextOrder,
-        is_visible: false,
+        is_visible: getLessonVisibilitySummary().isFullyVisible,
     })
         .select("id")
         .single();
@@ -2350,7 +2386,7 @@ questionForm.addEventListener("submit", async (event) => {
         correct_answer: correctAnswer,
         points,
         is_required: isRequired,
-        is_visible: false,
+        is_visible: getLessonVisibilitySummary().isFullyVisible,
         order_index: nextOrder,
     }).select("id").single();
 
@@ -2447,6 +2483,11 @@ closeContentEditorButton?.addEventListener("click", () => {
 closeQuestionEditorButton?.addEventListener("click", () => {
     resetQuestionForm();
     hideBuilderEditors();
+});
+
+lessonVisibilityToggle?.addEventListener("click", () => {
+    const summary = getLessonVisibilitySummary();
+    setLessonVisibility(!summary.isFullyVisible);
 });
 
 await initializePage();

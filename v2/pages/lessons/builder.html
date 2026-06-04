@@ -61,7 +61,10 @@
                                 <p class="eyebrow">Lesson page</p>
                                 <h3 id="lesson-canvas-heading">Student view draft</h3>
                             </div>
-                            <span class="badge badge--quiet">Canvas</span>
+                            <div class="lesson-page-toolbar-actions">
+                                <span class="badge badge--quiet" data-lesson-visibility-state>Hidden from students</span>
+                                <button type="button" class="secondary-button" data-lesson-visibility-toggle>Make visible</button>
+                            </div>
                         </div>
 
                         <article class="lesson-page-sheet">
@@ -321,7 +324,7 @@
                         <div class="lesson-content" data-question-preview>
                             <p class="empty-state empty-state--compact">Draft question preview will appear after questions load.</p>
                         </div>
-                        <p class="section-copy">Edit visibility, order, points, and answer keys before questions appear to students.</p>
+                        <p class="section-copy">Edit order, points, and answer keys here. Use the lesson page visibility control above to show or hide the whole lesson for students.</p>
                         <div data-question-list>
                             <p class="empty-state">Loading draft questions...</p>
                         </div>
@@ -445,7 +448,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/lessons/builder.js?v=20260604-sites-layouts"></script>
+    <script type="module" src="../../scripts/lessons/builder.js?v=20260604-lesson-visibility"></script>
 </body>
 
 </html>

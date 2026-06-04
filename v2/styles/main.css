@@ -1897,6 +1897,19 @@ h2 {
     margin: 0;
 }
 
+.lesson-page-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.lesson-page-toolbar-actions .secondary-button {
+    min-height: 34px;
+    padding: 8px 12px;
+}
+
 .lesson-page-sheet {
     display: grid;
     min-height: 680px;
