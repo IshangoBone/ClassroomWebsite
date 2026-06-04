@@ -38,6 +38,8 @@ const contentEditorCard = qs("#lesson-content-editor");
 const closeContentEditorButton = qs("[data-close-content-editor]");
 const contentToolButtons = [...document.querySelectorAll("[data-content-tool]")];
 const contentToolLabel = qs("[data-content-tool-label]");
+const toolTabButtons = [...document.querySelectorAll("[data-tool-tab]")];
+const toolPanels = [...document.querySelectorAll("[data-tool-panel]")];
 const questionForm = qs("[data-question-form]");
 const questionFormHeading = qs("[data-question-form-heading]");
 const questionSubmit = qs("[data-question-submit]");
@@ -370,7 +372,21 @@ function setToolButtonState(buttons, activeValue) {
         const isActive = button.dataset.contentTool === activeValue || button.dataset.questionTool === activeValue;
 
         button.classList.toggle("lesson-tool-button--active", isActive);
+        button.classList.toggle("lesson-insert-tile--active", isActive);
+        button.classList.toggle("lesson-layout-tile--active", isActive);
         button.setAttribute("aria-pressed", String(isActive));
+    });
+}
+
+function activateToolTab(tabName = "content-blocks") {
+    toolTabButtons.forEach((button) => {
+        const isActive = button.dataset.toolTab === tabName;
+
+        button.classList.toggle("lesson-tool-tab--active", isActive);
+        button.setAttribute("aria-selected", String(isActive));
+    });
+    toolPanels.forEach((panel) => {
+        panel.hidden = panel.dataset.toolPanel !== tabName;
     });
 }
 
@@ -2485,6 +2501,12 @@ contentToolButtons.forEach((button) => {
             value: button.dataset.contentTool || "text",
             template: button.dataset.layoutTemplate || button.dataset.contentTool || "text",
         }));
+    });
+});
+
+toolTabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+        activateToolTab(button.dataset.toolTab || "content-blocks");
     });
 });
 

@@ -310,141 +310,140 @@
 
                 <aside class="lesson-builder-toolbox" aria-label="Lesson builder tools">
                     <div class="lesson-tool-tabs" aria-label="Builder side panel tabs">
-                        <span class="lesson-tool-tab lesson-tool-tab--active">Insert</span>
+                        <button type="button" class="lesson-tool-tab lesson-tool-tab--active" data-tool-tab="content-blocks" aria-controls="content-block-tools" aria-selected="true">Content blocks</button>
+                        <button type="button" class="lesson-tool-tab" data-tool-tab="lesson-inserts" aria-controls="lesson-insert-tools" aria-selected="false">Lesson inserts</button>
+                        <button type="button" class="lesson-tool-tab" data-tool-tab="data-collection" aria-controls="data-collection-tools" aria-selected="false">Data collection</button>
                     </div>
 
-                    <section class="lesson-tool-card" aria-label="Content tools">
-                        <h3>Content tools</h3>
-                        <div class="lesson-tool-grid">
-                            <button type="button" class="lesson-insert-tile" data-content-tool="text" aria-controls="lesson-content-editor">
-                                <span class="lesson-insert-icon">T</span>
-                                <span>Text box</span>
-                            </button>
-                            <button type="button" class="lesson-insert-tile" data-content-tool="image" aria-controls="lesson-content-editor">
-                                <span class="lesson-insert-icon">I</span>
-                                <span>Images</span>
-                            </button>
-                            <button type="button" class="lesson-insert-tile" data-content-tool="youtube" aria-controls="lesson-content-editor">
-                                <span class="lesson-insert-icon">Y</span>
-                                <span>YouTube</span>
-                            </button>
-                            <button type="button" class="lesson-insert-tile" data-content-tool="file" aria-controls="lesson-content-editor">
-                                <span class="lesson-insert-icon">U</span>
-                                <span>Upload</span>
-                            </button>
-                        </div>
-                    </section>
+                    <div class="lesson-tool-window">
+                        <section class="lesson-tool-card" id="content-block-tools" data-tool-panel="content-blocks" aria-labelledby="layout-tools-heading">
+                            <div class="lesson-tool-heading">
+                                <h3 id="layout-tools-heading">Content blocks</h3>
+                            </div>
+                            <div class="lesson-layout-grid">
+                                <button type="button" class="lesson-layout-tile" data-content-tool="text" data-layout-template="text" aria-label="One column text block">
+                                    <span class="layout-preview layout-preview--text"></span>
+                                </button>
+                                <button type="button" class="lesson-layout-tile" data-content-tool="image" data-layout-template="image-text" aria-label="Two column image and text block">
+                                    <span class="layout-preview layout-preview--image-text"></span>
+                                </button>
+                                <button type="button" class="lesson-layout-tile" data-content-tool="image" data-layout-template="feature" aria-label="Image feature block">
+                                    <span class="layout-preview layout-preview--feature"></span>
+                                </button>
+                                <button type="button" class="lesson-layout-tile" data-content-tool="text" data-layout-template="columns" aria-label="Three column text block">
+                                    <span class="layout-preview layout-preview--columns"></span>
+                                </button>
+                                <button type="button" class="lesson-layout-tile" data-content-tool="image" data-layout-template="gallery" aria-label="Gallery row block">
+                                    <span class="layout-preview layout-preview--gallery"></span>
+                                </button>
+                                <button type="button" class="lesson-layout-tile" data-content-tool="text" data-layout-template="wide" aria-label="Wide section block">
+                                    <span class="layout-preview layout-preview--wide"></span>
+                                </button>
+                            </div>
+                        </section>
 
-                    <section class="lesson-tool-card" aria-labelledby="layout-tools-heading">
-                        <div class="lesson-tool-heading">
-                            <h3 id="layout-tools-heading">Content blocks</h3>
-                            <span aria-hidden="true">⌃</span>
-                        </div>
-                        <div class="lesson-layout-grid">
-                            <button type="button" class="lesson-layout-tile" data-content-tool="text" data-layout-template="text" aria-label="One column text block">
-                                <span class="layout-preview layout-preview--text"></span>
-                            </button>
-                            <button type="button" class="lesson-layout-tile" data-content-tool="image" data-layout-template="image-text" aria-label="Two column image and text block">
-                                <span class="layout-preview layout-preview--image-text"></span>
-                            </button>
-                            <button type="button" class="lesson-layout-tile" data-content-tool="image" data-layout-template="feature" aria-label="Image feature block">
-                                <span class="layout-preview layout-preview--feature"></span>
-                            </button>
-                            <button type="button" class="lesson-layout-tile" data-content-tool="text" data-layout-template="columns" aria-label="Three column text block">
-                                <span class="layout-preview layout-preview--columns"></span>
-                            </button>
-                            <button type="button" class="lesson-layout-tile" data-content-tool="image" data-layout-template="gallery" aria-label="Gallery row block">
-                                <span class="layout-preview layout-preview--gallery"></span>
-                            </button>
-                            <button type="button" class="lesson-layout-tile" data-content-tool="text" data-layout-template="wide" aria-label="Wide section block">
-                                <span class="layout-preview layout-preview--wide"></span>
-                            </button>
-                        </div>
-                    </section>
+                        <section class="lesson-tool-card" id="lesson-insert-tools" data-tool-panel="lesson-inserts" aria-labelledby="insert-tools-heading" hidden>
+                            <h3 id="insert-tools-heading">Lesson inserts</h3>
+                            <div class="lesson-tool-grid lesson-tool-grid--compact">
+                                <button type="button" class="lesson-insert-tile" data-content-tool="text" aria-controls="lesson-content-editor">
+                                    <span class="lesson-insert-icon">T</span>
+                                    <span>Text box</span>
+                                </button>
+                                <button type="button" class="lesson-insert-tile" data-content-tool="image" aria-controls="lesson-content-editor">
+                                    <span class="lesson-insert-icon">I</span>
+                                    <span>Images</span>
+                                </button>
+                                <button type="button" class="lesson-insert-tile" data-content-tool="youtube" aria-controls="lesson-content-editor">
+                                    <span class="lesson-insert-icon">Y</span>
+                                    <span>YouTube</span>
+                                </button>
+                                <button type="button" class="lesson-insert-tile" data-content-tool="file" aria-controls="lesson-content-editor">
+                                    <span class="lesson-insert-icon">U</span>
+                                    <span>Upload</span>
+                                </button>
+                            </div>
+                            <div class="lesson-tool-list">
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="text" data-layout-template="toc" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">≡</span>
+                                    <span>Table of contents</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="image" data-layout-template="carousel" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">▣</span>
+                                    <span>Image carousel</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="link" data-layout-template="divider" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">—</span>
+                                    <span>Divider</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="text" data-layout-template="spacer" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">↕</span>
+                                    <span>Spacer</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="file" data-layout-template="placeholder" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">□</span>
+                                    <span>Placeholder</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="youtube" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">▶</span>
+                                    <span>YouTube</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="file" data-layout-template="upload" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">U</span>
+                                    <span>Upload</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="file" data-layout-template="pdf" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">P</span>
+                                    <span>PDF</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="slides" data-layout-template="slides" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">S</span>
+                                    <span>Slides</span>
+                                </button>
+                            </div>
+                        </section>
 
-                    <section class="lesson-tool-card" aria-labelledby="insert-tools-heading">
-                        <h3 id="insert-tools-heading">Lesson inserts</h3>
-                        <div class="lesson-tool-list">
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="text" data-layout-template="toc" aria-controls="lesson-content-editor">
-                                <span class="lesson-tool-icon">≡</span>
-                                <span>Table of contents</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="image" data-layout-template="carousel" aria-controls="lesson-content-editor">
-                                <span class="lesson-tool-icon">▣</span>
-                                <span>Image carousel</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="link" data-layout-template="divider" aria-controls="lesson-content-editor">
-                                <span class="lesson-tool-icon">—</span>
-                                <span>Divider</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="text" data-layout-template="spacer" aria-controls="lesson-content-editor">
-                                <span class="lesson-tool-icon">↕</span>
-                                <span>Spacer</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="file" data-layout-template="placeholder" aria-controls="lesson-content-editor">
-                                <span class="lesson-tool-icon">□</span>
-                                <span>Placeholder</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="youtube" aria-controls="lesson-content-editor">
-                                <span class="lesson-tool-icon">▶</span>
-                                <span>YouTube</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="file" data-layout-template="upload" aria-controls="lesson-content-editor">
-                                <span class="lesson-tool-icon">U</span>
-                                <span>Upload</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="file" data-layout-template="pdf" aria-controls="lesson-content-editor">
-                                <span class="lesson-tool-icon">P</span>
-                                <span>PDF</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="slides" data-layout-template="slides" aria-controls="lesson-content-editor">
-                                <span class="lesson-tool-icon">S</span>
-                                <span>Slides</span>
-                            </button>
-                        </div>
-                    </section>
-
-                    <section class="lesson-tool-card" aria-label="Data collection tools">
-                        <h3>Data collection tools</h3>
-                        <div class="lesson-tool-list">
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="short_response" aria-controls="lesson-question-editor">
-                                <span class="lesson-tool-icon">S</span>
-                                <span>Short response</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="long_response" aria-controls="lesson-question-editor">
-                                <span class="lesson-tool-icon">L</span>
-                                <span>Long response</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="multiple_choice" aria-controls="lesson-question-editor">
-                                <span class="lesson-tool-icon">M</span>
-                                <span>Multiple choice</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="select_all_that_apply" aria-controls="lesson-question-editor">
-                                <span class="lesson-tool-icon">C</span>
-                                <span>Select all</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="true_false" aria-controls="lesson-question-editor">
-                                <span class="lesson-tool-icon">TF</span>
-                                <span>True / false</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="rating_scale" aria-controls="lesson-question-editor">
-                                <span class="lesson-tool-icon">R</span>
-                                <span>Rating scale</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="fill_in_the_blank" aria-controls="lesson-question-editor">
-                                <span class="lesson-tool-icon">F</span>
-                                <span>Fill blank</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="matching" aria-controls="lesson-question-editor">
-                                <span class="lesson-tool-icon">P</span>
-                                <span>Matching pairs</span>
-                            </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="ordering" aria-controls="lesson-question-editor">
-                                <span class="lesson-tool-icon">O</span>
-                                <span>Ordering</span>
-                            </button>
-                        </div>
-                    </section>
+                        <section class="lesson-tool-card" id="data-collection-tools" data-tool-panel="data-collection" aria-label="Data collection tools" hidden>
+                            <h3>Data collection tools</h3>
+                            <div class="lesson-tool-list">
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="short_response" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">S</span>
+                                    <span>Short response</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="long_response" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">L</span>
+                                    <span>Long response</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="multiple_choice" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">M</span>
+                                    <span>Multiple choice</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="select_all_that_apply" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">C</span>
+                                    <span>Select all</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="true_false" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">TF</span>
+                                    <span>True / false</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="rating_scale" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">R</span>
+                                    <span>Rating scale</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="fill_in_the_blank" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">F</span>
+                                    <span>Fill blank</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="matching" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">P</span>
+                                    <span>Matching pairs</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="ordering" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">O</span>
+                                    <span>Ordering</span>
+                                </button>
+                            </div>
+                        </section>
+                    </div>
                 </aside>
             </div>
         </section>
