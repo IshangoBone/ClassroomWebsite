@@ -2107,13 +2107,21 @@ h2 {
     display: grid;
     place-items: center;
     min-height: 150px;
+    overflow: hidden;
     border: 1px dashed #cfd8e6;
     background: #fafbfc;
     color: #667892;
     text-align: center;
 }
 
+.lesson-inline-media-slot--filled {
+    border-style: solid;
+    background: #ffffff;
+}
+
 .lesson-inline-plus {
+    position: relative;
+    z-index: 2;
     display: inline-grid;
     place-items: center;
     width: 44px;
@@ -2127,6 +2135,54 @@ h2 {
     cursor: pointer;
     font: inherit;
     font-size: 1.6rem;
+}
+
+.lesson-inline-media-slot--filled .lesson-inline-plus {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    margin: 0;
+    background: rgba(255, 255, 255, 0.92);
+    color: #3569d9;
+    font-size: 1.2rem;
+}
+
+.lesson-inline-media-preview {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    min-height: 150px;
+}
+
+.lesson-inline-image-preview,
+.lesson-inline-video-preview {
+    display: block;
+    width: 100%;
+    min-height: 220px;
+    border: 0;
+    object-fit: cover;
+}
+
+.lesson-inline-video-preview {
+    aspect-ratio: 16 / 9;
+    min-height: 260px;
+}
+
+.lesson-inline-file-preview {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 88px;
+    width: min(100%, 420px);
+    padding: 18px;
+    border: 1px solid #d8dee8;
+    border-radius: 4px;
+    background: #f8fafc;
+    color: #183153;
+    font-weight: 900;
+    text-decoration: none;
 }
 
 .lesson-inline-media-menu {

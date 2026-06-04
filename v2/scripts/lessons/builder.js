@@ -444,25 +444,148 @@ function makeEditableText(className, placeholder, tagName = "div") {
     return element;
 }
 
-function createInlineMediaSlot(label = "Add media") {
+function getYouTubeEmbedUrl(value = "") {
+    try {
+        const url = new URL(value.trim());
+        let videoId = "";
+
+        if (url.hostname.includes("youtu.be")) {
+            videoId = url.pathname.split("/").filter(Boolean)[0] || "";
+        } else if (url.hostname.includes("youtube.com")) {
+            videoId = url.searchParams.get("v") || url.pathname.split("/").filter(Boolean).pop() || "";
+        }
+
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : "";
+    } catch {
+        return "";
+    }
+}
+
+function setInlineSlotContent(slot, content) {
+    const plusButton = slot.querySelector(".lesson-inline-plus");
+    const labelElement = slot.querySelector("[data-inline-slot-label]");
+    const preview = slot.querySelector("[data-inline-slot-preview]");
+
+    preview.replaceChildren(content);
+    labelElement.hidden = true;
+    slot.classList.add("lesson-inline-media-slot--filled");
+    plusButton.textContent = "+";
+    plusButton.setAttribute("aria-label", "Replace media");
+}
+
+function chooseInlineFile(slot, type) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = type === "image"
+        ? "image/png,image/jpeg,image/webp"
+        : type === "pdf"
+            ? "application/pdf"
+            : "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+    input.addEventListener("change", () => {
+        const file = input.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(file);
+
+        if (type === "image" && file.type.startsWith("image/")) {
+            const image = createElement("img", "lesson-inline-image-preview");
+            image.src = objectUrl;
+            image.alt = file.name;
+            setInlineSlotContent(slot, image);
+            setStatus("Image added to the draft canvas.", "success");
+            return;
+        }
+
+        const link = createElement("a", "lesson-inline-file-preview", file.name);
+        link.href = objectUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        setInlineSlotContent(slot, link);
+        setStatus("Upload added to the draft canvas.", "success");
+    });
+
+    input.click();
+}
+
+function addInlineUrl(slot, type) {
+    const labelByType = {
+        image: "Paste an image URL",
+        slides: "Paste a slides link",
+        youtube: "Paste a YouTube link",
+        link: "Paste a link",
+    };
+    const value = window.prompt(labelByType[type] || "Paste a link");
+
+    if (!value) {
+        return;
+    }
+
+    if (type === "youtube") {
+        const embedUrl = getYouTubeEmbedUrl(value);
+
+        if (!embedUrl) {
+            setStatus("That does not look like a YouTube link.", "error");
+            return;
+        }
+
+        const frame = createElement("iframe", "lesson-inline-video-preview");
+        frame.src = embedUrl;
+        frame.title = "YouTube video";
+        frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+        frame.allowFullscreen = true;
+        setInlineSlotContent(slot, frame);
+        setStatus("YouTube video embedded in the draft canvas.", "success");
+        return;
+    }
+
+    if (type === "image") {
+        const image = createElement("img", "lesson-inline-image-preview");
+        image.src = value;
+        image.alt = "Lesson image";
+        setInlineSlotContent(slot, image);
+        setStatus("Image added to the draft canvas.", "success");
+        return;
+    }
+
+    const link = createElement("a", "lesson-inline-file-preview", type === "slides" ? "Open slides" : value);
+    link.href = value;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    setInlineSlotContent(slot, link);
+    setStatus(`${type === "slides" ? "Slides" : "Link"} added to the draft canvas.`, "success");
+}
+
+function createInlineMediaSlot(label = "Add media", allowedTypes = ["image", "youtube", "slides", "file"]) {
     const slot = createElement("div", "lesson-inline-media-slot");
     const plusButton = createElement("button", "lesson-inline-plus", "+");
     const labelElement = createElement("span", "", label);
+    const preview = createElement("div", "lesson-inline-media-preview");
     const menu = createElement("div", "lesson-inline-media-menu");
+    const actions = {
+        image: [
+            ["Upload image", () => chooseInlineFile(slot, "image")],
+            ["Image URL", () => addInlineUrl(slot, "image")],
+        ],
+        youtube: [["YouTube link", () => addInlineUrl(slot, "youtube")]],
+        slides: [["Slides link", () => addInlineUrl(slot, "slides")]],
+        file: [["Upload PDF or doc", () => chooseInlineFile(slot, "file")]],
+        pdf: [["Upload PDF", () => chooseInlineFile(slot, "pdf")]],
+        link: [["Link", () => addInlineUrl(slot, "link")]],
+    };
 
-    [
-        ["image", "Image"],
-        ["youtube", "YouTube"],
-        ["slides", "Slides"],
-        ["file", "File"],
-    ].forEach(([type, text]) => {
+    labelElement.dataset.inlineSlotLabel = "";
+    preview.dataset.inlineSlotPreview = "";
+
+    allowedTypes.flatMap((type) => actions[type] || []).forEach(([text, action]) => {
         const button = createElement("button", "", text);
         button.type = "button";
         button.addEventListener("click", () => {
-            labelElement.textContent = `${text} placeholder`;
-            slot.dataset.mediaType = type;
             menu.hidden = true;
-            setStatus(`${text} placeholder added to the draft section.`, "success");
+            action();
         });
         menu.append(button);
     });
@@ -472,7 +595,7 @@ function createInlineMediaSlot(label = "Add media") {
         menu.hidden = !menu.hidden;
     });
     menu.hidden = true;
-    slot.append(plusButton, labelElement, menu);
+    slot.append(plusButton, labelElement, preview, menu);
     return slot;
 }
 
@@ -509,29 +632,36 @@ function createInlineDraftBlock(button) {
     } else if (template === "toc") {
         body.append(createInlineTextStack("Table of contents", "Section links will appear here as you build the lesson."));
     } else if (template === "placeholder") {
-        body.append(createInlineMediaSlot("Add a placeholder resource"));
+        body.append(createInlineMediaSlot("Choose what to add", ["image", "youtube", "slides", "file"]));
     } else if (template === "carousel" || template === "gallery") {
         body.classList.add("lesson-inline-gallery");
         body.append(
-            createInlineMediaSlot("Add media"),
-            createInlineMediaSlot("Add media"),
-            createInlineMediaSlot("Add media"),
-            createInlineMediaSlot("Add media")
+            createInlineMediaSlot("Add image", ["image"]),
+            createInlineMediaSlot("Add image", ["image"]),
+            createInlineMediaSlot("Add image", ["image"]),
+            createInlineMediaSlot("Add image", ["image"])
         );
-    } else if (template === "docs" || template === "forms" || template === "youtube" || template === "slides" || template === "file") {
+    } else if (template === "upload" || template === "pdf" || template === "youtube" || template === "slides" || template === "file") {
         const labelByTemplate = {
-            docs: "Google Doc",
             file: "file",
-            forms: "Google Form",
+            pdf: "PDF",
             slides: "slides",
+            upload: "file",
             youtube: "YouTube video",
         };
-        body.append(createInlineMediaSlot(`Add ${labelByTemplate[template] || "resource"}`));
+        const typesByTemplate = {
+            file: ["file"],
+            pdf: ["pdf"],
+            slides: ["slides"],
+            upload: ["file"],
+            youtube: ["youtube"],
+        };
+        body.append(createInlineMediaSlot(`Add ${labelByTemplate[template] || "resource"}`, typesByTemplate[template] || ["file"]));
     } else if (template === "image-text") {
         body.classList.add("lesson-inline-two-column");
-        body.append(createInlineMediaSlot("Add image, video, or slides"), createInlineTextStack());
+        body.append(createInlineMediaSlot("Add image", ["image"]), createInlineTextStack());
     } else if (template === "feature" || template === "image") {
-        body.append(createInlineMediaSlot("Add large image, video, or slides"));
+        body.append(createInlineMediaSlot("Add image", ["image"]));
     } else if (template === "columns") {
         body.classList.add("lesson-inline-columns");
         body.append(

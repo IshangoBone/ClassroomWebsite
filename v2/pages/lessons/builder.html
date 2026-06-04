@@ -336,7 +336,8 @@
                         <span class="lesson-tool-tab lesson-tool-tab--active">Insert</span>
                     </div>
 
-                    <section class="lesson-tool-card" aria-label="Quick insert tools">
+                    <section class="lesson-tool-card" aria-label="Content tools">
+                        <h3>Content tools</h3>
                         <div class="lesson-tool-grid">
                             <button type="button" class="lesson-insert-tile" data-content-tool="text" aria-controls="lesson-content-editor">
                                 <span class="lesson-insert-icon">T</span>
@@ -346,13 +347,13 @@
                                 <span class="lesson-insert-icon">I</span>
                                 <span>Images</span>
                             </button>
-                            <button type="button" class="lesson-insert-tile" data-content-tool="link" aria-controls="lesson-content-editor">
-                                <span class="lesson-insert-icon">E</span>
-                                <span>Embed</span>
+                            <button type="button" class="lesson-insert-tile" data-content-tool="youtube" aria-controls="lesson-content-editor">
+                                <span class="lesson-insert-icon">Y</span>
+                                <span>YouTube</span>
                             </button>
                             <button type="button" class="lesson-insert-tile" data-content-tool="file" aria-controls="lesson-content-editor">
-                                <span class="lesson-insert-icon">D</span>
-                                <span>Drive file</span>
+                                <span class="lesson-insert-icon">U</span>
+                                <span>Upload</span>
                             </button>
                         </div>
                     </section>
@@ -385,7 +386,7 @@
                     </section>
 
                     <section class="lesson-tool-card" aria-labelledby="insert-tools-heading">
-                        <h3 id="insert-tools-heading">Insert</h3>
+                        <h3 id="insert-tools-heading">Lesson inserts</h3>
                         <div class="lesson-tool-list">
                             <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="text" data-layout-template="toc" aria-controls="lesson-content-editor">
                                 <span class="lesson-tool-icon">≡</span>
@@ -411,23 +412,23 @@
                                 <span class="lesson-tool-icon">▶</span>
                                 <span>YouTube</span>
                             </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="file" data-layout-template="docs" aria-controls="lesson-content-editor">
-                                <span class="lesson-tool-icon">D</span>
-                                <span>Docs</span>
+                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="file" data-layout-template="upload" aria-controls="lesson-content-editor">
+                                <span class="lesson-tool-icon">U</span>
+                                <span>Upload</span>
+                            </button>
+                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="file" data-layout-template="pdf" aria-controls="lesson-content-editor">
+                                <span class="lesson-tool-icon">P</span>
+                                <span>PDF</span>
                             </button>
                             <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="slides" data-layout-template="slides" aria-controls="lesson-content-editor">
                                 <span class="lesson-tool-icon">S</span>
                                 <span>Slides</span>
                             </button>
-                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="link" data-layout-template="forms" aria-controls="lesson-content-editor">
-                                <span class="lesson-tool-icon">F</span>
-                                <span>Forms</span>
-                            </button>
                         </div>
                     </section>
 
                     <details class="lesson-tool-card lesson-tool-card--details">
-                        <summary>Question checkpoints</summary>
+                        <summary>Data collection tools</summary>
                         <div class="lesson-tool-list">
                             <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="short_response" aria-controls="lesson-question-editor">
                                 <span class="lesson-tool-icon">S</span>
@@ -448,7 +449,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/lessons/builder.js?v=20260604-lesson-visibility"></script>
+    <script type="module" src="../../scripts/lessons/builder.js?v=20260604-content-tools"></script>
 </body>
 
 </html>
