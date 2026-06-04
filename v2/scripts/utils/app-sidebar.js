@@ -86,13 +86,19 @@ async function hasTeachingTools(profileId) {
 }
 
 function getSidebarSections(profile, hasTeachingAccess) {
+    const workspaceItems = [
+        { label: "Home", path: "dashboard/index.html", icon: "H" },
+        { label: "Profile", path: "profile/index.html", icon: "U" },
+    ];
+
+    if (hasTeachingAccess) {
+        workspaceItems.push({ label: "Courses I teach", path: "dashboard/index.html#courses-heading", icon: "T" });
+    }
+
     const sections = [
         {
-            title: "Workspace",
-            items: [
-                { label: "Home", path: "dashboard/index.html", icon: "H" },
-                { label: "Profile", path: "profile/index.html", icon: "U" },
-            ],
+            title: "My workspace",
+            items: workspaceItems,
         },
         {
             title: "Learning",
@@ -109,7 +115,6 @@ function getSidebarSections(profile, hasTeachingAccess) {
         sections.push({
             title: "Teaching",
             items: [
-                { label: "My courses", path: "dashboard/index.html#courses-heading", icon: "C" },
                 { label: "Student work", path: "submissions/index.html", icon: "S" },
                 { label: "Analytics", path: "analytics/index.html", icon: "A" },
             ],

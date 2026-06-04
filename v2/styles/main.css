@@ -64,7 +64,9 @@ main {
     display: grid;
     grid-template-rows: auto 1fr auto;
     gap: 18px;
+    max-height: calc(100vh - 48px);
     min-height: calc(100vh - 48px);
+    overflow: hidden;
     padding: 18px 16px 14px;
     border: 1px solid #dbe4f1;
     border-radius: 20px;
@@ -122,6 +124,10 @@ main {
     display: grid;
     align-content: start;
     gap: 0;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 2px;
+    scrollbar-gutter: stable;
 }
 
 .app-sidebar-section {
@@ -4209,7 +4215,9 @@ h2 {
 
     .app-sidebar {
         position: static;
+        max-height: none;
         min-height: 0;
+        overflow: visible;
         gap: 14px;
         padding: 14px;
     }
@@ -4217,6 +4225,8 @@ h2 {
     .app-sidebar-content {
         grid-template-columns: 1fr;
         gap: 12px;
+        overflow: visible;
+        padding-right: 0;
     }
 
     .app-sidebar-nav {
