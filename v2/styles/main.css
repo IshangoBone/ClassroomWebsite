@@ -2015,6 +2015,187 @@ h2 {
     background: #ffffff;
 }
 
+.lesson-inline-draft-list {
+    display: grid;
+    gap: 0;
+}
+
+.lesson-inline-block {
+    position: relative;
+    display: grid;
+    gap: 14px;
+    padding: 26px 0;
+    border-top: 1px dashed #d8dee8;
+    background: #ffffff;
+}
+
+.lesson-inline-block:first-child {
+    border-top: 0;
+}
+
+.lesson-inline-toolbar {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 6px;
+    border: 1px solid #d8dee8;
+    border-radius: 4px;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(24, 49, 83, 0.12);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.lesson-inline-block:hover .lesson-inline-toolbar,
+.lesson-inline-block:focus-within .lesson-inline-toolbar {
+    opacity: 1;
+}
+
+.lesson-inline-toolbar span {
+    color: #667892;
+    font-size: 0.72rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.lesson-inline-remove {
+    border: 0;
+    background: transparent;
+    color: #9d3528;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 900;
+}
+
+.lesson-inline-block-body {
+    display: grid;
+    gap: 18px;
+}
+
+.lesson-inline-two-column {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+    align-items: center;
+}
+
+.lesson-inline-columns {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lesson-inline-gallery {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.lesson-inline-media-slot {
+    position: relative;
+    display: grid;
+    place-items: center;
+    min-height: 150px;
+    border: 1px dashed #cfd8e6;
+    background: #fafbfc;
+    color: #667892;
+    text-align: center;
+}
+
+.lesson-inline-plus {
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 8px;
+    border: 0;
+    border-radius: 999px;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(24, 49, 83, 0.18);
+    color: #183153;
+    cursor: pointer;
+    font: inherit;
+    font-size: 1.6rem;
+}
+
+.lesson-inline-media-menu {
+    position: absolute;
+    top: calc(50% + 18px);
+    left: 50%;
+    z-index: 5;
+    display: grid;
+    min-width: 160px;
+    padding: 8px;
+    border: 1px solid #d8dee8;
+    border-radius: 4px;
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(24, 49, 83, 0.18);
+    transform: translateX(-50%);
+}
+
+.lesson-inline-media-menu button {
+    padding: 10px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #183153;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 800;
+    text-align: left;
+}
+
+.lesson-inline-media-menu button:hover,
+.lesson-inline-media-menu button:focus-visible {
+    background: #f1f5fb;
+}
+
+.lesson-inline-text-stack {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.lesson-inline-title,
+.lesson-inline-body {
+    outline: 2px solid transparent;
+    outline-offset: 4px;
+}
+
+.lesson-inline-title {
+    margin: 0;
+    color: #7b9ab0;
+    font-size: 2.1rem;
+    font-weight: 400;
+    line-height: 1.18;
+}
+
+.lesson-inline-body {
+    margin: 0;
+    color: #5c6f87;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+[contenteditable="true"]:focus {
+    outline-color: #4d7df2;
+}
+
+[contenteditable="true"]:empty::before {
+    color: #8aa1b7;
+    content: attr(data-placeholder);
+}
+
+.lesson-inline-divider {
+    width: 100%;
+    border: 0;
+    border-top: 2px solid #d8dee8;
+}
+
+.lesson-inline-spacer {
+    min-height: 72px;
+    border: 1px dashed #d8dee8;
+    background: #fbfcfe;
+}
+
 .lesson-page-section {
     display: grid;
     gap: 14px;
@@ -2134,7 +2315,6 @@ h2 {
 
 .lesson-tool-tabs {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
     border-bottom: 1px solid #e3e8f1;
 }
 
@@ -3988,6 +4168,12 @@ h2 {
 
     .lesson-page-body {
         padding: 24px;
+    }
+
+    .lesson-inline-two-column,
+    .lesson-inline-columns,
+    .lesson-inline-gallery {
+        grid-template-columns: 1fr;
     }
 
     .lesson-builder-toolbox {

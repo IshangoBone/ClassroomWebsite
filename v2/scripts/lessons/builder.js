@@ -33,6 +33,7 @@ const resourceLibrarySelect = qs("[data-resource-library-select]");
 const resourceLibraryStatus = qs("[data-resource-library-status]");
 const fileTypeField = qs("[data-file-type-field]");
 const contentBlockList = qs("[data-content-block-list]");
+const inlineDraftList = qs("[data-inline-draft-list]");
 const contentEditorCard = qs("#lesson-content-editor");
 const closeContentEditorButton = qs("[data-close-content-editor]");
 const contentToolButtons = [...document.querySelectorAll("[data-content-tool]")];
@@ -428,6 +429,126 @@ function openBuilderTool(toolType, value) {
     if (toolType === "question") {
         openQuestionTool(value);
     }
+}
+
+function makeEditableText(className, placeholder, tagName = "div") {
+    const element = document.createElement(tagName);
+    element.className = className;
+    element.contentEditable = "true";
+    element.dataset.placeholder = placeholder;
+    element.setAttribute("role", "textbox");
+    element.setAttribute("aria-label", placeholder);
+    element.spellcheck = true;
+    return element;
+}
+
+function createInlineMediaSlot(label = "Add media") {
+    const slot = createElement("div", "lesson-inline-media-slot");
+    const plusButton = createElement("button", "lesson-inline-plus", "+");
+    const labelElement = createElement("span", "", label);
+    const menu = createElement("div", "lesson-inline-media-menu");
+
+    [
+        ["image", "Image"],
+        ["youtube", "YouTube"],
+        ["slides", "Slides"],
+        ["file", "File"],
+    ].forEach(([type, text]) => {
+        const button = createElement("button", "", text);
+        button.type = "button";
+        button.addEventListener("click", () => {
+            labelElement.textContent = `${text} placeholder`;
+            slot.dataset.mediaType = type;
+            menu.hidden = true;
+            setStatus(`${text} placeholder added to the draft section.`, "success");
+        });
+        menu.append(button);
+    });
+
+    plusButton.type = "button";
+    plusButton.addEventListener("click", () => {
+        menu.hidden = !menu.hidden;
+    });
+    menu.hidden = true;
+    slot.append(plusButton, labelElement, menu);
+    return slot;
+}
+
+function createInlineTextStack(titlePlaceholder = "Click to edit text", bodyPlaceholder = "Click to add a description") {
+    const stack = createElement("div", "lesson-inline-text-stack");
+    stack.append(
+        makeEditableText("lesson-inline-title", titlePlaceholder, "h3"),
+        makeEditableText("lesson-inline-body", bodyPlaceholder, "p")
+    );
+    return stack;
+}
+
+function createInlineDraftBlock(button) {
+    if (!inlineDraftList) {
+        openContentTool(button.dataset.contentTool || "text");
+        return;
+    }
+
+    const template = button.dataset.layoutTemplate || button.dataset.contentTool || "text";
+    const block = createElement("article", `lesson-inline-block lesson-inline-block--${template}`);
+    const toolbar = createElement("div", "lesson-inline-toolbar");
+    const label = createElement("span", "", "Draft content block");
+    const removeButton = createElement("button", "lesson-inline-remove", "Remove");
+    const body = createElement("div", "lesson-inline-block-body");
+
+    removeButton.type = "button";
+    removeButton.addEventListener("click", () => block.remove());
+    toolbar.append(label, removeButton);
+
+    if (template === "divider") {
+        body.append(createElement("hr", "lesson-inline-divider"));
+    } else if (template === "spacer") {
+        body.append(createElement("div", "lesson-inline-spacer"));
+    } else if (template === "toc") {
+        body.append(createInlineTextStack("Table of contents", "Section links will appear here as you build the lesson."));
+    } else if (template === "placeholder") {
+        body.append(createInlineMediaSlot("Add a placeholder resource"));
+    } else if (template === "carousel" || template === "gallery") {
+        body.classList.add("lesson-inline-gallery");
+        body.append(
+            createInlineMediaSlot("Add media"),
+            createInlineMediaSlot("Add media"),
+            createInlineMediaSlot("Add media"),
+            createInlineMediaSlot("Add media")
+        );
+    } else if (template === "docs" || template === "forms" || template === "youtube" || template === "slides" || template === "file") {
+        const labelByTemplate = {
+            docs: "Google Doc",
+            file: "file",
+            forms: "Google Form",
+            slides: "slides",
+            youtube: "YouTube video",
+        };
+        body.append(createInlineMediaSlot(`Add ${labelByTemplate[template] || "resource"}`));
+    } else if (template === "image-text") {
+        body.classList.add("lesson-inline-two-column");
+        body.append(createInlineMediaSlot("Add image, video, or slides"), createInlineTextStack());
+    } else if (template === "feature" || template === "image") {
+        body.append(createInlineMediaSlot("Add large image, video, or slides"));
+    } else if (template === "columns") {
+        body.classList.add("lesson-inline-columns");
+        body.append(
+            createInlineTextStack("Column title", "Column description"),
+            createInlineTextStack("Column title", "Column description"),
+            createInlineTextStack("Column title", "Column description")
+        );
+    } else if (template === "link") {
+        body.append(createInlineTextStack("Link title", "Paste or describe the resource"));
+    } else {
+        body.append(createInlineTextStack());
+    }
+
+    block.append(toolbar, body);
+    contentBlockList?.querySelector(".lesson-page-empty")?.remove();
+    inlineDraftList.append(block);
+    hideBuilderEditors({ scrollToCanvas: false });
+    block.scrollIntoView({ behavior: "smooth", block: "center" });
+    block.querySelector("[contenteditable='true']")?.focus();
 }
 
 function getBuilderToolFromTransfer(event) {
@@ -2052,7 +2173,7 @@ contentBlockTypeSelect.addEventListener("change", () => {
 
 contentToolButtons.forEach((button) => {
     button.addEventListener("click", () => {
-        openContentTool(button.dataset.contentTool || "text");
+        createInlineDraftBlock(button);
     });
     button.draggable = true;
     button.addEventListener("dragstart", (event) => {
@@ -2060,6 +2181,7 @@ contentToolButtons.forEach((button) => {
         event.dataTransfer.setData("application/x-builder-tool", JSON.stringify({
             toolType: "content",
             value: button.dataset.contentTool || "text",
+            template: button.dataset.layoutTemplate || button.dataset.contentTool || "text",
         }));
     });
 });
@@ -2305,6 +2427,15 @@ builderDropZone?.addEventListener("drop", (event) => {
     builderDropZone.classList.remove("lesson-page-insert-zone--active");
 
     const tool = getBuilderToolFromTransfer(event);
+    if (tool.toolType === "content") {
+        createInlineDraftBlock({
+            dataset: {
+                contentTool: tool.value || "text",
+                layoutTemplate: tool.template || tool.value || "text",
+            },
+        });
+        return;
+    }
     openBuilderTool(tool.toolType, tool.value);
 });
 
