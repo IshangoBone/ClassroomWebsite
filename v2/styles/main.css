@@ -3199,7 +3199,42 @@ h2 {
 }
 
 .lesson-submit-card--page {
-    max-width: 760px;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+    gap: 8px 24px;
+    align-items: end;
+    max-width: none;
+    margin: 28px -64px -72px;
+    padding: 24px 64px 32px;
+    border: 0;
+    border-top: 4px solid #183153;
+    border-radius: 0;
+    background: #f8fafc;
+    box-shadow: none;
+}
+
+.lesson-submit-card--page h3,
+.lesson-submit-card--page [data-save-status],
+.lesson-submit-card--page [data-submit-status] {
+    grid-column: 1;
+}
+
+.lesson-submit-card--page h3 {
+    align-self: end;
+}
+
+.lesson-submit-card--page [data-save-status],
+.lesson-submit-card--page [data-submit-status] {
+    max-width: 620px;
+}
+
+.lesson-submit-card--page .lesson-draft-actions,
+.lesson-submit-card--page [data-turn-in-button],
+.lesson-submit-card--page [data-next-lesson-link] {
+    grid-column: 2;
+}
+
+.lesson-submit-card--page .lesson-draft-actions {
+    align-self: end;
 }
 
 .lesson-render-block--text {
@@ -3349,10 +3384,6 @@ h2 {
 
 .lesson-answer-field {
     gap: 6px;
-}
-
-.lesson-submit-card {
-    border-left: 5px solid #183153;
 }
 
 .lesson-draft-actions {
@@ -4315,6 +4346,21 @@ h2 {
 
     .lesson-page-body {
         padding: 24px;
+    }
+
+    .lesson-submit-card--page {
+        grid-template-columns: 1fr;
+        margin: 24px -24px -24px;
+        padding: 22px 24px 24px;
+    }
+
+    .lesson-submit-card--page h3,
+    .lesson-submit-card--page [data-save-status],
+    .lesson-submit-card--page [data-submit-status],
+    .lesson-submit-card--page .lesson-draft-actions,
+    .lesson-submit-card--page [data-turn-in-button],
+    .lesson-submit-card--page [data-next-lesson-link] {
+        grid-column: 1;
     }
 
     .lesson-inline-two-column,
