@@ -1830,7 +1830,7 @@ async function loadLessonResources() {
 
 function renderQuestions(questions) {
     if (!questions.length) {
-        questionList.replaceChildren(createElement("p", "empty-state", "No draft questions have been added yet."));
+        questionList?.replaceChildren(createElement("p", "empty-state", "No draft questions have been added yet."));
         updateLessonVisibilityControls();
         return;
     }
@@ -1960,48 +1960,64 @@ function renderQuestions(questions) {
         return section;
     });
 
-    questionList.replaceChildren(...sections);
+    questionList?.replaceChildren(...sections);
     updateLessonVisibilityControls();
 }
 
 function renderQuestionPreview(questions) {
-    const visibleQuestions = questions.filter((question) => question.is_visible);
+    const previewQuestions = [...questions].sort((first, second) => {
+        if (first.phase !== second.phase) {
+            return questionPhases.findIndex(([phase]) => phase === first.phase) -
+                questionPhases.findIndex(([phase]) => phase === second.phase);
+        }
+
+        return first.order_index - second.order_index;
+    });
     const header = createElement("div", "lesson-content-header");
-    const heading = createElement("h6", "", "Student preview");
+    const heading = createElement("h6", "", "Data collection");
 
     header.append(heading);
 
-    if (!visibleQuestions.length) {
+    if (!previewQuestions.length) {
         questionPreview.replaceChildren(
             header,
-            createElement("p", "empty-state empty-state--compact", "No visible questions are ready for student preview.")
+            createElement("p", "empty-state empty-state--compact", "Add a data collection tool to collect student responses.")
         );
         return;
     }
 
-    const previewSections = questionPhases.map(([phase, phaseTitle]) => {
-        const phaseQuestions = visibleQuestions.filter((question) => question.phase === phase);
+    const previewSections = questionPhases.flatMap(([phase, phaseTitle]) => {
+        const phaseQuestions = previewQuestions.filter((question) => question.phase === phase);
         const section = createElement("section", "lesson-content");
         const heading = createElement("h3", "course-subheading", phaseTitle);
 
-        section.append(heading);
-
         if (!phaseQuestions.length) {
-            section.append(createElement("p", "empty-state empty-state--compact", "No visible questions in this section."));
-            return section;
+            return [];
         }
+
+        section.append(heading);
 
         phaseQuestions.forEach((question) => {
             const card = createElement("article", "question-card");
             const prompt = createElement("h4", "question-prompt", question.prompt);
             const responseType = question.question_type || "short_response";
+            const typeLabel = createElement("span", "badge badge--quiet", questionTypeLabels[responseType] || "Question");
+            const requiredLabel = createElement("span", "badge badge--quiet", question.is_required ? "Required" : "Optional");
             const instructions = createElement(
                 "p",
                 "course-muted question-instructions",
                 question.student_instructions || "Answer in your own words."
             );
+            const editButton = createElement("button", "secondary-button lesson-action", "Edit question");
+            const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete question");
+            const actions = createElement("div", "content-block-actions");
 
-            card.append(prompt, instructions);
+            editButton.type = "button";
+            editButton.addEventListener("click", () => editQuestion(question));
+            deleteButton.type = "button";
+            deleteButton.addEventListener("click", () => deleteQuestion(question));
+            actions.append(editButton, deleteButton);
+            card.append(prompt, typeLabel, requiredLabel, instructions);
 
             if (responseType === "multiple_choice" || responseType === "select_all_that_apply") {
                 const options = getQuestionOptions(question);
@@ -2099,6 +2115,7 @@ function renderQuestionPreview(questions) {
                 card.append(response);
             }
 
+            card.append(actions);
             section.append(card);
         });
 
@@ -2117,7 +2134,7 @@ async function loadQuestions() {
         .order("order_index", { ascending: true });
 
     if (error) {
-        questionList.replaceChildren(createElement("p", "empty-state", "Draft questions could not be loaded."));
+        questionList?.replaceChildren(createElement("p", "empty-state", "Draft questions could not be loaded."));
         setStatus("Draft questions could not be loaded.", "error");
         return false;
     }

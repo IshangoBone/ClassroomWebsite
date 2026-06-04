@@ -44,52 +44,30 @@
                         <div class="lesson-renderer" data-content-renderer>
                             <p class="empty-state">Loading lesson content...</p>
                         </div>
+
+                        <section class="lesson-page-data-collection" data-question-flow hidden>
+                            <h3>Student response</h3>
+                            <p class="section-copy">Answer the questions your teacher added for this lesson.</p>
+                        </section>
+
+                        <article class="lesson-submit-card lesson-submit-card--page" data-submit-panel hidden>
+                            <h3 data-submit-panel-heading>Turn in lesson</h3>
+                            <p data-save-status>Draft answers are saved as you work.</p>
+                            <p class="auth-status management-status" data-submit-status aria-live="polite"></p>
+                            <div class="lesson-draft-actions">
+                                <button type="button" class="secondary-button" data-save-draft-button>Save draft</button>
+                                <button type="button" class="secondary-button destructive-button" data-reset-draft-button>Reset draft</button>
+                            </div>
+                            <button type="button" class="primary-button" data-turn-in-button>Turn in lesson</button>
+                            <a class="secondary-button" data-next-lesson-link href="../dashboard/index.html" hidden>Continue</a>
+                        </article>
                     </div>
                 </article>
             </section>
-
-            <aside class="lesson-view-sidebar" aria-labelledby="lesson-flow-heading">
-                <div class="lesson-view-panel-heading">
-                    <h2 id="lesson-flow-heading">Lesson flow</h2>
-                    <p class="section-copy">Objective and question checkpoints.</p>
-                </div>
-
-                <article class="lesson-flow-card">
-                    <h3>Objective</h3>
-                    <p data-lesson-objective>Loading objective...</p>
-                </article>
-
-                <div class="lesson-question-flow" data-question-flow>
-                    <section class="lesson-flow-card">
-                        <h3>Before lesson</h3>
-                        <p>Question flow will appear here in the lesson experience.</p>
-                    </section>
-                    <section class="lesson-flow-card">
-                        <h3>During lesson</h3>
-                        <p>Question flow will appear here in the lesson experience.</p>
-                    </section>
-                    <section class="lesson-flow-card">
-                        <h3>Reflection</h3>
-                        <p>Question flow will appear here in the lesson experience.</p>
-                    </section>
-                </div>
-
-                <article class="lesson-submit-card" data-submit-panel hidden>
-                    <h3 data-submit-panel-heading>Turn in lesson</h3>
-                    <p data-save-status>Draft answers are saved as you work.</p>
-                    <p class="auth-status management-status" data-submit-status aria-live="polite"></p>
-                    <div class="lesson-draft-actions">
-                        <button type="button" class="secondary-button" data-save-draft-button>Save draft</button>
-                        <button type="button" class="secondary-button destructive-button" data-reset-draft-button>Reset draft</button>
-                    </div>
-                    <button type="button" class="primary-button" data-turn-in-button>Turn in lesson</button>
-                    <a class="secondary-button" data-next-lesson-link href="../dashboard/index.html" hidden>Continue</a>
-                </article>
-            </aside>
         </div>
     </main>
 
-    <script type="module" src="../../scripts/lessons/viewer.js?v=20260604-lesson-page-visible"></script>
+    <script type="module" src="../../scripts/lessons/viewer.js?v=20260604-data-tools"></script>
 </body>
 
 </html>

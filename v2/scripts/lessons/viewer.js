@@ -832,18 +832,16 @@ function createQuestionAnswerControl(question) {
 }
 
 function renderQuestionFlow(questions) {
-    const sections = questionPhases.map(([phase, title]) => {
+    const sections = questionPhases.flatMap(([phase, title]) => {
         const phaseQuestions = questions.filter((question) => question.phase === phase);
         const section = createElement("section", "lesson-flow-card");
         const heading = createElement("h3", "", title);
 
-        section.append(heading);
-
         if (!phaseQuestions.length) {
-            section.append(createElement("p", "", "Questions for this section will appear in the full lesson experience."));
-            return section;
+            return [];
         }
 
+        section.append(heading);
         const list = createElement("ol", "lesson-flow-question-list");
 
         phaseQuestions.forEach((question) => {
@@ -865,7 +863,16 @@ function renderQuestionFlow(questions) {
         return section;
     });
 
-    questionFlow.replaceChildren(...sections);
+    questionFlow.hidden = !sections.length;
+    questionFlow.replaceChildren(
+        ...(sections.length
+            ? [
+                createElement("h3", "", "Student response"),
+                createElement("p", "section-copy", "Answer the questions your teacher added for this lesson."),
+                ...sections,
+            ]
+            : [])
+    );
     setQuestionInputsDisabled(isSubmitted || isTeacherPreview);
 }
 
@@ -1401,7 +1408,9 @@ async function initializePage() {
     contextElement.textContent = isTeacherPreview
         ? `Teacher preview / ${course.title || "Untitled course"} / ${module.title || "Untitled module"}`
         : `${course.title || "Untitled course"} / ${module.title || "Untitled module"}`;
-    objectiveElement.textContent = lesson.objective || lesson.summary || "No objective has been added for this lesson yet.";
+    if (objectiveElement) {
+        objectiveElement.textContent = lesson.objective || lesson.summary || "No objective has been added for this lesson yet.";
+    }
     if (canvasContextElement) {
         canvasContextElement.textContent = contextElement.textContent;
     }

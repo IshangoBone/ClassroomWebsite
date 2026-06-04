@@ -92,6 +92,10 @@
                                     <p class="empty-state">Loading lesson content...</p>
                                 </div>
                                 <div class="lesson-inline-draft-list" data-inline-draft-list></div>
+                                <div class="lesson-page-question-canvas" data-question-preview>
+                                    <p class="empty-state empty-state--compact">Data collection blocks will appear here.</p>
+                                </div>
+                                <div data-question-list hidden></div>
                             </div>
                         </article>
                     </section>
@@ -305,22 +309,6 @@
                         </form>
                     </article>
 
-                    <details class="lesson-builder-draft-list">
-                        <summary>
-                            <div>
-                                <p class="eyebrow">Teacher only</p>
-                                <strong>Student checkpoints and draft questions</strong>
-                            </div>
-                            <span class="badge badge--quiet">Settings</span>
-                        </summary>
-                        <div class="lesson-content" data-question-preview>
-                            <p class="empty-state empty-state--compact">Draft question preview will appear after questions load.</p>
-                        </div>
-                        <p class="section-copy">Edit order, points, and answer keys here. Use the lesson page visibility control above to show or hide the whole lesson for students.</p>
-                        <div data-question-list>
-                            <p class="empty-state">Loading draft questions...</p>
-                        </div>
-                    </details>
                 </div>
 
                 <aside class="lesson-builder-toolbox" aria-label="Lesson builder tools">
@@ -419,29 +407,53 @@
                         </div>
                     </section>
 
-                    <details class="lesson-tool-card lesson-tool-card--details">
-                        <summary>Data collection tools</summary>
+                    <section class="lesson-tool-card" aria-label="Data collection tools">
+                        <h3>Data collection tools</h3>
                         <div class="lesson-tool-list">
                             <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="short_response" aria-controls="lesson-question-editor">
                                 <span class="lesson-tool-icon">S</span>
                                 <span>Short response</span>
                             </button>
+                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="long_response" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">L</span>
+                                <span>Long response</span>
+                            </button>
                             <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="multiple_choice" aria-controls="lesson-question-editor">
                                 <span class="lesson-tool-icon">M</span>
                                 <span>Multiple choice</span>
+                            </button>
+                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="select_all_that_apply" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">C</span>
+                                <span>Select all</span>
                             </button>
                             <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="true_false" aria-controls="lesson-question-editor">
                                 <span class="lesson-tool-icon">TF</span>
                                 <span>True / false</span>
                             </button>
+                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="rating_scale" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">R</span>
+                                <span>Rating scale</span>
+                            </button>
+                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="fill_in_the_blank" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">F</span>
+                                <span>Fill blank</span>
+                            </button>
+                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="matching" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">P</span>
+                                <span>Matching pairs</span>
+                            </button>
+                            <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="ordering" aria-controls="lesson-question-editor">
+                                <span class="lesson-tool-icon">O</span>
+                                <span>Ordering</span>
+                            </button>
                         </div>
-                    </details>
+                    </section>
                 </aside>
             </div>
         </section>
     </main>
 
-    <script type="module" src="../../scripts/lessons/builder.js?v=20260604-lesson-page-visible"></script>
+    <script type="module" src="../../scripts/lessons/builder.js?v=20260604-data-tools"></script>
 </body>
 
 </html>

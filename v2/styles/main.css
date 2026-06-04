@@ -1981,6 +1981,19 @@ h2 {
     padding: 36px 64px 72px;
 }
 
+.lesson-page-question-canvas,
+.lesson-page-data-collection {
+    display: grid;
+    gap: 16px;
+    padding-top: 24px;
+    border-top: 1px dashed #d8dee8;
+}
+
+.lesson-page-question-canvas:empty,
+.lesson-page-data-collection:empty {
+    display: none;
+}
+
 .lesson-page-insert-zone {
     display: flex;
     gap: 12px;
@@ -3088,10 +3101,16 @@ h2 {
     margin-bottom: 24px;
 }
 
-.lesson-view-shell,
 .split-learning-layout {
     display: grid;
     grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.lesson-view-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 20px;
     align-items: start;
 }
@@ -3130,6 +3149,10 @@ h2 {
     border-radius: 14px;
     background: #ffffff;
     box-shadow: 0 12px 28px rgba(24, 49, 83, 0.06);
+}
+
+.lesson-submit-card--page {
+    max-width: 760px;
 }
 
 .lesson-render-block--text {
