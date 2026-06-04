@@ -183,11 +183,11 @@
                         </form>
                     </article>
 
-                    <article class="lesson-builder-editor-card" id="lesson-question-editor" hidden>
+                    <article class="lesson-builder-editor-card lesson-question-editor-popover" id="lesson-question-editor" hidden>
                         <div class="lesson-builder-editor-header">
                             <div>
-                                <p class="eyebrow">Assessment</p>
-                                <h3 data-question-form-heading>Add draft question</h3>
+                                <p class="eyebrow">Data collection</p>
+                                <h3 data-question-form-heading>Add question block</h3>
                             </div>
                             <div class="lesson-builder-editor-actions">
                                 <span class="badge badge--quiet" data-question-tool-label>Short response</span>
@@ -197,17 +197,9 @@
 
                         <form class="management-create-form management-create-form--embedded" data-question-form>
                             <input type="hidden" name="question-id" />
+                            <input type="hidden" name="phase" value="during" />
 
                             <div class="content-block-form-grid">
-                                <label class="form-field">
-                                    <span>Phase</span>
-                                    <select name="phase" required>
-                                        <option value="before">Before lesson</option>
-                                        <option value="during">During lesson</option>
-                                        <option value="reflection">Reflection</option>
-                                    </select>
-                                </label>
-
                                 <label class="form-field builder-mode-field">
                                     <span>Question type</span>
                                     <select name="question-type" required>
@@ -223,87 +215,92 @@
                                     </select>
                                 </label>
 
-                    <label class="form-field">
-                        <span>Prompt</span>
-                        <textarea name="prompt" rows="4" maxlength="1000" placeholder="What should students answer?" required></textarea>
-                    </label>
+                                <label class="form-field">
+                                    <span>Prompt</span>
+                                    <textarea name="prompt" rows="2" maxlength="1000" placeholder="What should students answer?" required></textarea>
+                                </label>
 
-                    <label class="form-field form-field--wide">
-                        <span>Student instructions</span>
-                        <textarea name="student-instructions" rows="3" maxlength="800" placeholder="Explain your answer in two or three complete sentences."></textarea>
-                    </label>
+                                <label class="form-field form-field--wide">
+                                    <span>Student instructions</span>
+                                    <textarea name="student-instructions" rows="2" maxlength="800" placeholder="Explain your answer in two or three complete sentences."></textarea>
+                                </label>
 
-                    <label class="form-field form-field--wide">
-                        <span>Optional hint</span>
-                        <textarea name="hint" rows="2" maxlength="500" placeholder="Give students a nudge without giving away the answer."></textarea>
-                    </label>
+                                <details class="question-settings-panel form-field--wide">
+                                    <summary>Answer settings</summary>
+                                    <div class="question-settings-grid">
+                                        <label class="form-field form-field--wide">
+                                            <span>Optional hint</span>
+                                            <textarea name="hint" rows="2" maxlength="500" placeholder="Give students a nudge without giving away the answer."></textarea>
+                                        </label>
 
-                    <label class="form-field">
-                        <span>Points</span>
-                        <input type="number" name="points" min="0" max="100" step="0.5" value="0" required />
-                    </label>
+                                        <label class="form-field">
+                                            <span>Points</span>
+                                            <input type="number" name="points" min="0" max="100" step="0.5" value="0" required />
+                                        </label>
 
-                    <label class="form-field form-field--checkbox form-field--wide">
-                        <input type="checkbox" name="is-required" />
-                        <span>Require students to answer before turning in the lesson</span>
-                    </label>
+                                        <label class="form-field form-field--checkbox form-field--wide">
+                                            <input type="checkbox" name="is-required" />
+                                            <span>Require students to answer before turning in the lesson</span>
+                                        </label>
 
-                    <fieldset class="form-field form-field--wide correct-answer-field" data-correct-answer-field>
-                        <legend>Optional correct answer</legend>
-                        <input type="text" name="correct-text" maxlength="500" placeholder="Sample correct answer" data-correct-text />
-                        <select name="correct-boolean" data-correct-boolean hidden>
-                            <option value="">No correct answer</option>
-                            <option value="true">True</option>
-                            <option value="false">False</option>
-                        </select>
-                        <input type="number" name="correct-rating" min="1" max="5" step="1" placeholder="1-5" data-correct-rating hidden />
-                    </fieldset>
+                                        <fieldset class="form-field form-field--wide correct-answer-field" data-correct-answer-field>
+                                            <legend>Optional correct answer</legend>
+                                            <input type="text" name="correct-text" maxlength="500" placeholder="Sample correct answer" data-correct-text />
+                                            <select name="correct-boolean" data-correct-boolean hidden>
+                                                <option value="">No correct answer</option>
+                                                <option value="true">True</option>
+                                                <option value="false">False</option>
+                                            </select>
+                                            <input type="number" name="correct-rating" min="1" max="5" step="1" placeholder="1-5" data-correct-rating hidden />
+                                        </fieldset>
 
-                    <fieldset class="form-field form-field--wide response-rules-field" data-response-rules-field>
-                        <legend>Optional response length rules</legend>
-                        <input type="number" name="min-length" min="0" max="5000" step="1" placeholder="Minimum characters" />
-                        <input type="number" name="max-length" min="0" max="5000" step="1" placeholder="Maximum characters" />
-                    </fieldset>
+                                        <fieldset class="form-field form-field--wide response-rules-field" data-response-rules-field>
+                                            <legend>Optional response length rules</legend>
+                                            <input type="number" name="min-length" min="0" max="5000" step="1" placeholder="Minimum characters" />
+                                            <input type="number" name="max-length" min="0" max="5000" step="1" placeholder="Maximum characters" />
+                                        </fieldset>
+                                    </div>
+                                </details>
 
-                    <fieldset class="form-field form-field--wide question-options-field" data-question-options-field hidden>
-                        <legend>Answer choices</legend>
-                        <div class="question-option-row">
-                            <input type="text" name="option-1" maxlength="300" placeholder="Choice 1" />
-                            <input type="text" name="match-1" maxlength="300" placeholder="Match 1" data-match-input hidden />
-                            <label data-correct-control>
-                                <input type="radio" name="correct-option" value="1" />
-                                <span>Correct</span>
-                            </label>
-                        </div>
-                        <div class="question-option-row">
-                            <input type="text" name="option-2" maxlength="300" placeholder="Choice 2" />
-                            <input type="text" name="match-2" maxlength="300" placeholder="Match 2" data-match-input hidden />
-                            <label data-correct-control>
-                                <input type="radio" name="correct-option" value="2" />
-                                <span>Correct</span>
-                            </label>
-                        </div>
-                        <div class="question-option-row">
-                            <input type="text" name="option-3" maxlength="300" placeholder="Choice 3" />
-                            <input type="text" name="match-3" maxlength="300" placeholder="Match 3" data-match-input hidden />
-                            <label data-correct-control>
-                                <input type="radio" name="correct-option" value="3" />
-                                <span>Correct</span>
-                            </label>
-                        </div>
-                        <div class="question-option-row">
-                            <input type="text" name="option-4" maxlength="300" placeholder="Choice 4" />
-                            <input type="text" name="match-4" maxlength="300" placeholder="Match 4" data-match-input hidden />
-                            <label data-correct-control>
-                                <input type="radio" name="correct-option" value="4" />
-                                <span>Correct</span>
-                            </label>
-                        </div>
-                    </fieldset>
+                                <fieldset class="form-field form-field--wide question-options-field" data-question-options-field hidden>
+                                    <legend>Answer choices</legend>
+                                    <div class="question-option-row">
+                                        <input type="text" name="option-1" maxlength="300" placeholder="Choice 1" />
+                                        <input type="text" name="match-1" maxlength="300" placeholder="Match 1" data-match-input hidden />
+                                        <label data-correct-control>
+                                            <input type="radio" name="correct-option" value="1" />
+                                            <span>Correct</span>
+                                        </label>
+                                    </div>
+                                    <div class="question-option-row">
+                                        <input type="text" name="option-2" maxlength="300" placeholder="Choice 2" />
+                                        <input type="text" name="match-2" maxlength="300" placeholder="Match 2" data-match-input hidden />
+                                        <label data-correct-control>
+                                            <input type="radio" name="correct-option" value="2" />
+                                            <span>Correct</span>
+                                        </label>
+                                    </div>
+                                    <div class="question-option-row">
+                                        <input type="text" name="option-3" maxlength="300" placeholder="Choice 3" />
+                                        <input type="text" name="match-3" maxlength="300" placeholder="Match 3" data-match-input hidden />
+                                        <label data-correct-control>
+                                            <input type="radio" name="correct-option" value="3" />
+                                            <span>Correct</span>
+                                        </label>
+                                    </div>
+                                    <div class="question-option-row">
+                                        <input type="text" name="option-4" maxlength="300" placeholder="Choice 4" />
+                                        <input type="text" name="match-4" maxlength="300" placeholder="Match 4" data-match-input hidden />
+                                        <label data-correct-control>
+                                            <input type="radio" name="correct-option" value="4" />
+                                            <span>Correct</span>
+                                        </label>
+                                    </div>
+                                </fieldset>
                             </div>
 
                             <div class="course-form-actions">
-                                <button type="submit" class="primary-button" data-question-submit>Create draft question</button>
+                                <button type="submit" class="primary-button" data-question-submit>Done</button>
                                 <button type="button" class="secondary-button" data-cancel-question-edit hidden>Cancel edit</button>
                             </div>
                         </form>

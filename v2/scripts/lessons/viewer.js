@@ -832,44 +832,33 @@ function createQuestionAnswerControl(question) {
 }
 
 function renderQuestionFlow(questions) {
-    const sections = questionPhases.flatMap(([phase, title]) => {
-        const phaseQuestions = questions.filter((question) => question.phase === phase);
+    const sortedQuestions = [...questions].sort((first, second) => first.order_index - second.order_index);
+    const cards = sortedQuestions.map((question) => {
         const section = createElement("section", "lesson-flow-card");
-        const heading = createElement("h3", "", title);
-
-        if (!phaseQuestions.length) {
-            return [];
-        }
-
-        section.append(heading);
+        const item = createElement("li", "");
+        const prompt = createElement("strong", "", question.prompt);
+        const instructions = createElement(
+            "p",
+            "",
+            question.student_instructions || (question.is_required ? "Required checkpoint" : "Optional checkpoint")
+        );
+        const badge = createElement("span", "badge badge--quiet", question.is_required ? "Required" : "Optional");
         const list = createElement("ol", "lesson-flow-question-list");
 
-        phaseQuestions.forEach((question) => {
-            const item = createElement("li", "");
-            const prompt = createElement("strong", "", question.prompt);
-            const instructions = createElement(
-                "p",
-                "",
-                question.student_instructions || (question.is_required ? "Required checkpoint" : "Optional checkpoint")
-            );
-            const badge = createElement("span", "badge badge--quiet", question.is_required ? "Required" : "Optional");
-
-            item.dataset.questionId = question.id;
-            item.append(prompt, badge, instructions, createQuestionAnswerControl(question));
-            list.append(item);
-        });
-
+        item.dataset.questionId = question.id;
+        item.append(prompt, badge, instructions, createQuestionAnswerControl(question));
+        list.append(item);
         section.append(list);
         return section;
     });
 
-    questionFlow.hidden = !sections.length;
+    questionFlow.hidden = !cards.length;
     questionFlow.replaceChildren(
-        ...(sections.length
+        ...(cards.length
             ? [
                 createElement("h3", "", "Student response"),
                 createElement("p", "section-copy", "Answer the questions your teacher added for this lesson."),
-                ...sections,
+                ...cards,
             ]
             : [])
     );

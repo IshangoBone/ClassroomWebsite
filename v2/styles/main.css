@@ -2881,6 +2881,12 @@ h2 {
     background: #f7faff;
 }
 
+.question-card--placeholder {
+    border-color: #4d7df2;
+    border-style: dashed;
+    background: #f5f8ff;
+}
+
 .lesson-page-sheet .content-block-card,
 .lesson-page-sheet .question-card {
     border-color: #e0e5ee;
@@ -3016,6 +3022,47 @@ h2 {
     margin: 0;
     padding: 0;
     border: 0;
+}
+
+.lesson-question-editor-popover {
+    position: fixed;
+    right: 332px;
+    top: 92px;
+    z-index: 40;
+    width: min(560px, calc(100vw - 48px));
+    max-height: calc(100vh - 124px);
+    overflow: auto;
+    box-shadow: 0 24px 60px rgba(24, 49, 83, 0.24);
+}
+
+.lesson-question-editor-popover .content-block-form-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.lesson-question-editor-popover textarea {
+    min-height: 0;
+}
+
+.question-settings-panel {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid #dbe4f1;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.question-settings-panel summary {
+    cursor: pointer;
+    color: #183153;
+    font-weight: 900;
+}
+
+.question-settings-grid {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
 }
 
 .question-matching-preview {
@@ -4241,6 +4288,14 @@ h2 {
 
     .lesson-builder-workspace {
         grid-template-columns: 1fr;
+    }
+
+    .lesson-question-editor-popover {
+        left: 16px;
+        right: 16px;
+        top: 72px;
+        width: auto;
+        max-height: calc(100vh - 96px);
     }
 
     .lesson-page-toolbar,

@@ -385,6 +385,10 @@ function focusEditor(editorId) {
 }
 
 function showBuilderEditor(editor) {
+    if (editor !== questionEditorCard) {
+        clearQuestionDraftPlaceholder();
+    }
+
     [contentEditorCard, questionEditorCard].forEach((card) => {
         if (card) {
             card.hidden = card !== editor;
@@ -397,6 +401,7 @@ function showBuilderEditor(editor) {
 }
 
 function hideBuilderEditors({ scrollToCanvas = true } = {}) {
+    clearQuestionDraftPlaceholder();
     [contentEditorCard, questionEditorCard].forEach((card) => {
         if (card) {
             card.hidden = true;
@@ -417,6 +422,7 @@ function openContentTool(blockType = "text") {
 
 function openQuestionTool(questionType = "short_response") {
     setQuestionFormMode(questionType);
+    showQuestionDraftPlaceholder(questionType);
     showBuilderEditor(questionEditorCard);
     focusEditor("lesson-question-editor");
     questionForm.elements.prompt.focus();
@@ -1270,8 +1276,8 @@ function resetQuestionForm() {
     setQuestionFormMode("short_response");
     questionForm.elements["is-required"].checked = false;
     questionForm.elements.points.value = "0";
-    questionFormHeading.textContent = "Add draft question";
-    questionSubmit.textContent = "Create draft question";
+    questionFormHeading.textContent = "Add question block";
+    questionSubmit.textContent = "Done";
     cancelQuestionEditButton.hidden = true;
 }
 
@@ -1319,7 +1325,7 @@ function setQuestionFormMode(questionType) {
     const usesRatingCorrectAnswer = questionType === "rating_scale";
 
     questionForm.elements["question-type"].value = questionType;
-    questionToolLabel.textContent = questionTypeLabels[questionType] || "Assessment";
+    questionToolLabel.textContent = questionTypeLabels[questionType] || "Question";
     setToolButtonState(questionToolButtons, questionType);
     correctAnswerField.hidden = !usesScalarCorrectAnswer;
     responseRulesField.hidden = !usesTextCorrectAnswer;
@@ -1391,6 +1397,29 @@ function setQuestionFormMode(questionType) {
     if (!usesRatingCorrectAnswer) {
         correctRatingInput.value = "";
     }
+}
+
+function showQuestionDraftPlaceholder(questionType) {
+    if (!questionPreview || questionForm.elements["question-id"].value) {
+        return;
+    }
+
+    const existingPlaceholder = questionPreview.querySelector("[data-question-draft-placeholder]");
+
+    existingPlaceholder?.remove();
+    const card = createElement("article", "question-card question-card--placeholder");
+    const prompt = createElement("h4", "question-prompt", "New data collection block");
+    const label = createElement("span", "badge badge--quiet", questionTypeLabels[questionType] || "Question");
+    const copy = createElement("p", "course-muted question-instructions", "Fill out the popup, then click Done to place it in this lesson.");
+
+    card.dataset.questionDraftPlaceholder = "";
+    card.append(prompt, label, copy);
+    questionPreview.append(card);
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+function clearQuestionDraftPlaceholder() {
+    questionPreview?.querySelector("[data-question-draft-placeholder]")?.remove();
 }
 
 function getCorrectAnswerInput(formData, questionType) {
@@ -1523,8 +1552,8 @@ function editQuestion(question) {
         questionForm.elements[`match-${index}`].value = option?.match_group || "";
         questionOptionsField.querySelector(`[name='correct-option'][value='${index}']`).checked = Boolean(option?.is_correct);
     });
-    questionFormHeading.textContent = "Edit draft question";
-    questionSubmit.textContent = "Save draft question";
+    questionFormHeading.textContent = "Edit question block";
+    questionSubmit.textContent = "Done";
     cancelQuestionEditButton.hidden = false;
     focusEditor("lesson-question-editor");
     questionForm.elements.prompt.focus();
@@ -1564,14 +1593,14 @@ async function saveQuestionOptions(questionId, optionInputs, existingOptions = [
 
 async function deleteQuestion(question) {
     const confirmed = window.confirm(
-        `Delete draft question "${question.prompt}"? This hides it from the lesson while preserving its history.`
+        `Delete question block "${question.prompt}"? This hides it from the lesson while preserving its history.`
     );
 
     if (!confirmed) {
         return;
     }
 
-    setStatus("Deleting draft question...");
+    setStatus("Deleting question block...");
 
     const { error } = await supabase
         .from("questions")
@@ -1580,7 +1609,7 @@ async function deleteQuestion(question) {
         .eq("lesson_id", lessonId);
 
     if (error) {
-        setStatus(error.message || "The draft question could not be deleted.", "error");
+        setStatus(error.message || "The question block could not be deleted.", "error");
         return;
     }
 
@@ -1589,7 +1618,7 @@ async function deleteQuestion(question) {
     }
 
     await loadQuestions();
-    setStatus("Draft question deleted.", "success");
+    setStatus("Question block deleted.", "success");
 }
 
 async function moveQuestion(question, direction) {
@@ -1602,7 +1631,7 @@ async function moveQuestion(question, direction) {
         return;
     }
 
-    setStatus("Saving draft question order...");
+    setStatus("Saving question block order...");
 
     const results = await Promise.all([
         supabase
@@ -1619,12 +1648,12 @@ async function moveQuestion(question, direction) {
     const failedUpdate = results.find((result) => result.error);
 
     if (failedUpdate) {
-        setStatus(failedUpdate.error.message || "The draft question order could not be saved.", "error");
+        setStatus(failedUpdate.error.message || "The question block order could not be saved.", "error");
         return;
     }
 
     await loadQuestions();
-    setStatus("Draft question order saved.", "success");
+    setStatus("Question block order saved.", "success");
 }
 
 async function saveQuestionOrder(list, phase) {
@@ -1640,7 +1669,7 @@ async function saveQuestionOrder(list, phase) {
         return;
     }
 
-    setStatus("Saving draft question order...");
+    setStatus("Saving question block order...");
 
     const results = await Promise.all(
         updates.map((update) => {
@@ -1654,7 +1683,7 @@ async function saveQuestionOrder(list, phase) {
     const failedUpdate = results.find((result) => result.error);
 
     if (failedUpdate) {
-        setStatus(failedUpdate.error.message || "The draft question order could not be saved.", "error");
+        setStatus(failedUpdate.error.message || "The question block order could not be saved.", "error");
         await loadQuestions();
         return;
     }
@@ -1665,7 +1694,7 @@ async function saveQuestionOrder(list, phase) {
     });
     renderQuestions(loadedQuestions);
     renderQuestionPreview(loadedQuestions);
-    setStatus("Draft question order saved.", "success");
+    setStatus("Question block order saved.", "success");
 }
 
 function renderContentBlocks(contentBlocks) {
@@ -1830,7 +1859,7 @@ async function loadLessonResources() {
 
 function renderQuestions(questions) {
     if (!questions.length) {
-        questionList?.replaceChildren(createElement("p", "empty-state", "No draft questions have been added yet."));
+        questionList?.replaceChildren(createElement("p", "empty-state", "No question blocks have been added yet."));
         updateLessonVisibilityControls();
         return;
     }
@@ -1848,7 +1877,7 @@ function renderQuestions(questions) {
         section.append(header);
 
         if (!phaseQuestions.length) {
-            section.append(createElement("p", "empty-state empty-state--compact", "No draft questions in this section yet."));
+            section.append(createElement("p", "empty-state empty-state--compact", "No question blocks in this section yet."));
             return section;
         }
 
@@ -1966,163 +1995,139 @@ function renderQuestions(questions) {
 
 function renderQuestionPreview(questions) {
     const previewQuestions = [...questions].sort((first, second) => {
-        if (first.phase !== second.phase) {
-            return questionPhases.findIndex(([phase]) => phase === first.phase) -
-                questionPhases.findIndex(([phase]) => phase === second.phase);
-        }
-
         return first.order_index - second.order_index;
     });
-    const header = createElement("div", "lesson-content-header");
-    const heading = createElement("h6", "", "Data collection");
-
-    header.append(heading);
 
     if (!previewQuestions.length) {
         questionPreview.replaceChildren(
-            header,
             createElement("p", "empty-state empty-state--compact", "Add a data collection tool to collect student responses.")
         );
         return;
     }
 
-    const previewSections = questionPhases.flatMap(([phase, phaseTitle]) => {
-        const phaseQuestions = previewQuestions.filter((question) => question.phase === phase);
-        const section = createElement("section", "lesson-content");
-        const heading = createElement("h3", "course-subheading", phaseTitle);
+    const previewCards = previewQuestions.map((question) => {
+        const card = createElement("article", "question-card");
+        const prompt = createElement("h4", "question-prompt", question.prompt);
+        const responseType = question.question_type || "short_response";
+        const typeLabel = createElement("span", "badge badge--quiet", questionTypeLabels[responseType] || "Question");
+        const requiredLabel = createElement("span", "badge badge--quiet", question.is_required ? "Required" : "Optional");
+        const instructions = createElement(
+            "p",
+            "course-muted question-instructions",
+            question.student_instructions || "Answer in your own words."
+        );
+        const editButton = createElement("button", "secondary-button lesson-action", "Edit question");
+        const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete question");
+        const actions = createElement("div", "content-block-actions");
 
-        if (!phaseQuestions.length) {
-            return [];
-        }
+        editButton.type = "button";
+        editButton.addEventListener("click", () => editQuestion(question));
+        deleteButton.type = "button";
+        deleteButton.addEventListener("click", () => deleteQuestion(question));
+        actions.append(editButton, deleteButton);
+        card.append(prompt, typeLabel, requiredLabel, instructions);
 
-        section.append(heading);
+        if (responseType === "multiple_choice" || responseType === "select_all_that_apply") {
+            const options = getQuestionOptions(question);
+            const fieldset = createElement("fieldset", "question-preview-options");
+            const legend = createElement("legend", "screen-reader-only", "Answer choices");
 
-        phaseQuestions.forEach((question) => {
-            const card = createElement("article", "question-card");
-            const prompt = createElement("h4", "question-prompt", question.prompt);
-            const responseType = question.question_type || "short_response";
-            const typeLabel = createElement("span", "badge badge--quiet", questionTypeLabels[responseType] || "Question");
-            const requiredLabel = createElement("span", "badge badge--quiet", question.is_required ? "Required" : "Optional");
-            const instructions = createElement(
-                "p",
-                "course-muted question-instructions",
-                question.student_instructions || "Answer in your own words."
-            );
-            const editButton = createElement("button", "secondary-button lesson-action", "Edit question");
-            const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete question");
-            const actions = createElement("div", "content-block-actions");
-
-            editButton.type = "button";
-            editButton.addEventListener("click", () => editQuestion(question));
-            deleteButton.type = "button";
-            deleteButton.addEventListener("click", () => deleteQuestion(question));
-            actions.append(editButton, deleteButton);
-            card.append(prompt, typeLabel, requiredLabel, instructions);
-
-            if (responseType === "multiple_choice" || responseType === "select_all_that_apply") {
-                const options = getQuestionOptions(question);
-                const fieldset = createElement("fieldset", "question-preview-options");
-                const legend = createElement("legend", "screen-reader-only", "Answer choices");
-
-                fieldset.append(legend);
-                if (!options.length) {
-                    fieldset.append(
-                        createElement("p", "empty-state empty-state--compact", "Answer choices will appear here after options are added.")
-                    );
-                }
-
-                options.forEach((option) => {
-                    const label = createElement("label", "question-preview-option");
-                    const input = document.createElement("input");
-
-                    input.type = responseType === "multiple_choice" ? "radio" : "checkbox";
-                    input.disabled = true;
-                    label.append(input, createElement("span", "", option.option_text));
-                    fieldset.append(label);
-                });
-                card.append(fieldset);
-            } else if (responseType === "matching") {
-                const options = getQuestionOptions(question);
-                const list = createElement("dl", "question-matching-preview");
-
-                if (!options.length) {
-                    card.append(createElement("p", "empty-state empty-state--compact", "Matching pairs will appear here after they are added."));
-                }
-
-                options.forEach((option) => {
-                    list.append(
-                        createElement("dt", "", option.option_text),
-                        createElement("dd", "", option.match_group || "Match")
-                    );
-                });
-                card.append(list);
-            } else if (responseType === "ordering") {
-                const options = getQuestionOptions(question);
-                const list = createElement("ol", "question-ordering-preview");
-
-                if (!options.length) {
-                    card.append(createElement("p", "empty-state empty-state--compact", "Sequence items will appear here after they are added."));
-                }
-
-                options.forEach((option) => {
-                    list.append(createElement("li", "", option.option_text));
-                });
-                card.append(list);
-            } else if (responseType === "true_false") {
-                const fieldset = createElement("fieldset", "question-preview-options");
-                const legend = createElement("legend", "screen-reader-only", "True or false answer choices");
-
-                fieldset.append(legend);
-                ["True", "False"].forEach((option) => {
-                    const label = createElement("label", "question-preview-option");
-                    const input = document.createElement("input");
-
-                    input.type = "radio";
-                    input.disabled = true;
-                    label.append(input, createElement("span", "", option));
-                    fieldset.append(label);
-                });
-                card.append(fieldset);
-            } else if (responseType === "rating_scale") {
-                const fieldset = createElement("fieldset", "question-preview-options question-rating-scale");
-                const legend = createElement("legend", "screen-reader-only", "Rating scale choices");
-
-                fieldset.append(legend);
-                [1, 2, 3, 4, 5].forEach((rating) => {
-                    const label = createElement("label", "question-preview-option");
-                    const input = document.createElement("input");
-
-                    input.type = "radio";
-                    input.disabled = true;
-                    label.append(input, createElement("span", "", String(rating)));
-                    fieldset.append(label);
-                });
-                card.append(fieldset);
-            } else if (responseType === "fill_in_the_blank") {
-                const response = document.createElement("input");
-
-                response.className = "question-preview-blank";
-                response.type = "text";
-                response.placeholder = question.hint ? `Hint: ${question.hint}` : "Student answer";
-                response.disabled = true;
-                card.append(response);
-            } else {
-                const response = createElement("textarea", "question-preview-response", "");
-
-                response.rows = responseType === "long_response" ? 5 : 3;
-                response.placeholder = question.hint ? `Hint: ${question.hint}` : "Student response";
-                response.disabled = true;
-                card.append(response);
+            fieldset.append(legend);
+            if (!options.length) {
+                fieldset.append(
+                    createElement("p", "empty-state empty-state--compact", "Answer choices will appear here after options are added.")
+                );
             }
 
-            card.append(actions);
-            section.append(card);
-        });
+            options.forEach((option) => {
+                const label = createElement("label", "question-preview-option");
+                const input = document.createElement("input");
 
-        return section;
+                input.type = responseType === "multiple_choice" ? "radio" : "checkbox";
+                input.disabled = true;
+                label.append(input, createElement("span", "", option.option_text));
+                fieldset.append(label);
+            });
+            card.append(fieldset);
+        } else if (responseType === "matching") {
+            const options = getQuestionOptions(question);
+            const list = createElement("dl", "question-matching-preview");
+
+            if (!options.length) {
+                card.append(createElement("p", "empty-state empty-state--compact", "Matching pairs will appear here after they are added."));
+            }
+
+            options.forEach((option) => {
+                list.append(
+                    createElement("dt", "", option.option_text),
+                    createElement("dd", "", option.match_group || "Match")
+                );
+            });
+            card.append(list);
+        } else if (responseType === "ordering") {
+            const options = getQuestionOptions(question);
+            const list = createElement("ol", "question-ordering-preview");
+
+            if (!options.length) {
+                card.append(createElement("p", "empty-state empty-state--compact", "Sequence items will appear here after they are added."));
+            }
+
+            options.forEach((option) => {
+                list.append(createElement("li", "", option.option_text));
+            });
+            card.append(list);
+        } else if (responseType === "true_false") {
+            const fieldset = createElement("fieldset", "question-preview-options");
+            const legend = createElement("legend", "screen-reader-only", "True or false answer choices");
+
+            fieldset.append(legend);
+            ["True", "False"].forEach((option) => {
+                const label = createElement("label", "question-preview-option");
+                const input = document.createElement("input");
+
+                input.type = "radio";
+                input.disabled = true;
+                label.append(input, createElement("span", "", option));
+                fieldset.append(label);
+            });
+            card.append(fieldset);
+        } else if (responseType === "rating_scale") {
+            const fieldset = createElement("fieldset", "question-preview-options question-rating-scale");
+            const legend = createElement("legend", "screen-reader-only", "Rating scale choices");
+
+            fieldset.append(legend);
+            [1, 2, 3, 4, 5].forEach((rating) => {
+                const label = createElement("label", "question-preview-option");
+                const input = document.createElement("input");
+
+                input.type = "radio";
+                input.disabled = true;
+                label.append(input, createElement("span", "", String(rating)));
+                fieldset.append(label);
+            });
+            card.append(fieldset);
+        } else if (responseType === "fill_in_the_blank") {
+            const response = document.createElement("input");
+
+            response.className = "question-preview-blank";
+            response.type = "text";
+            response.placeholder = question.hint ? `Hint: ${question.hint}` : "Student answer";
+            response.disabled = true;
+            card.append(response);
+        } else {
+            const response = createElement("textarea", "question-preview-response", "");
+
+            response.rows = responseType === "long_response" ? 5 : 3;
+            response.placeholder = question.hint ? `Hint: ${question.hint}` : "Student response";
+            response.disabled = true;
+            card.append(response);
+        }
+
+        card.append(actions);
+        return card;
     });
 
-    questionPreview.replaceChildren(header, ...previewSections);
+    questionPreview.replaceChildren(...previewCards);
 }
 
 async function loadQuestions() {
@@ -2134,8 +2139,8 @@ async function loadQuestions() {
         .order("order_index", { ascending: true });
 
     if (error) {
-        questionList?.replaceChildren(createElement("p", "empty-state", "Draft questions could not be loaded."));
-        setStatus("Draft questions could not be loaded.", "error");
+        questionList?.replaceChildren(createElement("p", "empty-state", "Question blocks could not be loaded."));
+        setStatus("Question blocks could not be loaded.", "error");
         return false;
     }
 
@@ -2149,7 +2154,7 @@ async function loadQuestions() {
         : { data: [], error: null };
 
     if (optionsError) {
-        setStatus("Draft question options could not be loaded.", "error");
+        setStatus("Question options could not be loaded.", "error");
     }
 
     loadedQuestions = data.map((question) => ({
@@ -2538,7 +2543,7 @@ questionForm.addEventListener("submit", async (event) => {
     const submitButton = questionForm.querySelector("button[type='submit']");
 
     if (!["before", "during", "reflection"].includes(phase) || !prompt) {
-        setStatus("Choose a phase and enter a question prompt before saving.", "error");
+        setStatus("Enter a question prompt before saving.", "error");
         return;
     }
 
@@ -2586,11 +2591,11 @@ questionForm.addEventListener("submit", async (event) => {
         const question = loadedQuestions.find((currentQuestion) => currentQuestion.id === questionId);
 
         if (!question) {
-            setStatus("Choose a draft question before saving.", "error");
+            setStatus("Choose a question block before saving.", "error");
             return;
         }
 
-        setStatus("Saving draft question...");
+        setStatus("Saving question block...");
         submitButton.disabled = true;
 
         const { error } = await supabase
@@ -2610,7 +2615,7 @@ questionForm.addEventListener("submit", async (event) => {
 
         if (error) {
             submitButton.disabled = false;
-            setStatus(error.message || "The draft question could not be saved.", "error");
+            setStatus(error.message || "The question block could not be saved.", "error");
             return;
         }
 
@@ -2623,18 +2628,18 @@ questionForm.addEventListener("submit", async (event) => {
         }
 
         resetQuestionForm();
+        clearQuestionDraftPlaceholder();
         await loadQuestions();
         hideBuilderEditors();
-        setStatus("Draft question saved.", "success");
+        setStatus("Question block saved.", "success");
         return;
     }
 
-    const lessonPhaseQuestions = loadedQuestions.filter((question) => question.phase === phase);
-    const nextOrder = lessonPhaseQuestions.reduce(
+    const nextOrder = loadedQuestions.reduce(
         (highest, question) => Math.max(highest, question.order_index),
         -1
     ) + 1;
-    setStatus("Creating draft question...");
+    setStatus("Creating question block...");
     submitButton.disabled = true;
 
     const { data: createdQuestion, error } = await supabase.from("questions").insert({
@@ -2653,7 +2658,7 @@ questionForm.addEventListener("submit", async (event) => {
 
     if (error) {
         submitButton.disabled = false;
-        setStatus(error.message || "The draft question could not be created.", "error");
+        setStatus(error.message || "The question block could not be created.", "error");
         return;
     }
 
@@ -2666,9 +2671,10 @@ questionForm.addEventListener("submit", async (event) => {
     }
 
     resetQuestionForm();
+    clearQuestionDraftPlaceholder();
     await loadQuestions();
     hideBuilderEditors();
-    setStatus("Draft question created.", "success");
+    setStatus("Question block added.", "success");
 });
 
 questionForm.elements["question-type"].addEventListener("change", (event) => {
