@@ -88,6 +88,7 @@ function getSidebarSections(profile, hasTeachingAccess) {
             title: "Workspace",
             items: [
                 { label: "Dashboard", path: "dashboard/index.html", icon: "D" },
+                { label: "Profile", path: "profile/index.html", icon: "U" },
                 { label: "Course catalog", path: "courses/discover.html", icon: "C" },
             ],
         },
