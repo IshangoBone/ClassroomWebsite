@@ -7,6 +7,7 @@ Useful Version 2 docs:
 
 - `v2/LOCAL_DEVELOPMENT.md`
 - `v2/V2_WORKFLOW.md`
+- `v2/DEPLOYMENT_STRATEGY.md`
 - `v2/SUPABASE_SETUP.md`
 - `v2/ROLE_PERMISSIONS.md`
 - `v2/FILE_ACCESS_RULES.md`

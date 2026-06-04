@@ -66,7 +66,9 @@ http://127.0.0.1:4173/pages/auth/login.html
 ## Environment Plan
 
 The MVP currently uses one linked Supabase project. The planned environment
-split is:
+split is documented in more detail in `DEPLOYMENT_STRATEGY.md`.
+
+Summary:
 
 | Environment | Frontend use | Supabase use | Config file direction |
 | --- | --- | --- | --- |
