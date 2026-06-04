@@ -36,10 +36,12 @@ Prefer a name that includes `v2` and the issue or feature area.
 1. Start from an up-to-date `v2` branch.
 2. Check `git status --short` before editing.
 3. Preserve unrelated local files and uncommitted work.
-4. Break large issues into small, testable slices.
-5. Commit only the files needed for that slice.
-6. Push the slice to `origin/v2`.
-7. Close the GitHub issue only after the requirements are implemented,
+4. Keep routine V2 changes inside `v2/`; see `V1_PROTECTION_PLAN.md` before
+   touching root Version 1 files.
+5. Break large issues into small, testable slices.
+6. Commit only the files needed for that slice.
+7. Push the slice to `origin/v2`.
+8. Close the GitHub issue only after the requirements are implemented,
    checked, and pushed.
 
 ## Pull Request Workflow

@@ -4,6 +4,8 @@
 
 Version 2 should be deployed separately from the current Version 1 public site
 until it is stable enough to become the main CodeTheCurrent experience.
+See `V1_PROTECTION_PLAN.md` for the development guardrails that keep the root
+V1 site stable while V2 evolves under `v2/`.
 
 The current direction is to keep using GitHub Pages for the static frontend and
 Supabase for auth, database, RPCs, RLS, and storage.
