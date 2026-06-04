@@ -641,6 +641,105 @@ h2 {
     justify-content: space-between;
 }
 
+.ui-page-header,
+.ui-section-header,
+.ui-card__header {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.ui-page-header__content,
+.ui-section-header__content {
+    display: grid;
+    gap: 8px;
+}
+
+.ui-page-header :is(h1, p),
+.ui-section-header :is(h2, p),
+.ui-card :is(h3, p) {
+    margin: 0;
+}
+
+.ui-page-header > .ui-action-row,
+.ui-section-header > .ui-action-row {
+    flex: 0 0 auto;
+}
+
+.ui-card {
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid #dbe4f1;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.ui-card__title {
+    color: #183153;
+    font-size: 1.05rem;
+}
+
+.ui-card__copy,
+.field-hint {
+    color: #536a89;
+    line-height: 1.5;
+}
+
+.ui-card__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.ui-empty-state {
+    margin: 0;
+    padding: 18px;
+    border: 1px dashed #dbe4f1;
+    border-radius: 16px;
+    background: #f8fbff;
+    color: #536a89;
+    font-weight: 700;
+}
+
+.ui-empty-state--compact {
+    padding: 12px 14px;
+    border-radius: 12px;
+}
+
+.ui-data-table-shell {
+    overflow-x: auto;
+    border: 1px solid #dbe4f1;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.ui-data-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 640px;
+}
+
+.ui-data-table th,
+.ui-data-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #e7edf6;
+    text-align: left;
+    vertical-align: top;
+}
+
+.ui-data-table th {
+    color: #536a89;
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+
+.ui-data-table tr:last-child td {
+    border-bottom: 0;
+}
+
 .field-error {
     color: #b42318;
     font-size: 0.85rem;
@@ -2989,6 +3088,17 @@ h2 {
 
     .section-header--actions {
         display: grid;
+    }
+
+    .ui-page-header,
+    .ui-section-header,
+    .ui-card__header {
+        display: grid;
+    }
+
+    .ui-page-header > .ui-action-row,
+    .ui-section-header > .ui-action-row {
+        width: 100%;
     }
 
     .student-course-header {
