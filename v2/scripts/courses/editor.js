@@ -229,12 +229,6 @@ function formatCourseStatus(status) {
 function getPublishingBlockers() {
     const blockers = [];
     const visibleContentBlocks = loadedContentBlocks.filter((contentBlock) => contentBlock.is_visible);
-    const visibleQuestions = loadedQuestions.filter((question) => question.is_visible);
-    const requiredQuestionPhases = [
-        ["before", "before-lesson question"],
-        ["during", "during-lesson question"],
-        ["reflection", "reflection question"],
-    ];
 
     if (!loadedCourse?.title?.trim()) {
         blockers.push("Course title is required.");
@@ -278,14 +272,6 @@ function getPublishingBlockers() {
         if (!lesson.estimated_time?.trim()) {
             blockers.push(`${lessonLabel} needs an estimated time.`);
         }
-
-        requiredQuestionPhases.forEach(([phase, label]) => {
-            const hasQuestion = visibleQuestions.some((question) => question.lesson_id === lesson.id && question.phase === phase);
-
-            if (!hasQuestion) {
-                blockers.push(`${lessonLabel} needs a ${label}.`);
-            }
-        });
     });
 
     return blockers;
