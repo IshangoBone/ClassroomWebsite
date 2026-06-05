@@ -1,3 +1,13 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    min-width: 0;
+}
+
 body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -7,6 +17,7 @@ body {
         linear-gradient(180deg, #eef4ff 0%, #f8fbff 100%);
     color: #183153;
     line-height: 1.5;
+    overflow-x: hidden;
 }
 
 body.has-app-sidebar {
@@ -31,7 +42,9 @@ body.has-app-sidebar {
 }
 
 main {
+    width: min(100%, 800px);
     max-width: 800px;
+    min-width: 0;
     margin: 0 auto;
     background: white;
     padding: 32px;
@@ -43,13 +56,16 @@ main {
     display: grid;
     grid-template-columns: 250px minmax(0, 1fr);
     gap: 26px;
+    width: 100%;
     min-height: 100vh;
     padding: 24px;
+    overflow-x: hidden;
 }
 
 .app-shell > main {
     align-self: start;
     width: 100%;
+    min-width: 0;
     margin: 0 auto;
 }
 
@@ -389,6 +405,7 @@ main {
     display: grid;
     gap: 18px;
     max-width: 1040px;
+    min-width: 0;
 }
 
 .profile-hero {
@@ -433,6 +450,7 @@ main {
     margin: 0;
     font-size: clamp(2rem, 3.5vw, 2.7rem);
     line-height: 1.05;
+    overflow-wrap: anywhere;
 }
 
 .profile-username {
@@ -668,6 +686,7 @@ h1 {
 .intro {
     margin: 0 0 32px;
     max-width: 56ch;
+    overflow-wrap: anywhere;
 }
 
 h2 {
@@ -1245,7 +1264,9 @@ h2 {
 .dashboard-layout {
     display: grid;
     gap: 28px;
+    width: 100%;
     max-width: 1120px;
+    min-width: 0;
 }
 
 .dashboard-header {
@@ -1288,11 +1309,13 @@ h2 {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 14px;
+    min-width: 0;
 }
 
 .summary-card {
     display: grid;
     gap: 8px;
+    min-width: 0;
     padding: 18px;
     border: 1px solid #dbe4f1;
     border-radius: 18px;
@@ -1636,6 +1659,7 @@ h2 {
 .course-card {
     display: grid;
     gap: 14px;
+    min-width: 0;
     padding: 20px;
     border: 1px solid #dbe4f1;
     border-left: 4px solid #bfd0ec;
@@ -1678,6 +1702,7 @@ h2 {
     display: flex;
     justify-content: space-between;
     gap: 16px;
+    min-width: 0;
     padding-bottom: 10px;
     border-bottom: 1px solid #eef3fb;
 }
@@ -1685,6 +1710,7 @@ h2 {
 .course-title {
     margin: 0;
     font-size: 1.15rem;
+    overflow-wrap: anywhere;
 }
 
 .badge-row {
@@ -4334,28 +4360,56 @@ h2 {
     .app-shell,
     .app-shell--collapsed {
         grid-template-columns: 1fr;
-        gap: 18px;
-        padding: 18px;
+        gap: 14px;
+        padding: 14px;
+    }
+
+    .app-shell > main {
+        max-width: 100%;
+        padding: 22px;
+        border-radius: 18px;
+        overflow-x: hidden;
     }
 
     .app-sidebar {
         position: static;
         max-height: none;
         min-height: 0;
-        overflow: visible;
-        gap: 14px;
+        overflow: hidden;
+        gap: 12px;
         padding: 14px;
+        border-radius: 18px;
+    }
+
+    .app-sidebar-brand {
+        align-items: center;
     }
 
     .app-sidebar-content {
         grid-template-columns: 1fr;
-        gap: 12px;
-        overflow: visible;
+        gap: 0;
+        max-height: min(54vh, 480px);
+        overflow-y: auto;
         padding-right: 0;
     }
 
+    .app-sidebar-section {
+        gap: 8px;
+        padding: 12px 0;
+    }
+
     .app-sidebar-nav {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        grid-template-columns: 1fr;
+    }
+
+    .app-sidebar-link,
+    .app-sidebar-toggle {
+        min-height: 44px;
+    }
+
+    .app-sidebar-footer {
+        justify-content: flex-start;
+        padding-top: 10px;
     }
 
     .app-shell--collapsed .app-sidebar-content {
@@ -4428,6 +4482,7 @@ h2 {
 
     .dashboard-header {
         display: grid;
+        gap: 16px;
     }
 
     .dashboard-section--panel {
@@ -4462,6 +4517,15 @@ h2 {
         grid-template-columns: 1fr;
     }
 
+    .summary-card {
+        padding: 14px;
+        border-radius: 14px;
+    }
+
+    .summary-value {
+        font-size: clamp(1.7rem, 10vw, 2.15rem);
+    }
+
     .roster-item {
         justify-items: start;
     }
@@ -4493,6 +4557,11 @@ h2 {
 
     .course-card-header {
         display: grid;
+    }
+
+    .course-card {
+        padding: 16px;
+        border-radius: 16px;
     }
 
     .course-actions--split,
@@ -4685,5 +4754,88 @@ h2 {
     .lesson-content-header {
         align-items: stretch;
         flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    body:not(.has-app-sidebar) {
+        padding: 12px;
+    }
+
+    .app-shell,
+    .app-shell--collapsed {
+        gap: 12px;
+        padding: 10px;
+    }
+
+    .app-shell > main {
+        padding: 18px 14px;
+        border-radius: 16px;
+    }
+
+    .app-sidebar {
+        padding: 12px;
+        border-radius: 16px;
+    }
+
+    .app-sidebar-mark {
+        width: 36px;
+        height: 36px;
+        flex-basis: 36px;
+        border-radius: 11px;
+    }
+
+    .app-sidebar-link {
+        padding: 0 10px;
+        font-size: 0.9rem;
+    }
+
+    .dashboard-profile-heading {
+        display: grid;
+        gap: 12px;
+    }
+
+    .dashboard-section--panel,
+    .course-card,
+    .profile-hero,
+    .profile-panel {
+        border-radius: 14px;
+    }
+
+    .dashboard-section--panel,
+    .course-card {
+        padding: 14px;
+    }
+
+    .profile-hero-content {
+        gap: 12px;
+        padding: 0 16px 18px;
+        margin-top: -34px;
+    }
+
+    .profile-hero-title-row h1 {
+        font-size: 1.8rem;
+    }
+
+    .profile-summary .summary-card {
+        padding: 14px;
+    }
+
+    .section-actions,
+    .course-form-actions,
+    .dashboard-header-actions,
+    .course-actions,
+    .lesson-header-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        width: 100%;
+    }
+
+    .primary-button,
+    .secondary-button,
+    .destructive-button,
+    .social-button {
+        width: 100%;
+        min-width: 0;
     }
 }
