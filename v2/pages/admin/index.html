@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Admin Dashboard</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout admin-layout">
+        <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Admin Portal</p>
+            <h1>Admin dashboard</h1>
+            <p class="intro">Platform-wide counts, health signals, and recent activity for Version 2.</p>
+        </header>
+
+        <p class="auth-status management-status" data-admin-status aria-live="polite"></p>
+
+        <section class="management-section" data-admin-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Platform overview</h2>
+                    <p class="section-copy">Core counts and recent activity indicators across users, courses, classrooms, and submissions.</p>
+                </div>
+                <div class="section-actions">
+                    <a class="secondary-button" href="./analytics.html">Open analytics</a>
+                    <a class="secondary-button" href="./moderation.html">Open moderation</a>
+                    <a class="secondary-button" href="../activity/index.html">Open activity logs</a>
+                </div>
+            </div>
+
+            <div class="dashboard-summary admin-summary-grid" data-admin-summary>
+                <p class="empty-state">Loading platform summary...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-admin-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Platform health</h2>
+                    <p class="section-copy">Moderation and operational signals that should stay easy to scan.</p>
+                </div>
+            </div>
+
+            <div class="admin-health-grid" data-admin-health>
+                <p class="empty-state">Loading platform health...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-admin-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Global search</h2>
+                    <p class="section-copy">Find users, courses, and classrooms by name, email, subject, or ID.</p>
+                </div>
+            </div>
+
+            <form class="admin-search-form" data-admin-search-form>
+                <label class="form-field">
+                    <span>Search platform records</span>
+                    <input type="search" name="query" placeholder="Type at least 2 characters" autocomplete="off" />
+                </label>
+                <button type="submit" class="secondary-button">Search</button>
+            </form>
+
+            <div data-admin-search-results>
+                <p class="empty-state">Search results will appear here.</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-admin-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Recent activity</h2>
+                    <p class="section-copy">Latest platform events. Open the activity logs for filters and JSON snapshots.</p>
+                </div>
+            </div>
+
+            <div data-admin-recent-activity>
+                <p class="empty-state">Loading recent activity...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/admin/index.js?v=20260602-route-guards"></script>
+</body>
+
+</html>

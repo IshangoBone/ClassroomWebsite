@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Teaching Analytics</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout analytics-layout">
+        <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Teacher Portal</p>
+            <h1>Teaching analytics</h1>
+            <p class="intro">Track student progress, completion, participation points, and missing work across your courses and classrooms.</p>
+        </header>
+
+        <p class="auth-status management-status" data-analytics-status aria-live="polite"></p>
+
+        <section class="management-section" data-analytics-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Overview</h2>
+                    <p class="section-copy">Summary metrics combine active classroom enrollments with current lessons and student submissions.</p>
+                </div>
+                <a class="secondary-button" href="../submissions/index.html" data-analytics-review-link>Review submissions</a>
+            </div>
+
+            <form class="submission-filter-form analytics-filter-form" data-analytics-filter-form>
+                <label class="form-field">
+                    <span>Course</span>
+                    <select name="course" data-analytics-filter-course>
+                        <option value="">All courses</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Classroom</span>
+                    <select name="classroom" data-analytics-filter-classroom>
+                        <option value="">All classrooms</option>
+                    </select>
+                </label>
+            </form>
+
+            <div class="analytics-summary-grid" data-analytics-summary>
+                <p class="empty-state">Loading analytics summary...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Course analytics</h2>
+                    <p class="section-copy">Compare progress and participation across every course you teach.</p>
+                </div>
+            </div>
+
+            <div data-course-analytics>
+                <p class="empty-state">Loading course analytics...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Classroom analytics</h2>
+                    <p class="section-copy">Find classrooms with low completion, missing work, or incomplete drafts.</p>
+                </div>
+            </div>
+
+            <div data-classroom-analytics>
+                <p class="empty-state">Loading classroom analytics...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Students needing attention</h2>
+                    <p class="section-copy">Prioritized by low completion, missing work, incomplete drafts, and older activity.</p>
+                </div>
+            </div>
+
+            <div data-student-risk-analytics>
+                <p class="empty-state">Loading student progress...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Lesson completion</h2>
+                    <p class="section-copy">See which lessons have the most missing or incomplete work in the selected view.</p>
+                </div>
+            </div>
+
+            <div data-lesson-analytics>
+                <p class="empty-state">Loading lesson completion...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Question trends</h2>
+                    <p class="section-copy">Spot questions with low answer rates or frequent missing responses.</p>
+                </div>
+            </div>
+
+            <div data-question-analytics>
+                <p class="empty-state">Loading question trends...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Recent activity</h2>
+                    <p class="section-copy">Latest submitted or saved lesson work from your managed courses.</p>
+                </div>
+            </div>
+
+            <div data-analytics-activity>
+                <p class="empty-state">Loading recent activity...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/analytics/index.js?v=20260602-route-guards"></script>
+</body>
+
+</html>

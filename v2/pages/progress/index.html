@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Student Progress</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout student-progress-layout">
+        <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Student Portal</p>
+            <h1>My progress</h1>
+            <p class="intro">Track course completion, remaining lessons, engagement points, and submitted work.</p>
+        </header>
+
+        <p class="auth-status management-status" data-progress-status aria-live="polite"></p>
+
+        <section class="dashboard-summary" data-progress-summary hidden aria-label="Progress summary">
+            <article class="summary-card">
+                <span class="summary-label">Overall progress</span>
+                <strong class="summary-value" data-progress-percent>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Completed lessons</span>
+                <strong class="summary-value" data-progress-completed>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Remaining lessons</span>
+                <strong class="summary-value" data-progress-remaining>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Engagement points</span>
+                <strong class="summary-value" data-progress-points>-</strong>
+            </article>
+        </section>
+
+        <section class="dashboard-section student-course-progress-section" data-progress-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Overall completion</h2>
+                    <p class="section-copy" data-progress-copy>Your progress will appear here.</p>
+                </div>
+            </div>
+            <div class="dashboard-progress student-course-progress-bar" role="progressbar" aria-label="Overall completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-progress-bar>
+                <span class="dashboard-progress-value" data-progress-value></span>
+            </div>
+        </section>
+
+        <section class="dashboard-section dashboard-section--muted" data-progress-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Filter progress</h2>
+                    <p class="section-copy">Narrow this view by course or classroom context.</p>
+                </div>
+            </div>
+            <form class="submission-filter-form student-progress-filter-form" data-progress-filter-form>
+                <label class="form-field">
+                    <span>Course</span>
+                    <select name="course" data-progress-filter-course>
+                        <option value="">All courses</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Classroom</span>
+                    <select name="classroom" data-progress-filter-classroom>
+                        <option value="">All classrooms</option>
+                    </select>
+                </label>
+            </form>
+        </section>
+
+        <section class="dashboard-section" data-progress-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Course progress</h2>
+                    <p class="section-copy">Open a course to continue lessons or review submitted work.</p>
+                </div>
+            </div>
+            <div class="course-grid" data-progress-course-list>
+                <p class="empty-state">Loading enrolled courses...</p>
+            </div>
+        </section>
+
+        <section class="dashboard-section dashboard-section--muted" data-progress-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Submitted work history</h2>
+                    <p class="section-copy">Final submitted lessons appear here with point totals when available.</p>
+                </div>
+            </div>
+            <div data-progress-history-list>
+                <p class="empty-state">Loading submitted work...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/progress/index.js?v=20260602-route-guards"></script>
+</body>
+
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Activity Logs</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout activity-layout">
+        <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Admin Portal</p>
+            <h1>Activity logs</h1>
+            <p class="intro">Review major account, course, classroom, content, enrollment, and lesson-work events.</p>
+        </header>
+
+        <p class="auth-status management-status" data-activity-status aria-live="polite"></p>
+
+        <section class="management-section" data-activity-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Recent events</h2>
+                    <p class="section-copy">Admin-only event history. Latest activity appears first.</p>
+                </div>
+                <button type="button" class="secondary-button" data-activity-refresh>Refresh logs</button>
+            </div>
+
+            <div class="dashboard-summary dashboard-summary--activity" data-activity-summary>
+                <p class="empty-state">Loading activity summary...</p>
+            </div>
+
+            <form class="submission-filter-form activity-filter-form" data-activity-filter-form>
+                <label class="form-field">
+                    <span>Action type</span>
+                    <select name="action" data-activity-filter-action>
+                        <option value="">All actions</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Target type</span>
+                    <select name="target" data-activity-filter-target>
+                        <option value="">All targets</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Course ID</span>
+                    <input type="search" name="course" placeholder="Any course" autocomplete="off" />
+                </label>
+                <label class="form-field">
+                    <span>Classroom ID</span>
+                    <input type="search" name="classroom" placeholder="Any classroom" autocomplete="off" />
+                </label>
+                <label class="form-field">
+                    <span>Search</span>
+                    <input type="search" name="query" placeholder="Action, target, metadata" autocomplete="off" />
+                </label>
+            </form>
+
+            <div class="activity-table-shell" data-activity-list>
+                <p class="empty-state">Loading activity logs...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/activity/index.js?v=20260602-route-guards"></script>
+</body>
+
+</html>

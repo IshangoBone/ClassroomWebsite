@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Student Course</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout student-course-layout">
+        <header class="management-header student-course-header">
+            <div>
+                <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+                <p class="eyebrow">Student Course</p>
+                <h1 data-student-course-heading>Loading course...</h1>
+                <p class="intro" data-student-course-context>Preparing your course outline.</p>
+            </div>
+            <button class="secondary-button destructive-button management-action" type="button" data-student-course-unenroll hidden>Unenroll</button>
+        </header>
+
+        <p class="auth-status management-status" data-student-course-status aria-live="polite"></p>
+
+        <section class="dashboard-summary" data-student-course-summary hidden aria-label="Course progress summary">
+            <article class="summary-card">
+                <span class="summary-label">Progress</span>
+                <strong class="summary-value" data-student-course-progress>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Lessons submitted</span>
+                <strong class="summary-value" data-student-course-submitted>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Next lesson</span>
+                <strong class="summary-value student-course-next" data-student-course-next>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Engagement points</span>
+                <strong class="summary-value" data-student-course-points>-</strong>
+            </article>
+        </section>
+
+        <section class="dashboard-section student-course-progress-section" data-student-course-progress-section hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Course progress</h2>
+                    <p class="section-copy" data-student-course-progress-copy>Your completion progress will appear here.</p>
+                </div>
+            </div>
+            <div class="dashboard-progress student-course-progress-bar" role="progressbar" aria-label="Course completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-student-course-progress-bar>
+                <span class="dashboard-progress-value" data-student-course-progress-value></span>
+            </div>
+        </section>
+
+        <section class="dashboard-section dashboard-section--muted" data-student-course-next-section hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Continue learning</h2>
+                    <p class="section-copy" data-student-course-next-copy>Your next lesson will appear here.</p>
+                </div>
+                <a class="primary-button" href="../dashboard/index.html" data-student-course-next-link>Open lesson</a>
+            </div>
+        </section>
+
+        <section class="dashboard-section" data-student-course-shell hidden aria-labelledby="student-course-modules-heading">
+            <div class="section-header">
+                <div>
+                    <h2 id="student-course-modules-heading">Course modules</h2>
+                    <p class="section-copy">Open a module to review lesson status and continue your work.</p>
+                </div>
+            </div>
+
+            <div data-student-course-module-list>
+                <p class="empty-state">Loading modules...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/courses/student.js?v=20260604-lesson-locking"></script>
+</body>
+
+</html>

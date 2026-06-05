@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Onboarding</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="auth-layout auth-layout--single">
+        <section class="auth-card auth-card--single" aria-labelledby="onboarding-heading">
+            <div class="auth-card-header">
+                <p class="eyebrow">Onboarding</p>
+                <h1 id="onboarding-heading" class="auth-card-title">Finish setup</h1>
+                <p class="auth-card-copy">
+                    Choose your public username and complete the private profile information needed for your account.
+                </p>
+            </div>
+
+            <form class="auth-form" data-onboarding-form>
+                <label class="form-field">
+                    <span>Legal first name</span>
+                    <input type="text" name="legal-first-name" autocomplete="given-name" required />
+                </label>
+
+                <label class="form-field">
+                    <span>Legal last name</span>
+                    <input type="text" name="legal-last-name" autocomplete="family-name" required />
+                </label>
+
+                <label class="form-field">
+                    <span>Username / screen name</span>
+                    <input type="text" name="username" autocomplete="username" minlength="3" maxlength="40" required />
+                    <small class="form-hint">This is the name other users may see later.</small>
+                </label>
+
+                <label class="form-field">
+                    <span>Date of birth</span>
+                    <input type="date" name="date-of-birth" autocomplete="bday" required />
+                    <small class="form-hint">Your birth date stays private by default.</small>
+                </label>
+
+                <label class="form-field">
+                    <span>Fallback avatar</span>
+                    <select name="avatar-key" required>
+                        <option value="bolt">Bolt</option>
+                        <option value="compass">Compass</option>
+                        <option value="pixel">Pixel</option>
+                    </select>
+                    <small class="form-hint">Used when you do not upload a custom profile photo.</small>
+                </label>
+
+                <label class="form-field">
+                    <span>Profile photo</span>
+                    <input type="file" name="profile-photo" accept="image/png,image/jpeg,image/webp,image/gif" />
+                    <small class="form-hint">Optional. PNG, JPEG, WebP, or GIF up to 10 MB.</small>
+                </label>
+
+                <div class="profile-photo-preview" data-profile-photo-preview hidden>
+                    <img alt="Selected profile preview" data-profile-photo-preview-image />
+                    <span data-profile-photo-preview-name></span>
+                </div>
+
+                <button type="submit" class="primary-button primary-button--signup">Continue to Dashboard</button>
+            </form>
+
+            <p class="auth-status" data-onboarding-status aria-live="polite"></p>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/auth/onboarding.js?v=20260602-profile-photo-upload"></script>
+</body>
+
+</html>

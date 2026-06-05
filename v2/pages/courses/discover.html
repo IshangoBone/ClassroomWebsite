@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Browse Courses</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout">
+        <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Browse Courses</p>
+            <h1>Find public courses</h1>
+            <p class="intro">Browse published courses, then choose whether to join independently or with a classroom code.</p>
+        </header>
+
+        <p class="auth-status management-status" data-discovery-status aria-live="polite"></p>
+
+        <section class="dashboard-section dashboard-section--muted" data-discovery-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Search discovery</h2>
+                    <p class="section-copy">Search by title, subject, description, or tags.</p>
+                </div>
+            </div>
+            <form class="dashboard-join-form discovery-search-form" data-discovery-search-form>
+                <label class="form-field">
+                    <span>Search courses</span>
+                    <input type="search" name="search" autocomplete="off" placeholder="Example: science, coding, algebra" />
+                </label>
+                <button type="submit" class="secondary-button">Search</button>
+            </form>
+        </section>
+
+        <section class="dashboard-section" data-discovery-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Public courses</h2>
+                    <p class="section-copy">Published public courses appear here. Use a class code when a teacher gave you one, or join independently without a classroom.</p>
+                </div>
+            </div>
+            <div class="course-grid" data-discovery-course-list>
+                <p class="empty-state">Loading public courses...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/courses/discover.js?v=20260603-scoped-class-code"></script>
+</body>
+
+</html>

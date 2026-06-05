@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Manage Course</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout">
+        <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Course Management</p>
+            <h1 data-course-heading>Loading course...</h1>
+            <p class="intro">
+                Update course basics, organize modules, and add lessons here. Open the lesson builder to write content
+                and draft questions.
+            </p>
+        </header>
+
+        <p class="auth-status management-status" data-course-status aria-live="polite"></p>
+
+        <section class="management-section" data-course-content hidden aria-labelledby="course-access-heading">
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2 id="course-access-heading">Course access</h2>
+                    <p class="section-copy">Publish the course when students can join it without a classroom code.</p>
+                </div>
+                <span class="badge badge--quiet" data-course-visibility>Loading...</span>
+            </div>
+
+            <p class="course-muted" data-public-course-copy>Public course joining is unavailable until this course is published.</p>
+            <label class="form-field course-discovery-toggle">
+                <span>Discovery listing</span>
+                <select name="discovery-listing" data-course-discovery-select disabled>
+                    <option value="hidden">Hidden from public discovery</option>
+                    <option value="listed">Listed in public discovery</option>
+                </select>
+            </label>
+            <div class="course-form-actions">
+                <button type="button" class="secondary-button" data-toggle-course-visibility>Publish course</button>
+                <button type="button" class="secondary-button" data-copy-public-course-link>Copy public course link</button>
+                <a class="secondary-button" href="preview.html" data-course-preview-link>Preview as student</a>
+                <button type="button" class="secondary-button" data-archive-course>Archive course</button>
+                <button type="button" class="secondary-button destructive-button" data-delete-course>Delete course</button>
+            </div>
+        </section>
+
+        <section class="management-section" data-course-content hidden aria-labelledby="course-basics-heading">
+            <div class="section-header">
+                <h2 id="course-basics-heading">Course basics</h2>
+                <p class="section-copy">These fields define the starting information for your draft course.</p>
+            </div>
+
+            <form class="course-form" data-course-editor-form>
+                <label class="form-field">
+                    <span>Course title</span>
+                    <input type="text" name="title" maxlength="120" required />
+                </label>
+
+                <label class="form-field">
+                    <span>Subject area</span>
+                    <input type="text" name="subject-area" maxlength="80" required />
+                </label>
+
+                <label class="form-field">
+                    <span>Estimated length</span>
+                    <input type="text" name="estimated-length" maxlength="80" required />
+                </label>
+
+                <label class="form-field form-field--wide">
+                    <span>Description</span>
+                    <textarea name="description" rows="4" maxlength="600" required></textarea>
+                </label>
+
+                <label class="form-field form-field--wide">
+                    <span>Course thumbnail</span>
+                    <input type="file" name="course-thumbnail" accept="image/png,image/jpeg,image/webp,image/gif" />
+                    <small class="form-hint">Optional public image for course discovery. PNG, JPEG, WebP, or GIF up to 10 MB.</small>
+                </label>
+
+                <div class="file-preview form-field--wide" data-course-thumbnail-preview hidden>
+                    <img alt="Course thumbnail preview" data-course-thumbnail-preview-image />
+                    <span data-course-thumbnail-preview-name></span>
+                </div>
+
+                <div class="course-form-actions form-field--wide">
+                    <button type="submit" class="primary-button">Save course basics</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="management-section" data-course-content hidden aria-labelledby="course-pacing-heading">
+            <div class="section-header">
+                <h2 id="course-pacing-heading">Lesson pacing</h2>
+                <p class="section-copy">Control whether students can open every lesson immediately or unlock lessons over time.</p>
+            </div>
+
+            <form class="course-form course-form--pacing" data-course-pacing-form>
+                <label class="form-field form-field--checkbox form-field--wide">
+                    <input type="checkbox" name="pacing-enabled" />
+                    <span>Unlock lessons on a schedule</span>
+                </label>
+
+                <label class="form-field">
+                    <span>Schedule start date</span>
+                    <input type="date" name="release-start-date" />
+                    <small class="form-hint">If blank, classroom start date or student join date is used.</small>
+                </label>
+
+                <label class="form-field">
+                    <span>Unlock every</span>
+                    <input type="number" name="release-interval-days" min="1" max="30" step="1" value="1" />
+                    <small class="form-hint">Use 1 for one new lesson per day.</small>
+                </label>
+
+                <div class="course-form-actions form-field--wide">
+                    <button type="submit" class="primary-button">Save pacing settings</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="management-section" data-course-content hidden aria-labelledby="course-modules-heading">
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2 id="course-modules-heading">Course modules</h2>
+                    <p class="section-copy">Modules organize the lessons that make up this draft course.</p>
+                </div>
+                <button type="button" class="primary-button management-action" data-toggle-module-form>Add module</button>
+            </div>
+
+            <div class="dashboard-summary dashboard-summary--compact">
+                <article class="summary-card">
+                    <span class="summary-label">Modules</span>
+                    <strong class="summary-value" data-module-count>-</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Lessons</span>
+                    <strong class="summary-value" data-lesson-count>-</strong>
+                </article>
+            </div>
+
+            <form class="management-create-form" data-module-form hidden>
+                <h3 data-module-form-heading>Add module</h3>
+                <p class="section-copy">Create or rename a unit of study within this course.</p>
+                <input type="hidden" name="module-id" />
+
+                <div class="module-form-grid">
+                    <label class="form-field">
+                        <span>Module title</span>
+                        <input type="text" name="title" placeholder="Introduction to Computers and Programming" maxlength="120" required />
+                    </label>
+
+                    <label class="form-field">
+                        <span>Description</span>
+                        <textarea name="description" rows="3" maxlength="500" placeholder="Learning focus for this module"></textarea>
+                    </label>
+                </div>
+
+                <div class="course-form-actions">
+                    <button type="submit" class="primary-button" data-module-submit>Create module</button>
+                    <button type="button" class="secondary-button" data-cancel-module-form>Cancel</button>
+                </div>
+            </form>
+
+            <div data-module-list>
+                <p class="empty-state">Loading modules...</p>
+            </div>
+
+            <form class="management-create-form" data-lesson-form hidden>
+                <h3 data-lesson-form-heading>Add lesson</h3>
+                <p class="section-copy">Create a lesson within this module, then open its lesson builder for content and draft questions.</p>
+                <input type="hidden" name="module-id" />
+
+                <div class="lesson-form-grid">
+                    <label class="form-field">
+                        <span>Lesson title</span>
+                        <input type="text" name="title" placeholder="Introduction" maxlength="120" required />
+                    </label>
+
+                    <label class="form-field">
+                        <span>Objective</span>
+                        <textarea name="objective" rows="3" maxlength="500" placeholder="What students should understand after this lesson"></textarea>
+                    </label>
+
+                    <label class="form-field">
+                        <span>Estimated time</span>
+                        <input type="text" name="estimated-time" placeholder="45 minutes" maxlength="80" />
+                    </label>
+
+                    <label class="form-field form-field--wide">
+                        <span>Lesson overview</span>
+                        <textarea name="summary" rows="3" maxlength="600" placeholder="Work through introduction as part of Chapter 1: Introduction to Computers and Programming."></textarea>
+                    </label>
+                </div>
+
+                <div class="course-form-actions">
+                    <button type="submit" class="primary-button">Create lesson</button>
+                    <button type="button" class="secondary-button" data-cancel-lesson-form>Cancel</button>
+                </div>
+            </form>
+
+            <h3 class="section-subheading">Coming in the course builder</h3>
+            <ul class="feature-list">
+                <li>Edit lesson details after creation</li>
+                <li>Add media resources and answer options</li>
+                <li>Preview as a student before publishing</li>
+            </ul>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/courses/editor.js?v=20260605-publish-page-model"></script>
+</body>
+
+</html>

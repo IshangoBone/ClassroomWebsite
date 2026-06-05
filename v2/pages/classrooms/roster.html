@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Classroom Roster</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout">
+        <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Classroom Roster</p>
+            <h1 data-roster-heading>Loading roster...</h1>
+            <p class="intro" data-roster-context>Preparing enrolled students.</p>
+        </header>
+
+        <p class="auth-status management-status" data-roster-status aria-live="polite"></p>
+
+        <section class="management-section" data-roster-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Students</h2>
+                    <p class="section-copy">Review enrollment, progress, activity, and student work for this classroom.</p>
+                </div>
+                <div class="section-actions">
+                    <a class="secondary-button" href="../submissions/index.html" data-review-classroom-link>Review submissions</a>
+                    <button class="secondary-button" type="button" data-copy-invite-link>Copy invite link</button>
+                    <a class="secondary-button" href="../dashboard/index.html" data-manage-classrooms-link>Manage classrooms</a>
+                </div>
+            </div>
+
+            <div class="roster-summary-grid" data-roster-summary>
+                <p class="empty-state">Loading roster summary...</p>
+            </div>
+
+            <form class="roster-add-form" data-roster-add-form>
+                <label class="form-field">
+                    <span>Add student by email</span>
+                    <input type="email" name="studentEmail" placeholder="student@example.com" autocomplete="email" required />
+                </label>
+                <button class="secondary-button" type="submit">Add student</button>
+            </form>
+
+            <form class="roster-controls" data-roster-controls>
+                <label class="form-field">
+                    <span>Status</span>
+                    <select name="status">
+                        <option value="">All students</option>
+                        <option value="active">Active</option>
+                        <option value="removed">Removed</option>
+                        <option value="completed">Completed</option>
+                        <option value="dropped">Dropped</option>
+                    </select>
+                </label>
+
+                <label class="form-field">
+                    <span>Work</span>
+                    <select name="work">
+                        <option value="">All work statuses</option>
+                        <option value="needs-work">Missing or incomplete</option>
+                        <option value="missing">No submitted work</option>
+                        <option value="complete">Complete</option>
+                    </select>
+                </label>
+
+                <label class="form-field">
+                    <span>Sort by</span>
+                    <select name="sort">
+                        <option value="name-asc">Name A-Z</option>
+                        <option value="progress-asc">Progress low-high</option>
+                        <option value="progress-desc">Progress high-low</option>
+                        <option value="last-activity-desc">Last activity</option>
+                        <option value="joined-desc">Newest joined</option>
+                        <option value="joined-asc">Oldest joined</option>
+                        <option value="status-asc">Status</option>
+                    </select>
+                </label>
+            </form>
+
+            <div data-roster-list>
+                <p class="empty-state">Loading enrolled students...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/classrooms/roster.js?v=20260602-profile-photos"></script>
+</body>
+
+</html>

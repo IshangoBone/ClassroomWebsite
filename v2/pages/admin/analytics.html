@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Platform Analytics</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout admin-layout">
+        <a class="back-link" href="./index.html">Back to admin dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Admin Portal</p>
+            <h1>Platform analytics</h1>
+            <p class="intro">High-level growth, usage, engagement, and moderation metrics across the platform.</p>
+
+            <div class="analytics-range-control" aria-label="Analytics time range" data-platform-range-control>
+                <button class="secondary-button" type="button" data-range-days="7" aria-pressed="true">7 days</button>
+                <button class="secondary-button" type="button" data-range-days="30" aria-pressed="false">30 days</button>
+                <button class="secondary-button" type="button" data-range-days="90" aria-pressed="false">90 days</button>
+            </div>
+        </header>
+
+        <p class="auth-status management-status" data-platform-analytics-status aria-live="polite"></p>
+
+        <section class="management-section" data-platform-analytics-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Platform metrics</h2>
+                    <p class="section-copy">Counts and signals across users, courses, classrooms, enrollments, and submissions. Select a metric to inspect the underlying records.</p>
+                </div>
+                <div class="section-actions">
+                    <button class="secondary-button" type="button" data-platform-copy-summary>Copy summary</button>
+                    <button class="secondary-button" type="button" data-platform-download-summary>Download JSON</button>
+                    <a class="secondary-button" href="./moderation.html">Open moderation</a>
+                    <a class="secondary-button" href="../activity/index.html">Open activity logs</a>
+                </div>
+            </div>
+
+            <div class="dashboard-summary admin-summary-grid" data-platform-analytics-summary>
+                <p class="empty-state">Loading platform analytics...</p>
+            </div>
+
+            <div class="analytics-export-preview" data-platform-export-preview hidden></div>
+        </section>
+
+        <section class="management-section" data-platform-analytics-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2 data-platform-drilldown-title>Metric drill-down</h2>
+                    <p class="section-copy" data-platform-drilldown-copy>Select a platform metric to review matching users, courses, classrooms, enrollments, or submissions.</p>
+                </div>
+                <div class="section-actions">
+                    <button class="secondary-button" type="button" data-platform-drilldown-refresh disabled>Refresh records</button>
+                </div>
+            </div>
+
+            <div class="analytics-table-shell" data-platform-drilldown>
+                <p class="empty-state">Choose a metric above to load record details.</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-platform-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Status breakdowns</h2>
+                    <p class="section-copy">Visual snapshots of account, course, and classroom status distribution.</p>
+                </div>
+            </div>
+
+            <div class="analytics-breakdown-grid" data-platform-status-breakdown>
+                <p class="empty-state">Loading status breakdowns...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-platform-analytics-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Moderation signals</h2>
+                    <p class="section-copy">Quick review points for suspended accounts, deleted users, and archived or deleted teaching records.</p>
+                </div>
+                <div class="section-actions">
+                    <a class="secondary-button" href="./moderation.html">Open moderation</a>
+                </div>
+            </div>
+
+            <div class="analytics-table-shell" data-platform-moderation>
+                <p class="empty-state">Loading moderation signals...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-platform-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Growth and activity</h2>
+                    <p class="section-copy" data-platform-growth-copy>Recent signup and active-user signals for the selected range.</p>
+                </div>
+            </div>
+
+            <div class="analytics-trend-shell" data-platform-growth-trend>
+                <p class="empty-state">Loading growth trend...</p>
+            </div>
+
+            <div class="analytics-table-shell" data-platform-growth>
+                <p class="empty-state">Loading growth metrics...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-platform-analytics-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Submission health</h2>
+                    <p class="section-copy">Draft-to-submitted work mix, completion rate, and engagement points across lesson submissions.</p>
+                </div>
+                <div class="section-actions">
+                    <button class="secondary-button" type="button" data-platform-submissions-action>View submissions</button>
+                </div>
+            </div>
+
+            <div class="analytics-trend-shell" data-platform-submission-health>
+                <p class="empty-state">Loading submission health...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-platform-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Top teachers</h2>
+                    <p class="section-copy">Teachers with the most submitted student work, classrooms, and courses.</p>
+                </div>
+            </div>
+
+            <div class="analytics-table-shell" data-platform-teachers>
+                <p class="empty-state">Loading teacher analytics...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-platform-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Top courses</h2>
+                    <p class="section-copy">Courses ranked by submitted work and active enrollments.</p>
+                </div>
+            </div>
+
+            <div class="analytics-table-shell" data-platform-courses>
+                <p class="empty-state">Loading course analytics...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/admin/analytics.js?v=20260602-route-guards"></script>
+</body>
+
+</html>

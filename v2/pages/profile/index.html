@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Profile</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="profile-page">
+        <p class="eyebrow">Profile</p>
+        <p class="auth-status dashboard-status" data-profile-status aria-live="polite">Loading profile...</p>
+
+        <section class="profile-hero" aria-labelledby="profile-name">
+            <div class="profile-hero-cover" aria-hidden="true"></div>
+            <div class="profile-hero-content">
+                <div data-profile-avatar></div>
+                <div class="profile-hero-copy">
+                    <div class="profile-hero-title-row">
+                        <div>
+                            <h1 id="profile-name" data-profile-name>Loading profile</h1>
+                            <p class="profile-username" data-profile-username>@username</p>
+                        </div>
+                        <div class="badge-row" data-profile-badges></div>
+                    </div>
+                    <p class="intro" data-profile-intro>
+                        Your courses, classrooms, submissions, and teaching activity will appear here.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="dashboard-summary profile-summary" aria-label="Profile summary">
+            <article class="summary-card">
+                <span class="summary-label">Enrolled courses</span>
+                <strong class="summary-value" data-profile-enrolled-count>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Lessons submitted</span>
+                <strong class="summary-value" data-profile-submitted-count>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Engagement points</span>
+                <strong class="summary-value" data-profile-points-count>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Courses taught</span>
+                <strong class="summary-value" data-profile-teaching-count>-</strong>
+            </article>
+        </section>
+
+        <section class="profile-grid">
+            <article class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="about-heading">
+                <div class="section-header">
+                    <div>
+                        <h2 id="about-heading">About</h2>
+                        <p class="section-copy">Personal account details for your CodeTheCurrent workspace.</p>
+                    </div>
+                </div>
+                <dl class="profile-detail-list" data-profile-details></dl>
+            </article>
+
+            <article class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="activity-heading">
+                <div class="section-header">
+                    <div>
+                        <h2 id="activity-heading">Recent lesson work</h2>
+                        <p class="section-copy">Your latest drafts, submissions, and feedback-ready lessons.</p>
+                    </div>
+                    <a class="secondary-button" href="../submissions/index.html">Open submissions</a>
+                </div>
+                <div data-profile-activity-list>
+                    <p class="empty-state">Loading recent lesson work...</p>
+                </div>
+            </article>
+        </section>
+
+        <section class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="learning-heading">
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2 id="learning-heading">Learning</h2>
+                    <p class="section-copy">Courses and classrooms where you are enrolled as a student.</p>
+                </div>
+                <a class="secondary-button" href="../progress/index.html">Open progress</a>
+            </div>
+            <div class="profile-card-list" data-profile-learning-list>
+                <p class="empty-state">Loading enrolled courses...</p>
+            </div>
+        </section>
+
+        <section class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="teaching-heading" data-profile-teaching-section>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2 id="teaching-heading">Teaching</h2>
+                    <p class="section-copy">Courses you own or help teach, plus managed classroom context.</p>
+                </div>
+                <a class="secondary-button" href="../dashboard/index.html">Open dashboard</a>
+            </div>
+            <div class="profile-card-list" data-profile-teaching-list>
+                <p class="empty-state">Loading teaching courses...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/profile/index.js?v=20260605-teacher-role"></script>
+</body>
+
+</html>

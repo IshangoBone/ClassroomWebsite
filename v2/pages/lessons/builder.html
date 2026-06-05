@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Lesson Builder</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout">
+        <nav class="lesson-builder-nav" aria-label="Lesson builder navigation">
+            <a class="back-link" href="../dashboard/index.html" data-course-editor-link>Back to dashboard</a>
+            <a class="secondary-button" href="view.html" data-student-view-link hidden>View as student</a>
+        </nav>
+
+        <header class="management-header">
+            <p class="eyebrow">Lesson Builder</p>
+            <h1 data-lesson-heading>Loading lesson...</h1>
+            <p class="intro" data-lesson-context>
+                Open a lesson from course management to begin focused lesson authoring.
+            </p>
+        </header>
+
+        <p class="auth-status management-status" data-lesson-status aria-live="polite"></p>
+
+        <section class="management-section" data-lesson-content hidden aria-labelledby="lesson-overview-heading">
+            <div class="section-header">
+                <h2 id="lesson-overview-heading">Lesson overview</h2>
+                <p class="section-copy">Review the draft lesson details before adding content and questions.</p>
+            </div>
+
+            <div class="dashboard-summary dashboard-summary--compact">
+                <article class="summary-card">
+                    <span class="summary-label">Module</span>
+                    <strong class="summary-value" data-module-position>-</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Lesson</span>
+                    <strong class="summary-value" data-lesson-position>-</strong>
+                </article>
+            </div>
+
+            <div data-lesson-details>
+                <p class="empty-state">Loading lesson details...</p>
+            </div>
+        </section>
+
+        <section class="management-section management-section--pending" data-lesson-content hidden>
+            <div class="section-header">
+                <h2>Authoring workspace</h2>
+                <p class="section-copy">Design the student lesson page, then add resources from the insert panel.</p>
+            </div>
+
+            <div class="lesson-builder-workspace">
+                <div class="lesson-builder-main">
+                    <section class="lesson-page-canvas" data-builder-canvas aria-labelledby="lesson-canvas-heading">
+                        <div class="lesson-page-toolbar">
+                            <div>
+                                <p class="eyebrow">Lesson page</p>
+                                <h3 id="lesson-canvas-heading">Student view draft</h3>
+                            </div>
+                            <div class="lesson-page-toolbar-actions">
+                                <span class="badge badge--quiet" data-lesson-visibility-state>Hidden from students</span>
+                                <button type="button" class="secondary-button" data-lesson-visibility-toggle>Make visible</button>
+                            </div>
+                        </div>
+
+                        <article class="lesson-page-sheet">
+                            <header class="lesson-page-hero">
+                                <p class="eyebrow" data-canvas-context>Course / module</p>
+                                <h2 data-canvas-title>Lesson title</h2>
+                                <div class="lesson-page-lesson-meta">
+                                    <article>
+                                        <span>Objective</span>
+                                        <p data-canvas-objective>Lesson objective will appear here.</p>
+                                    </article>
+                                    <article>
+                                        <span>Overview</span>
+                                        <p data-canvas-overview>Lesson overview will appear here.</p>
+                                    </article>
+                                    <article>
+                                        <span>Duration</span>
+                                        <p data-canvas-duration>Not set</p>
+                                    </article>
+                                </div>
+                            </header>
+
+                            <div class="lesson-page-body">
+                                <div data-content-block-list>
+                                    <p class="empty-state">Loading lesson content...</p>
+                                </div>
+                                <div class="lesson-inline-draft-list" data-inline-draft-list></div>
+                                <div class="lesson-page-question-canvas" data-question-preview>
+                                    <p class="empty-state empty-state--compact">Data collection blocks will appear here.</p>
+                                </div>
+                                <div data-question-list hidden></div>
+                            </div>
+                        </article>
+                    </section>
+
+                    <article class="lesson-builder-editor-card" id="lesson-content-editor" hidden>
+                        <div class="lesson-builder-editor-header">
+                            <div>
+                                <p class="eyebrow">Content</p>
+                                <h3 data-content-block-form-heading>Add lesson content</h3>
+                            </div>
+                            <div class="lesson-builder-editor-actions">
+                                <span class="badge badge--quiet" data-content-tool-label>Text section</span>
+                                <button type="button" class="secondary-button lesson-editor-close" data-close-content-editor>Close</button>
+                            </div>
+                        </div>
+
+                        <form class="management-create-form management-create-form--embedded" data-content-block-form>
+                            <input type="hidden" name="content-block-id" />
+
+                            <div class="content-block-form-grid">
+                                <label class="form-field builder-mode-field">
+                                    <span>Content type</span>
+                                    <select name="block-type" data-content-block-type required>
+                                        <option value="text">Text section</option>
+                                        <option value="link">External link</option>
+                                        <option value="youtube">YouTube video</option>
+                                        <option value="slides">Slides embed</option>
+                                        <option value="image">Image resource</option>
+                                        <option value="audio">Audio block</option>
+                                        <option value="file">File/resource download</option>
+                                    </select>
+                                </label>
+
+                    <label class="form-field">
+                        <span>Optional label</span>
+                        <input type="text" name="title" placeholder="What is a computer?" maxlength="120" data-content-title />
+                    </label>
+
+                    <label class="form-field" data-text-content-field>
+                        <span>Section text</span>
+                        <div class="text-format-toolbar" aria-label="Text formatting shortcuts">
+                            <button type="button" class="secondary-button lesson-action" data-format-action="heading">Heading</button>
+                            <button type="button" class="secondary-button lesson-action" data-format-action="bold">Bold</button>
+                            <button type="button" class="secondary-button lesson-action" data-format-action="bullet">Bullets</button>
+                            <button type="button" class="secondary-button lesson-action" data-format-action="link">Link</button>
+                        </div>
+                        <textarea name="body-text" rows="6" maxlength="5000" placeholder="Write lesson content. Use the buttons for headings, bold text, bullet lists, and links." required></textarea>
+                    </label>
+
+                    <label class="form-field" data-url-content-field hidden>
+                        <span data-url-content-label>External URL</span>
+                        <input type="url" name="content-url" placeholder="https://example.com/resource" maxlength="500" data-url-content-input />
+                    </label>
+
+                    <label class="form-field" data-content-upload-field hidden>
+                        <span data-content-upload-label>Upload resource</span>
+                        <input type="file" name="content-upload" data-content-upload-input />
+                        <small class="form-hint" data-content-upload-status>Optional. PDF, DOCX, PPTX, images, ZIP, and audio up to 50 MB.</small>
+                    </label>
+
+                    <label class="form-field" data-resource-library-field hidden>
+                        <span>Attach from resource library</span>
+                        <select name="resource-library" data-resource-library-select>
+                            <option value="">No library resource selected</option>
+                        </select>
+                        <small class="form-hint" data-resource-library-status>Uploaded lesson resources you own appear here.</small>
+                    </label>
+
+                    <label class="form-field" data-file-type-field hidden>
+                        <span>File type</span>
+                        <select name="file-type">
+                            <option value="pdf">PDF</option>
+                            <option value="docx">Word document</option>
+                            <option value="pptx">Slides</option>
+                            <option value="zip">ZIP archive</option>
+                            <option value="audio">Audio</option>
+                        </select>
+                    </label>
+                            </div>
+
+                            <div class="course-form-actions">
+                                <button type="submit" class="primary-button" data-content-block-submit>Create content block</button>
+                                <button type="button" class="secondary-button" data-cancel-content-block-edit hidden>Cancel edit</button>
+                            </div>
+                        </form>
+                    </article>
+
+                    <article class="lesson-builder-editor-card lesson-question-editor-popover" id="lesson-question-editor" hidden>
+                        <div class="lesson-builder-editor-header">
+                            <div>
+                                <p class="eyebrow">Data collection</p>
+                                <h3 data-question-form-heading>Add question block</h3>
+                            </div>
+                            <div class="lesson-builder-editor-actions">
+                                <span class="badge badge--quiet" data-question-tool-label>Short response</span>
+                                <button type="button" class="secondary-button lesson-editor-close" data-close-question-editor>Close</button>
+                            </div>
+                        </div>
+
+                        <form class="management-create-form management-create-form--embedded" data-question-form>
+                            <input type="hidden" name="question-id" />
+                            <input type="hidden" name="phase" value="during" />
+                            <input type="hidden" name="question-type" value="short_response" />
+                            <input type="hidden" name="student-instructions" value="" />
+
+                            <div class="content-block-form-grid">
+                                <label class="form-field form-field--wide">
+                                    <span>Question</span>
+                                    <textarea name="prompt" rows="4" maxlength="1000" placeholder="What should students answer?" required></textarea>
+                                </label>
+
+                                <details class="question-settings-panel form-field--wide">
+                                    <summary>Answer settings</summary>
+                                    <div class="question-settings-grid">
+                                        <label class="form-field form-field--wide">
+                                            <span>Optional hint</span>
+                                            <textarea name="hint" rows="2" maxlength="500" placeholder="Give students a nudge without giving away the answer."></textarea>
+                                        </label>
+
+                                        <label class="form-field">
+                                            <span>Points</span>
+                                            <input type="number" name="points" min="0" max="100" step="0.5" value="0" required />
+                                        </label>
+
+                                        <label class="form-field form-field--checkbox form-field--wide">
+                                            <input type="checkbox" name="is-required" />
+                                            <span>Require students to answer before turning in the lesson</span>
+                                        </label>
+
+                                        <fieldset class="form-field form-field--wide correct-answer-field" data-correct-answer-field hidden>
+                                            <legend>Optional correct answer</legend>
+                                            <input type="text" name="correct-text" maxlength="500" placeholder="Sample correct answer" data-correct-text />
+                                            <select name="correct-boolean" data-correct-boolean hidden>
+                                                <option value="">No correct answer</option>
+                                                <option value="true">True</option>
+                                                <option value="false">False</option>
+                                            </select>
+                                            <input type="number" name="correct-rating" min="1" max="5" step="1" placeholder="1-5" data-correct-rating hidden />
+                                        </fieldset>
+
+                                        <fieldset class="form-field form-field--wide response-rules-field" data-response-rules-field hidden>
+                                            <legend>Optional response length rules</legend>
+                                            <input type="number" name="min-length" min="0" max="5000" step="1" placeholder="Minimum characters" />
+                                            <input type="number" name="max-length" min="0" max="5000" step="1" placeholder="Maximum characters" />
+                                        </fieldset>
+                                    </div>
+                                </details>
+
+                                <fieldset class="form-field form-field--wide question-options-field" data-question-options-field hidden>
+                                    <legend>Answer choices</legend>
+                                    <div class="question-option-row">
+                                        <input type="text" name="option-1" maxlength="300" placeholder="Choice 1" />
+                                        <input type="text" name="match-1" maxlength="300" placeholder="Match 1" data-match-input hidden />
+                                        <label data-correct-control>
+                                            <input type="radio" name="correct-option" value="1" />
+                                            <span>Correct</span>
+                                        </label>
+                                    </div>
+                                    <div class="question-option-row">
+                                        <input type="text" name="option-2" maxlength="300" placeholder="Choice 2" />
+                                        <input type="text" name="match-2" maxlength="300" placeholder="Match 2" data-match-input hidden />
+                                        <label data-correct-control>
+                                            <input type="radio" name="correct-option" value="2" />
+                                            <span>Correct</span>
+                                        </label>
+                                    </div>
+                                    <div class="question-option-row">
+                                        <input type="text" name="option-3" maxlength="300" placeholder="Choice 3" />
+                                        <input type="text" name="match-3" maxlength="300" placeholder="Match 3" data-match-input hidden />
+                                        <label data-correct-control>
+                                            <input type="radio" name="correct-option" value="3" />
+                                            <span>Correct</span>
+                                        </label>
+                                    </div>
+                                    <div class="question-option-row">
+                                        <input type="text" name="option-4" maxlength="300" placeholder="Choice 4" />
+                                        <input type="text" name="match-4" maxlength="300" placeholder="Match 4" data-match-input hidden />
+                                        <label data-correct-control>
+                                            <input type="radio" name="correct-option" value="4" />
+                                            <span>Correct</span>
+                                        </label>
+                                    </div>
+                                </fieldset>
+                            </div>
+
+                            <div class="course-form-actions">
+                                <button type="submit" class="primary-button" data-question-submit>Done</button>
+                                <button type="button" class="secondary-button" data-cancel-question-edit hidden>Cancel edit</button>
+                            </div>
+                        </form>
+                    </article>
+
+                </div>
+
+                <aside class="lesson-builder-toolbox" aria-label="Lesson builder tools">
+                    <div class="lesson-tool-tabs" aria-label="Builder side panel tabs">
+                        <button type="button" class="lesson-tool-tab lesson-tool-tab--active" data-tool-tab="content-blocks" aria-controls="content-block-tools" aria-selected="true">Content blocks</button>
+                        <button type="button" class="lesson-tool-tab" data-tool-tab="lesson-inserts" aria-controls="lesson-insert-tools" aria-selected="false">Lesson inserts</button>
+                        <button type="button" class="lesson-tool-tab" data-tool-tab="data-collection" aria-controls="data-collection-tools" aria-selected="false">Data collection</button>
+                    </div>
+
+                    <div class="lesson-tool-window">
+                        <section class="lesson-tool-card" id="content-block-tools" data-tool-panel="content-blocks" aria-labelledby="layout-tools-heading">
+                            <div class="lesson-tool-heading">
+                                <h3 id="layout-tools-heading">Content blocks</h3>
+                            </div>
+                            <div class="lesson-layout-grid">
+                                <button type="button" class="lesson-layout-tile" data-content-tool="text" data-layout-template="text" aria-label="One column text block">
+                                    <span class="layout-preview layout-preview--text"></span>
+                                </button>
+                                <button type="button" class="lesson-layout-tile" data-content-tool="image" data-layout-template="image-text" aria-label="Two column image and text block">
+                                    <span class="layout-preview layout-preview--image-text"></span>
+                                </button>
+                                <button type="button" class="lesson-layout-tile" data-content-tool="image" data-layout-template="feature" aria-label="Image feature block">
+                                    <span class="layout-preview layout-preview--feature"></span>
+                                </button>
+                                <button type="button" class="lesson-layout-tile" data-content-tool="text" data-layout-template="columns" aria-label="Three column text block">
+                                    <span class="layout-preview layout-preview--columns"></span>
+                                </button>
+                                <button type="button" class="lesson-layout-tile" data-content-tool="image" data-layout-template="gallery" aria-label="Gallery row block">
+                                    <span class="layout-preview layout-preview--gallery"></span>
+                                </button>
+                                <button type="button" class="lesson-layout-tile" data-content-tool="text" data-layout-template="wide" aria-label="Wide section block">
+                                    <span class="layout-preview layout-preview--wide"></span>
+                                </button>
+                            </div>
+                        </section>
+
+                        <section class="lesson-tool-card" id="lesson-insert-tools" data-tool-panel="lesson-inserts" aria-labelledby="insert-tools-heading" hidden>
+                            <h3 id="insert-tools-heading">Lesson inserts</h3>
+                            <div class="lesson-tool-grid lesson-tool-grid--compact">
+                                <button type="button" class="lesson-insert-tile" data-content-tool="text" aria-controls="lesson-content-editor">
+                                    <span class="lesson-insert-icon">T</span>
+                                    <span>Text box</span>
+                                </button>
+                                <button type="button" class="lesson-insert-tile" data-content-tool="image" aria-controls="lesson-content-editor">
+                                    <span class="lesson-insert-icon">I</span>
+                                    <span>Images</span>
+                                </button>
+                                <button type="button" class="lesson-insert-tile" data-content-tool="youtube" aria-controls="lesson-content-editor">
+                                    <span class="lesson-insert-icon">Y</span>
+                                    <span>YouTube</span>
+                                </button>
+                                <button type="button" class="lesson-insert-tile" data-content-tool="file" aria-controls="lesson-content-editor">
+                                    <span class="lesson-insert-icon">U</span>
+                                    <span>Upload</span>
+                                </button>
+                            </div>
+                            <div class="lesson-tool-list">
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="text" data-layout-template="toc" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">≡</span>
+                                    <span>Table of contents</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="image" data-layout-template="carousel" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">▣</span>
+                                    <span>Image carousel</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="link" data-layout-template="divider" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">—</span>
+                                    <span>Divider</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="text" data-layout-template="spacer" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">↕</span>
+                                    <span>Spacer</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="file" data-layout-template="placeholder" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">□</span>
+                                    <span>Placeholder</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="youtube" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">▶</span>
+                                    <span>YouTube</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="file" data-layout-template="upload" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">U</span>
+                                    <span>Upload</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="file" data-layout-template="pdf" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">P</span>
+                                    <span>PDF</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="slides" data-layout-template="slides" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon">S</span>
+                                    <span>Slides</span>
+                                </button>
+                            </div>
+                        </section>
+
+                        <section class="lesson-tool-card" id="data-collection-tools" data-tool-panel="data-collection" aria-label="Data collection tools" hidden>
+                            <h3>Data collection tools</h3>
+                            <div class="lesson-tool-list">
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="short_response" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">S</span>
+                                    <span>Short response</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="long_response" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">L</span>
+                                    <span>Long response</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="multiple_choice" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">M</span>
+                                    <span>Multiple choice</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="select_all_that_apply" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">C</span>
+                                    <span>Select all</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="true_false" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">TF</span>
+                                    <span>True / false</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="rating_scale" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">R</span>
+                                    <span>Rating scale</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="fill_in_the_blank" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">F</span>
+                                    <span>Fill blank</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="matching" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">P</span>
+                                    <span>Matching pairs</span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="ordering" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon">O</span>
+                                    <span>Ordering</span>
+                                </button>
+                            </div>
+                        </section>
+                    </div>
+                </aside>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/lessons/builder.js?v=20260604-data-tools"></script>
+</body>
+
+</html>

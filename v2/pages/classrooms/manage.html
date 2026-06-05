@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Manage Classrooms</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout">
+        <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Classroom Management</p>
+            <h1 data-classrooms-heading>Loading classrooms...</h1>
+            <p class="intro">
+                Classrooms created from this course will appear here. Generate join codes for student access,
+                then review roster and progress work as those tools come online.
+            </p>
+        </header>
+
+        <p class="auth-status management-status" data-classrooms-status aria-live="polite"></p>
+
+        <section class="management-section" data-classrooms-content hidden aria-labelledby="managed-classrooms-heading">
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2 id="managed-classrooms-heading">Managed classrooms</h2>
+                    <p class="section-copy">Only classrooms you are authorized to manage are displayed. Drag classroom cards to arrange their order.</p>
+                </div>
+                <button type="button" class="primary-button management-action" data-toggle-classroom-form>Create classroom</button>
+            </div>
+
+            <form class="management-create-form" data-classroom-form hidden>
+                <h3 data-classroom-form-heading>Create classroom</h3>
+                <p class="section-copy" data-classroom-form-copy>Create one classroom for this course. Join access and roster tools come later.</p>
+                <input type="hidden" name="classroom-id" />
+
+                <div class="management-form-grid">
+                    <label class="form-field">
+                        <span>Classroom name</span>
+                        <input type="text" name="name" placeholder="Intro to Computer Science" required />
+                    </label>
+
+                    <label class="form-field">
+                        <span>Period / block</span>
+                        <input type="text" name="period_block" placeholder="Period 1" />
+                    </label>
+
+                    <label class="form-field">
+                        <span>School year</span>
+                        <input type="text" name="school_year" placeholder="2026-2027" />
+                    </label>
+                </div>
+
+                <div class="course-form-actions">
+                    <button type="submit" class="primary-button" data-classroom-submit>Create classroom</button>
+                    <button type="button" class="secondary-button" data-cancel-classroom-form>Cancel</button>
+                </div>
+            </form>
+
+            <div data-classroom-list>
+                <p class="empty-state">Loading classrooms...</p>
+            </div>
+        </section>
+
+        <section class="management-section management-section--pending" data-classrooms-content hidden>
+            <h2>Coming in the classroom manager</h2>
+            <ul class="feature-list">
+                <li>View and manage enrolled student rosters</li>
+                <li>Review classroom progress and submissions</li>
+                <li>Restore archived classroom history when needed</li>
+            </ul>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/classrooms/manage.js?v=20260602-route-guards"></script>
+</body>
+
+</html>

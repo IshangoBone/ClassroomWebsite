@@ -1,0 +1,4 @@
+/v2/services/supabase/config.local.js
+/v2/.env
+/v2/.env.local
+/v2/.env.*.local

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Course Preview</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout course-preview-layout">
+        <a class="back-link" href="../dashboard/index.html" data-course-editor-link>Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Teacher Preview</p>
+            <h1 data-preview-heading>Loading course preview...</h1>
+            <p class="intro" data-preview-context>
+                Review the course structure, student-facing lessons, and visible content before publishing.
+            </p>
+        </header>
+
+        <p class="auth-status management-status" data-preview-status aria-live="polite"></p>
+
+        <section class="management-section" data-preview-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Student-facing course outline</h2>
+                    <p class="section-copy">This preview is read-only. Lesson links open the student lesson experience.</p>
+                </div>
+                <span class="badge badge--quiet" data-preview-visibility>Preview</span>
+            </div>
+
+            <div class="dashboard-summary dashboard-summary--compact">
+                <article class="summary-card">
+                    <span class="summary-label">Modules</span>
+                    <strong class="summary-value" data-preview-module-count>-</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Lessons</span>
+                    <strong class="summary-value" data-preview-lesson-count>-</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Visible content</span>
+                    <strong class="summary-value" data-preview-content-count>-</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Visible questions</span>
+                    <strong class="summary-value" data-preview-question-count>-</strong>
+                </article>
+            </div>
+
+            <div data-preview-module-list>
+                <p class="empty-state">Loading course modules...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/courses/preview.js?v=20260602-route-guards"></script>
+</body>
+
+</html>

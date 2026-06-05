@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Admin Moderation</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="management-layout admin-layout">
+        <a class="back-link" href="./index.html">Back to admin dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Admin Portal</p>
+            <h1>Admin moderation</h1>
+            <p class="intro">Review user accounts, course records, classroom records, and investigation links.</p>
+        </header>
+
+        <p class="auth-status management-status" data-moderation-status aria-live="polite"></p>
+
+        <section class="management-section" data-moderation-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Moderation queue</h2>
+                    <p class="section-copy">Suspended and deleted users are surfaced first. Suspend, reactivate, and soft-delete actions are logged for audit review.</p>
+                </div>
+                <button type="button" class="secondary-button" data-moderation-refresh>Refresh users</button>
+            </div>
+
+            <div class="dashboard-summary dashboard-summary--moderation" data-moderation-summary>
+                <p class="empty-state">Loading moderation summary...</p>
+            </div>
+
+            <form class="submission-filter-form moderation-filter-form" data-moderation-filter-form>
+                <label class="form-field">
+                    <span>Account status</span>
+                    <select name="status">
+                        <option value="">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                        <option value="deleted">Deleted</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Platform role</span>
+                    <select name="role">
+                        <option value="">All roles</option>
+                        <option value="supreme_admin">Supreme Admin</option>
+                        <option value="admin">Admin</option>
+                        <option value="teacher">Teacher</option>
+                        <option value="user">User</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Search</span>
+                    <input type="search" name="query" placeholder="Name, email, username, ID" autocomplete="off" />
+                </label>
+            </form>
+
+            <div class="activity-table-shell" data-moderation-list>
+                <p class="empty-state">Loading users...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-moderation-shell hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Content moderation</h2>
+                    <p class="section-copy">Review, archive, or soft-delete courses and classrooms. Moderation actions are logged for audit review.</p>
+                </div>
+                <button type="button" class="secondary-button" data-content-refresh>Refresh content</button>
+            </div>
+
+            <div class="dashboard-summary dashboard-summary--moderation" data-content-summary>
+                <p class="empty-state">Loading content summary...</p>
+            </div>
+
+            <form class="submission-filter-form moderation-filter-form" data-content-filter-form>
+                <label class="form-field">
+                    <span>Record type</span>
+                    <select name="type">
+                        <option value="">All records</option>
+                        <option value="course">Courses</option>
+                        <option value="classroom">Classrooms</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Status</span>
+                    <select name="status">
+                        <option value="">All statuses</option>
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                        <option value="private">Private</option>
+                        <option value="active">Active</option>
+                        <option value="archived">Archived</option>
+                        <option value="deleted">Deleted</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Search</span>
+                    <input type="search" name="query" placeholder="Title, owner, course, ID" autocomplete="off" />
+                </label>
+            </form>
+
+            <div class="activity-table-shell" data-content-list>
+                <p class="empty-state">Loading content records...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/admin/moderation.js?v=20260605-teacher-role"></script>
+</body>
+
+</html>

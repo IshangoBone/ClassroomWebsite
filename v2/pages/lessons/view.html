@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Lesson</title>
+    <link rel="stylesheet" href="../../styles/main.css" />
+</head>
+
+<body>
+    <main class="lesson-view-layout">
+        <header class="lesson-view-header">
+            <a class="back-link" href="../dashboard/index.html" data-lesson-back-link>Back to dashboard</a>
+            <p class="eyebrow">Lesson</p>
+            <h1 data-lesson-heading>Loading lesson...</h1>
+            <p class="intro" data-lesson-context>Preparing your lesson content.</p>
+            <p class="auth-status management-status" data-lesson-status aria-live="polite"></p>
+        </header>
+
+        <div class="lesson-view-shell" data-lesson-shell hidden>
+            <section class="lesson-page-canvas lesson-view-page" aria-labelledby="lesson-content-heading">
+                <article class="lesson-page-sheet">
+                    <header class="lesson-page-hero">
+                        <p class="eyebrow" data-canvas-context>Course / module</p>
+                        <h2 id="lesson-content-heading" data-canvas-title>Lesson title</h2>
+                        <div class="lesson-page-lesson-meta">
+                            <article>
+                                <span>Objective</span>
+                                <p data-canvas-objective>Lesson objective will appear here.</p>
+                            </article>
+                            <article>
+                                <span>Overview</span>
+                                <p data-canvas-overview>Lesson overview will appear here.</p>
+                            </article>
+                            <article>
+                                <span>Duration</span>
+                                <p data-canvas-duration>Not set</p>
+                            </article>
+                        </div>
+                    </header>
+
+                    <div class="lesson-page-body">
+                        <div class="lesson-renderer" data-content-renderer>
+                            <p class="empty-state">Loading lesson content...</p>
+                        </div>
+
+                        <section class="lesson-page-data-collection" data-question-flow hidden>
+                            <h3>Student response</h3>
+                            <p class="section-copy">Answer the questions your teacher added for this lesson.</p>
+                        </section>
+
+                        <article class="lesson-submit-card lesson-submit-card--page" data-submit-panel hidden>
+                            <h3 data-submit-panel-heading>Turn in lesson</h3>
+                            <p data-save-status>Draft answers are saved as you work.</p>
+                            <p class="auth-status management-status" data-submit-status aria-live="polite"></p>
+                            <div class="lesson-draft-actions">
+                                <button type="button" class="secondary-button" data-save-draft-button>Save draft</button>
+                                <button type="button" class="secondary-button destructive-button" data-reset-draft-button>Reset draft</button>
+                            </div>
+                            <button type="button" class="primary-button" data-turn-in-button>Turn in lesson</button>
+                            <a class="secondary-button" data-next-lesson-link href="../dashboard/index.html" hidden>Continue</a>
+                        </article>
+                    </div>
+                </article>
+            </section>
+        </div>
+    </main>
+
+    <script type="module" src="../../scripts/lessons/viewer.js?v=20260604-data-tools"></script>
+</body>
+
+</html>
