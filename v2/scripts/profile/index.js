@@ -1,5 +1,5 @@
 import { supabase } from "../../services/supabase/client.js";
-import { loadProtectedProfile } from "../utils/auth-guard.js";
+import { isTeachingRole, loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
 import { createProfileAvatar, getProfileDisplayName } from "../utils/profile-images.js";
 import { notifyStatus } from "../utils/ui-components.js";
@@ -66,6 +66,10 @@ function getRoleLabel(profile, teachingCount) {
         return "Admin";
     }
 
+    if (profile.platform_role === "teacher") {
+        return "Teacher";
+    }
+
     return teachingCount ? "Teacher" : "Student";
 }
 
@@ -80,7 +84,7 @@ function renderProfileHeader(profile, teachingCount) {
     avatarElement.replaceChildren(createProfileAvatar(profile, "profile-avatar profile-avatar--hero", "U"));
     nameElement.textContent = displayName;
     usernameElement.textContent = profile.username ? `@${profile.username}` : profile.email || "No username yet";
-    introElement.textContent = teachingCount
+    introElement.textContent = isTeachingRole(profile.platform_role) || teachingCount
         ? "Your learning, teaching, and platform work all live here in one profile view."
         : "Your courses, classroom progress, and lesson submissions live here in one profile view.";
     badgesElement.replaceChildren(

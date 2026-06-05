@@ -7,6 +7,10 @@ function isPlatformAdminRole(role) {
     return role === "admin" || role === "supreme_admin";
 }
 
+function isTeachingRole(role) {
+    return role === "teacher" || isPlatformAdminRole(role);
+}
+
 function getPagesRootUrl() {
     const marker = "/pages/";
     const markerIndex = window.location.pathname.indexOf(marker);
@@ -36,6 +40,10 @@ function getRoleLabel(profile, hasTeachingTools) {
 
     if (profile.platform_role === "admin") {
         return "Admin";
+    }
+
+    if (profile.platform_role === "teacher") {
+        return "Teacher";
     }
 
     return hasTeachingTools ? "Teacher" : "Student";
@@ -75,11 +83,15 @@ function createNavSection(title, items, pagesRoot, currentPath) {
     return section;
 }
 
-async function hasTeachingTools(profileId) {
+async function hasTeachingTools(profile) {
+    if (isTeachingRole(profile.platform_role)) {
+        return true;
+    }
+
     const { count, error } = await supabase
         .from("courses")
         .select("id", { count: "exact", head: true })
-        .eq("owner_user_id", profileId)
+        .eq("owner_user_id", profile.id)
         .neq("status", "deleted");
 
     return !error && Boolean(count);
@@ -176,7 +188,7 @@ export async function renderAppSidebar(profile) {
 
     const pagesRoot = getPagesRootUrl();
     const currentPath = getRelativePagePath();
-    const hasTeachingAccess = await hasTeachingTools(profile.id);
+    const hasTeachingAccess = await hasTeachingTools(profile);
     const sidebar = createElement("aside", "app-sidebar");
     const brand = createElement("div", "app-sidebar-brand");
     const mark = createElement("a", "app-sidebar-mark", "CTC");

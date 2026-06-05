@@ -5,6 +5,10 @@ export function isPlatformAdmin(role) {
     return role === "admin" || role === "supreme_admin";
 }
 
+export function isTeachingRole(role) {
+    return role === "teacher" || isPlatformAdmin(role);
+}
+
 export function isActiveProfile(profile) {
     return profile?.account_status === "active";
 }

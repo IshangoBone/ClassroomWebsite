@@ -1,5 +1,5 @@
 import { supabase } from "../../services/supabase/client.js";
-import { loadProtectedProfile } from "../utils/auth-guard.js";
+import { isTeachingRole, loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
 import { createProfileAvatar } from "../utils/profile-images.js";
 import { notifyStatus } from "../utils/ui-components.js";
@@ -1025,7 +1025,8 @@ async function refreshDashboard() {
             loadStudentTeacherMap(),
         ]);
         const displayStudentEnrollments = getDisplayStudentEnrollments(studentEnrollments);
-        const isStudentOnly = !courses.length;
+        const hasTeachingAccess = isTeachingRole(currentProfile.platform_role) || Boolean(courses.length);
+        const isStudentOnly = !hasTeachingAccess;
         const hasStudentEnrollments = Boolean(displayStudentEnrollments.length);
         const submittedStudentWork = studentSubmissions.filter((submission) => submission.status === "submitted");
         const studentPoints = submittedStudentWork.reduce((total, submission) => total + Number(submission.points_earned || 0), 0);

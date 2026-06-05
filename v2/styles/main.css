@@ -3850,6 +3850,12 @@ h2 {
     padding: 0 12px;
 }
 
+.admin-result-action-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .moderation-action-button {
     white-space: nowrap;
 }

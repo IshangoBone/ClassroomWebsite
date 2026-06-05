@@ -70,6 +70,10 @@ function isSupremeAdminRole(role) {
     return role === "supreme_admin";
 }
 
+function isTeacherRole(role) {
+    return role === "teacher";
+}
+
 function getDetailUrl(recordType, recordId) {
     const url = new URL("./detail.html", window.location.href);
 
@@ -155,12 +159,14 @@ function renderSummary(records) {
     const deletedCount = records.filter((record) => record.account_status === "deleted").length;
     const adminCount = records.filter((record) => isAdminRole(record.platform_role)).length;
     const supremeAdminCount = records.filter((record) => isSupremeAdminRole(record.platform_role)).length;
+    const teacherCount = records.filter((record) => isTeacherRole(record.platform_role)).length;
 
     summaryElement.replaceChildren(
         createSummaryCard("Visible users", records.length),
         createSummaryCard("Active", activeCount),
         createSummaryCard("Suspended", suspendedCount),
         createSummaryCard("Deleted", deletedCount),
+        createSummaryCard("Teachers", teacherCount),
         createSummaryCard("Platform admins", adminCount),
         createSummaryCard("Supreme admins", supremeAdminCount)
     );
@@ -246,13 +252,13 @@ function createDeleteButton(record) {
     return button;
 }
 
-function createRoleButton(record) {
+function createRoleActionButton(record, nextRole, label) {
     const button = createElement("button", "secondary-button admin-result-action moderation-action-button");
 
     button.type = "button";
-    button.dataset.nextRole = record.platform_role === "admin" ? "user" : "admin";
+    button.dataset.nextRole = nextRole;
     button.dataset.userId = record.user_id;
-    button.textContent = record.platform_role === "admin" ? "Remove admin" : "Make admin";
+    button.textContent = label;
 
     if (!isSupremeAdminRole(currentProfileRole)) {
         button.textContent = "Supreme admin only";
@@ -269,6 +275,26 @@ function createRoleButton(record) {
     }
 
     return button;
+}
+
+function createRoleButton(record) {
+    const group = createElement("span", "admin-result-action-group");
+
+    if (record.platform_role === "admin") {
+        group.append(createRoleActionButton(record, "user", "Remove admin"));
+    } else if (record.platform_role === "teacher") {
+        group.append(
+            createRoleActionButton(record, "user", "Remove teacher"),
+            createRoleActionButton(record, "admin", "Make admin")
+        );
+    } else {
+        group.append(
+            createRoleActionButton(record, "teacher", "Make teacher"),
+            createRoleActionButton(record, "admin", "Make admin")
+        );
+    }
+
+    return group;
 }
 
 function createContentArchiveButton(record) {
@@ -453,7 +479,11 @@ function getRoleConfirmation(record, nextRole) {
         return `Grant admin access to ${label}? They will be able to view admin dashboards, activity logs, and moderation tools.`;
     }
 
-    return `Remove admin access from ${label}? They will keep their account but lose admin dashboard and moderation access.`;
+    if (nextRole === "teacher") {
+        return `Grant teacher access to ${label}? They will be able to create courses, manage classrooms, and review student work.`;
+    }
+
+    return `Return ${label} to a student account? They will keep their account and enrolled courses but lose teacher/admin workspace tools.`;
 }
 
 function getContentArchiveConfirmation(record) {
