@@ -258,6 +258,7 @@ main {
 }
 
 .auth-layout {
+    box-sizing: border-box;
     display: grid;
     gap: 24px;
     max-width: 680px;
@@ -265,6 +266,16 @@ main {
     padding: 0;
     background: transparent;
     box-shadow: none;
+}
+
+.auth-layout *,
+.auth-layout *::before,
+.auth-layout *::after,
+.auth-feedback-shell,
+.auth-feedback-shell *,
+.auth-feedback-shell *::before,
+.auth-feedback-shell *::after {
+    box-sizing: border-box;
 }
 
 .auth-layout--single {
@@ -527,11 +538,12 @@ main {
 }
 
 .auth-card {
-    padding: 28px;
+    padding: clamp(22px, 3vw, 34px);
 }
 
 .auth-card--single {
-    padding: clamp(28px, 4vw, 40px);
+    width: min(100%, 760px);
+    padding: clamp(22px, 3.5vw, 40px);
 }
 
 .auth-card-header {
@@ -542,15 +554,16 @@ main {
 
 .auth-card-title {
     margin: 0;
-    font-size: clamp(2rem, 4vw, 3.25rem);
-    line-height: 0.98;
-    letter-spacing: -0.04em;
+    font-size: clamp(2rem, 3.8vw, 3rem);
+    line-height: 1.04;
+    letter-spacing: 0;
 }
 
 .auth-card-copy {
     margin: 0;
     color: #49617f;
     max-width: 42ch;
+    font-size: clamp(0.98rem, 1.5vw, 1.08rem);
 }
 
 .auth-toggle {
@@ -566,7 +579,7 @@ main {
 }
 
 .auth-toggle-button {
-    min-height: 46px;
+    min-height: 44px;
     padding: 0 18px;
     border: 0;
     border-radius: 999px;
@@ -588,7 +601,7 @@ main {
     align-items: center;
     justify-content: center;
     width: 100%;
-    min-height: 54px;
+    min-height: 50px;
     padding: 0 20px;
     border: 1px solid #cfe0ff;
     border-radius: 18px;
@@ -733,7 +746,7 @@ h2 {
     align-items: center;
     justify-content: center;
     width: 100%;
-    min-height: 52px;
+    min-height: 50px;
     padding: 0 18px;
     border: 0;
     border-radius: 18px;
@@ -796,7 +809,7 @@ h2 {
     inset: 0;
     display: grid;
     place-items: center;
-    padding: 24px;
+    padding: clamp(14px, 4vw, 24px);
     background: rgba(14, 28, 51, 0.34);
     backdrop-filter: blur(8px);
 }
@@ -807,10 +820,12 @@ h2 {
 
 .auth-feedback-panel {
     display: grid;
-    width: min(430px, 100%);
+    width: min(420px, 100%);
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
     justify-items: center;
     gap: 14px;
-    padding: 30px;
+    padding: clamp(22px, 5vw, 30px);
     border: 1px solid #dbe4f1;
     border-radius: 24px;
     background: #ffffff;
@@ -821,8 +836,8 @@ h2 {
 
 .auth-feedback-icon {
     display: grid;
-    width: 58px;
-    height: 58px;
+    width: clamp(48px, 12vw, 58px);
+    height: clamp(48px, 12vw, 58px);
     place-items: center;
     border-radius: 50%;
     background: #eaf1ff;
@@ -851,7 +866,7 @@ h2 {
 
 .auth-feedback-title {
     margin: 0;
-    font-size: 1.35rem;
+    font-size: clamp(1.18rem, 4vw, 1.35rem);
     line-height: 1.2;
 }
 
@@ -4305,6 +4320,10 @@ h2 {
 }
 
 @media (max-width: 720px) {
+    body:not(.has-app-sidebar) {
+        padding: 18px;
+    }
+
     .ui-toast-container {
         top: 16px;
         right: 16px;
@@ -4341,6 +4360,62 @@ h2 {
 
     .app-shell--collapsed .app-sidebar-content {
         display: none;
+    }
+
+    .auth-layout,
+    .auth-layout--single {
+        width: 100%;
+        min-height: calc(100vh - 36px);
+        padding: 0;
+        border-radius: 20px;
+    }
+
+    .auth-card,
+    .auth-card--single {
+        padding: 22px;
+    }
+
+    .auth-card-header {
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+
+    .auth-toggle {
+        gap: 4px;
+        padding: 5px;
+        border-radius: 18px;
+    }
+
+    .auth-toggle-button {
+        min-height: 42px;
+        padding: 0 10px;
+        border-radius: 14px;
+        font-size: 0.95rem;
+    }
+
+    .social-button,
+    .primary-button {
+        min-height: 48px;
+        border-radius: 14px;
+    }
+
+    .auth-divider span {
+        font-size: 0.9rem;
+    }
+
+    .auth-status {
+        font-size: 0.95rem;
+        overflow-wrap: anywhere;
+    }
+
+    .auth-feedback-shell {
+        align-items: end;
+        padding: 12px;
+    }
+
+    .auth-feedback-panel {
+        width: 100%;
+        border-radius: 20px;
     }
 
     .app-shell--collapsed .app-sidebar-title-group {
