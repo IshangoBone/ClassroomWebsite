@@ -1,5 +1,5 @@
 import { supabase } from "../../services/supabase/client.js";
-import { supabaseConfig } from "../../services/supabase/config.local.js";
+import { supabaseConfig } from "../../services/supabase/config.js";
 import { qs } from "../utils/dom.js";
 import { notifyStatus } from "../utils/ui-components.js";
 
@@ -25,7 +25,7 @@ const signupForm = qs("[data-signup-form]");
 const googleOAuthEnabled = supabaseConfig.googleOAuthEnabled === true;
 const googleOAuthDisabledMessage = [
     "Google sign-in is not enabled for this Supabase project yet.",
-    "Enable Google OAuth in Supabase, then set googleOAuthEnabled to true in config.local.js.",
+    "Enable Google OAuth in Supabase, then set googleOAuthEnabled to true in config.js.",
 ].join(" ");
 
 async function logAuthActivity(actionType, profile, mode) {
