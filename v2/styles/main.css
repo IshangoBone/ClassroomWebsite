@@ -750,6 +750,22 @@ h2 {
     background: #274a7f;
 }
 
+.primary-button:disabled {
+    cursor: wait;
+    opacity: 0.78;
+}
+
+.primary-button[data-loading="true"]::before {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+    border: 3px solid rgba(255, 255, 255, 0.38);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    content: "";
+    animation: auth-spin 0.75s linear infinite;
+}
+
 .primary-button--signup {
     background: linear-gradient(135deg, #1e8f57 0%, #35b36c 100%);
 }
@@ -772,6 +788,90 @@ h2 {
 
 .auth-status[data-tone="success"] {
     color: #117a37;
+}
+
+.auth-feedback-shell {
+    position: fixed;
+    z-index: 1100;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(14, 28, 51, 0.34);
+    backdrop-filter: blur(8px);
+}
+
+.auth-feedback-shell[hidden] {
+    display: none;
+}
+
+.auth-feedback-panel {
+    display: grid;
+    width: min(430px, 100%);
+    justify-items: center;
+    gap: 14px;
+    padding: 30px;
+    border: 1px solid #dbe4f1;
+    border-radius: 24px;
+    background: #ffffff;
+    color: #183153;
+    text-align: center;
+    box-shadow: 0 28px 70px rgba(24, 49, 83, 0.28);
+}
+
+.auth-feedback-icon {
+    display: grid;
+    width: 58px;
+    height: 58px;
+    place-items: center;
+    border-radius: 50%;
+    background: #eaf1ff;
+}
+
+.auth-feedback-shell[data-loading="true"] .auth-feedback-icon::before {
+    width: 30px;
+    height: 30px;
+    border: 4px solid #c9d6e8;
+    border-top-color: #3f6fda;
+    border-radius: 50%;
+    content: "";
+    animation: auth-spin 0.75s linear infinite;
+}
+
+.auth-feedback-shell[data-tone="success"] .auth-feedback-icon {
+    background: #e8f8ee;
+    color: #117a37;
+}
+
+.auth-feedback-shell[data-tone="success"] .auth-feedback-icon::before {
+    content: "OK";
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.auth-feedback-title {
+    margin: 0;
+    font-size: 1.35rem;
+    line-height: 1.2;
+}
+
+.auth-feedback-message {
+    margin: 0;
+    color: #49617f;
+    font-weight: 650;
+    line-height: 1.5;
+}
+
+.auth-feedback-close {
+    width: auto;
+    min-width: 120px;
+    margin-top: 4px;
+}
+
+@keyframes auth-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .ui-alert {

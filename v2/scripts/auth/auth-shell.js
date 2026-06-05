@@ -1,6 +1,6 @@
 import { supabase } from "../../services/supabase/client.js";
 import { supabaseConfig } from "../../services/supabase/config.js";
-import { qs } from "../utils/dom.js";
+import { createElement, qs } from "../utils/dom.js";
 import { notifyStatus } from "../utils/ui-components.js";
 
 const authModes = {
@@ -22,11 +22,84 @@ const headingElement = qs(".auth-card-title");
 const copyElement = qs(".auth-card-copy");
 const loginForm = qs("[data-login-form]");
 const signupForm = qs("[data-signup-form]");
+let authFeedback = null;
 const googleOAuthEnabled = supabaseConfig.googleOAuthEnabled === true;
 const googleOAuthDisabledMessage = [
     "Google sign-in is not enabled for this Supabase project yet.",
     "Enable Google OAuth in Supabase, then set googleOAuthEnabled to true in config.js.",
 ].join(" ");
+
+function getAuthFeedback() {
+    if (authFeedback) {
+        return authFeedback;
+    }
+
+    const shell = createElement("div", "auth-feedback-shell");
+    const panel = createElement("section", "auth-feedback-panel");
+    const icon = createElement("div", "auth-feedback-icon");
+    const title = createElement("h3", "auth-feedback-title");
+    const message = createElement("p", "auth-feedback-message");
+    const closeButton = createElement("button", "secondary-button auth-feedback-close", "Close");
+
+    shell.dataset.authFeedback = "true";
+    shell.hidden = true;
+    shell.setAttribute("role", "status");
+    shell.setAttribute("aria-live", "polite");
+    panel.setAttribute("aria-label", "Authentication status");
+    icon.setAttribute("aria-hidden", "true");
+    closeButton.type = "button";
+    closeButton.addEventListener("click", () => hideAuthFeedback());
+
+    panel.append(icon, title, message, closeButton);
+    shell.append(panel);
+    document.body.append(shell);
+
+    authFeedback = { shell, panel, icon, title, message, closeButton };
+    return authFeedback;
+}
+
+function showAuthFeedback({ title, message, tone = "info", loading = false, dismissible = false }) {
+    const feedback = getAuthFeedback();
+
+    feedback.shell.hidden = false;
+    feedback.shell.dataset.tone = tone;
+    feedback.shell.dataset.loading = String(loading);
+    feedback.title.textContent = title;
+    feedback.message.textContent = message;
+    feedback.closeButton.hidden = !dismissible;
+}
+
+function hideAuthFeedback() {
+    if (!authFeedback) {
+        return;
+    }
+
+    authFeedback.shell.hidden = true;
+    authFeedback.shell.dataset.loading = "false";
+}
+
+function setFormBusy(form, isBusy, label) {
+    if (!form) {
+        return;
+    }
+
+    const button = qs("button[type='submit']", form);
+
+    [...form.elements].forEach((element) => {
+        element.disabled = isBusy;
+    });
+
+    if (!button) {
+        return;
+    }
+
+    if (!button.dataset.defaultText) {
+        button.dataset.defaultText = button.textContent;
+    }
+
+    button.dataset.loading = String(isBusy);
+    button.textContent = isBusy ? label : button.dataset.defaultText;
+}
 
 async function logAuthActivity(actionType, profile, mode) {
     const { error } = await supabase.rpc("log_activity", {
@@ -53,11 +126,17 @@ async function continueFromAuth(user, mode) {
         .maybeSingle();
 
     if (error) {
+        hideAuthFeedback();
+        setFormBusy(loginForm, false);
+        setFormBusy(signupForm, false);
         setStatus(mode, "Your account is ready, but profile setup could not be loaded yet.", "error");
         return;
     }
 
     if (!profile) {
+        hideAuthFeedback();
+        setFormBusy(loginForm, false);
+        setFormBusy(signupForm, false);
         setStatus(mode, "Your account is ready, but its profile record has not been created yet.", "error");
         return;
     }
@@ -78,7 +157,10 @@ function setStatus(mode, message, tone = "info") {
 
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
-    notifyStatus(message, tone);
+    notifyStatus(message, tone, {
+        toast: true,
+        duration: tone === "info" ? 3000 : undefined,
+    });
 }
 
 function clearInactiveStatuses(mode) {
@@ -158,6 +240,12 @@ if (loginForm) {
             return;
         }
 
+        setFormBusy(loginForm, true, "Logging in...");
+        showAuthFeedback({
+            title: "Logging you in",
+            message: "Checking your account and loading your workspace.",
+            loading: true,
+        });
         setStatus("login", "Checking your account...", "info");
 
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -166,10 +254,18 @@ if (loginForm) {
         });
 
         if (error) {
+            setFormBusy(loginForm, false);
+            hideAuthFeedback();
             setStatus("login", error.message, "error");
             return;
         }
 
+        showAuthFeedback({
+            title: "Login successful",
+            message: "Your account is ready. Opening your workspace now.",
+            tone: "success",
+            loading: true,
+        });
         setStatus("login", "Login worked. Loading your profile...", "success");
         await continueFromAuth(data.user, "login");
     });
@@ -188,6 +284,12 @@ if (signupForm) {
             return;
         }
 
+        setFormBusy(signupForm, true, "Creating account...");
+        showAuthFeedback({
+            title: "Creating your account",
+            message: "Setting up your login and preparing your profile.",
+            loading: true,
+        });
         setStatus("signup", "Creating your account...", "info");
 
         const { data, error } = await supabase.auth.signUp({
@@ -199,13 +301,22 @@ if (signupForm) {
         });
 
         if (error) {
+            setFormBusy(signupForm, false);
+            hideAuthFeedback();
             setStatus("signup", error.message, "error");
             return;
         }
 
         signupForm.reset();
+        setFormBusy(signupForm, false);
 
         if (!data.session) {
+            showAuthFeedback({
+                title: "Account created",
+                message: "Check your email to confirm your account, then log in to finish setup.",
+                tone: "success",
+                dismissible: true,
+            });
             setStatus(
                 "signup",
                 "Account created. Check your email to confirm your account, then log in to finish setup.",
@@ -214,6 +325,12 @@ if (signupForm) {
             return;
         }
 
+        showAuthFeedback({
+            title: "Account created",
+            message: "Your account is ready. Opening profile setup now.",
+            tone: "success",
+            loading: true,
+        });
         setStatus("signup", "Account created. Loading profile setup...", "success");
         await continueFromAuth(data.user, "signup");
     });
