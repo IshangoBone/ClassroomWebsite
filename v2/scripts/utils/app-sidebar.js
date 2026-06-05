@@ -115,7 +115,7 @@ function getSidebarSections(profile, hasTeachingAccess) {
         {
             title: "My Learning",
             items: [
-                { label: "Course catalog", path: "courses/discover.html", icon: "C" },
+                { label: "Browse courses", path: "courses/discover.html", icon: "B" },
                 { label: "My courses", path: "dashboard/index.html#enrolled-courses-heading", icon: "M" },
                 { label: "My work", path: "submissions/index.html", icon: "W" },
             ],
@@ -134,7 +134,7 @@ function getSidebarSections(profile, hasTeachingAccess) {
             title: "Teaching",
             items: [
                 { label: "Student work", path: "submissions/index.html", icon: "S" },
-                { label: "Analytics", path: "analytics/index.html", icon: "A" },
+                { label: "Teaching analytics", path: "analytics/index.html", icon: "A" },
             ],
         });
     }

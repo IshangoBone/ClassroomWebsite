@@ -577,7 +577,7 @@ function renderCourseAnalytics(filters = getFilterValues()) {
             label: "Actions",
             render: (row) => createActionLink("Review", `../submissions/index.html?course=${encodeURIComponent(row.course.id)}`),
         },
-    ], rows, "Managed courses are required before teacher analytics are available."));
+    ], rows, "Managed courses are required before teaching analytics are available."));
 }
 
 function renderClassroomAnalytics(filters = getFilterValues()) {
@@ -1013,7 +1013,7 @@ function renderAnalyticsView() {
 }
 
 async function initializePage() {
-    setStatus("Loading teacher analytics...");
+    setStatus("Loading teaching analytics...");
 
     currentProfile = await loadCurrentProfile();
 
@@ -1027,7 +1027,7 @@ async function initializePage() {
         if (!loadedCourses.length) {
             showShell();
             renderSummary();
-            courseAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Managed courses are required before teacher analytics are available."));
+            courseAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Managed courses are required before teaching analytics are available."));
             classroomAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Create a course and classroom before analytics are available."));
             studentRiskElement.replaceChildren(createElement("p", "empty-state", "Student progress will appear after students join a classroom."));
             lessonAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Lesson completion will appear after students join a classroom."));
@@ -1054,7 +1054,7 @@ async function initializePage() {
         showShell();
         setStatus("");
     } catch (error) {
-        setStatus(error.message || "Teacher analytics could not be loaded.", "error");
+        setStatus(error.message || "Teaching analytics could not be loaded.", "error");
     }
 }
 
