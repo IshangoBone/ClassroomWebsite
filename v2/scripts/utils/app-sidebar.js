@@ -103,10 +103,6 @@ function getSidebarSections(profile, hasTeachingAccess) {
         { label: "Profile", path: "profile/index.html", icon: "U" },
     ];
 
-    if (hasTeachingAccess) {
-        accountItems.push({ label: "Courses I teach", path: "dashboard/index.html#courses-heading", icon: "T" });
-    }
-
     const sections = [
         {
             title: "Account",
@@ -120,19 +116,13 @@ function getSidebarSections(profile, hasTeachingAccess) {
                 { label: "My work", path: "submissions/index.html", icon: "W" },
             ],
         },
-        {
-            title: "Help",
-            items: [
-                { label: "About", path: "about/index.html", icon: "A" },
-                { label: "Contact", path: "contact/index.html", icon: "C" },
-            ],
-        },
     ];
 
     if (hasTeachingAccess) {
         sections.push({
             title: "Teaching",
             items: [
+                { label: "Courses I teach", path: "dashboard/index.html#courses-heading", icon: "T" },
                 { label: "Student work", path: "submissions/index.html", icon: "S" },
                 { label: "Teaching analytics", path: "analytics/index.html", icon: "A" },
             ],
@@ -155,6 +145,14 @@ function getSidebarSections(profile, hasTeachingAccess) {
             items: adminItems,
         });
     }
+
+    sections.push({
+        title: "Help",
+        items: [
+            { label: "About", path: "about/index.html", icon: "A" },
+            { label: "Contact", path: "contact/index.html", icon: "C" },
+        ],
+    });
 
     return sections;
 }
