@@ -3598,6 +3598,113 @@ h2 {
     border-left: 5px solid #6750a4;
 }
 
+.lesson-hub-section {
+    display: grid;
+    gap: 22px;
+}
+
+.lesson-hub-summary {
+    margin: 0;
+}
+
+.lesson-hub-filter-form {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.4fr) repeat(2, minmax(180px, 1fr));
+    gap: 14px;
+    align-items: end;
+    padding: 18px;
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    background: var(--surface-muted);
+}
+
+.lesson-hub-course-list,
+.lesson-hub-module-list,
+.lesson-hub-lesson-list {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+}
+
+.lesson-hub-course-card,
+.lesson-hub-module,
+.lesson-hub-lesson-card {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background: var(--surface-color);
+}
+
+.lesson-hub-course-card {
+    display: grid;
+    gap: 18px;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: var(--shadow-soft);
+}
+
+.lesson-hub-course-header,
+.lesson-hub-module-header,
+.lesson-hub-lesson-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: start;
+}
+
+.lesson-hub-course-copy,
+.lesson-hub-module-title,
+.lesson-hub-lesson-copy {
+    min-width: 0;
+}
+
+.lesson-hub-course-copy h2,
+.lesson-hub-module-title h3,
+.lesson-hub-lesson-copy h4 {
+    margin: 0 0 6px;
+}
+
+.lesson-hub-course-copy p,
+.lesson-hub-module-title p,
+.lesson-hub-lesson-copy p {
+    margin: 0;
+    color: var(--muted-text);
+}
+
+.lesson-hub-course-meta,
+.lesson-hub-lesson-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.lesson-hub-module {
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+    border-radius: 16px;
+    background: var(--surface-muted);
+}
+
+.lesson-hub-lesson-card {
+    padding: 16px;
+    border-radius: 14px;
+}
+
+.lesson-hub-lesson-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    min-width: 0;
+}
+
+.lesson-hub-action {
+    min-width: 150px;
+    white-space: nowrap;
+}
+
 .lesson-render-block h3,
 .lesson-flow-card h3,
 .lesson-submit-card h3 {
@@ -4846,7 +4953,8 @@ h2 {
     }
 
     .management-form-grid,
-    .lesson-form-grid {
+    .lesson-form-grid,
+    .lesson-hub-filter-form {
         grid-template-columns: 1fr;
     }
 
@@ -4872,6 +4980,22 @@ h2 {
 
     .management-layout .lesson-card-header {
         grid-template-columns: 1fr;
+    }
+
+    .lesson-hub-course-header,
+    .lesson-hub-module-header,
+    .lesson-hub-lesson-card {
+        grid-template-columns: 1fr;
+    }
+
+    .lesson-hub-lesson-actions {
+        justify-content: stretch;
+        width: 100%;
+    }
+
+    .lesson-hub-action {
+        flex: 1 1 180px;
+        min-width: 0;
     }
 
     .management-layout .lesson-header-actions,

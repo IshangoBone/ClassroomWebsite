@@ -123,6 +123,7 @@ function getSidebarSections(profile, hasTeachingAccess) {
             title: "Teaching",
             items: [
                 { label: "Courses I teach", path: "dashboard/index.html#courses-heading", icon: "T" },
+                { label: "Lesson builder", path: "lessons/index.html", icon: "L" },
                 { label: "Student work", path: "submissions/index.html", icon: "S" },
                 { label: "Teaching analytics", path: "analytics/index.html", icon: "A" },
             ],

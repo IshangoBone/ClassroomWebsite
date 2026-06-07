@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Lesson Builder Hub</title>
+    <link rel="stylesheet" href="../../styles/main.css?v=20260607-lesson-builder-hub" />
+</head>
+
+<body>
+    <main class="management-layout">
+        <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
+
+        <header class="management-header">
+            <p class="eyebrow">Lesson Builder</p>
+            <h1>Lesson builder hub</h1>
+            <p class="intro">
+                Find lessons from the courses you teach, then open the focused builder for the lesson you want to edit.
+            </p>
+        </header>
+
+        <p class="auth-status management-status" data-builder-hub-status aria-live="polite"></p>
+
+        <section class="management-section lesson-hub-section" data-builder-hub hidden>
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2>Your lesson workspace</h2>
+                    <p class="section-copy">Courses are grouped by course, then module, so lesson authoring stays easy to scan.</p>
+                </div>
+                <a class="secondary-button" href="../dashboard/index.html#courses-heading">View courses I teach</a>
+            </div>
+
+            <div class="dashboard-summary dashboard-summary--compact lesson-hub-summary" data-builder-hub-summary>
+                <article class="summary-card">
+                    <span class="summary-label">Courses</span>
+                    <strong class="summary-value" data-summary-courses>0</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Modules</span>
+                    <strong class="summary-value" data-summary-modules>0</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Lessons</span>
+                    <strong class="summary-value" data-summary-lessons>0</strong>
+                </article>
+                <article class="summary-card">
+                    <span class="summary-label">Visible lessons</span>
+                    <strong class="summary-value" data-summary-visible>0</strong>
+                </article>
+            </div>
+
+            <form class="lesson-hub-filter-form" data-builder-hub-filter-form>
+                <label class="form-field">
+                    <span>Search lessons</span>
+                    <input type="search" name="search" placeholder="Lesson, module, or course title" data-builder-hub-search />
+                </label>
+                <label class="form-field">
+                    <span>Course</span>
+                    <select name="course" data-builder-hub-course-filter>
+                        <option value="">All taught courses</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Status</span>
+                    <select name="status" data-builder-hub-status-filter>
+                        <option value="">All lessons</option>
+                        <option value="visible">Visible to students</option>
+                        <option value="hidden">Hidden from students</option>
+                        <option value="locked">Locked lessons</option>
+                    </select>
+                </label>
+            </form>
+
+            <div class="lesson-hub-course-list" data-builder-hub-course-list>
+                <p class="empty-state">Loading lesson builder workspace...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/lessons/index.js"></script>
+</body>
+
+</html>
