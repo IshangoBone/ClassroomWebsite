@@ -29,6 +29,12 @@ const googleOAuthDisabledMessage = [
     "Enable Google OAuth in Supabase, then set googleOAuthEnabled to true in config.js.",
 ].join(" ");
 
+function getLoginRedirectUrl() {
+    const redirectUrl = new URL("./login.html", window.location.href);
+    redirectUrl.searchParams.set("confirmed", "1");
+    return redirectUrl.href;
+}
+
 function getAuthFeedback() {
     if (authFeedback) {
         return authFeedback;
@@ -178,6 +184,73 @@ function clearInactiveStatuses(mode) {
         });
 }
 
+function cleanAuthUrl() {
+    if (!window.history.replaceState) {
+        return;
+    }
+
+    const cleanUrl = new URL(window.location.href);
+    const hashParams = new URLSearchParams(cleanUrl.hash.replace(/^#/, ""));
+    const shouldClearHash = hashParams.has("type")
+        || hashParams.has("error")
+        || hashParams.has("error_description")
+        || hashParams.has("access_token")
+        || hashParams.has("refresh_token");
+
+    [
+        "confirmed",
+        "error",
+        "error_code",
+        "error_description",
+        "type",
+    ].forEach((param) => cleanUrl.searchParams.delete(param));
+
+    window.history.replaceState(
+        {},
+        document.title,
+        cleanUrl.pathname + cleanUrl.search + (shouldClearHash ? "" : cleanUrl.hash)
+    );
+}
+
+function handleAuthRedirectState() {
+    const url = new URL(window.location.href);
+    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+    const authError = url.searchParams.get("error_description")
+        || hashParams.get("error_description")
+        || url.searchParams.get("error")
+        || hashParams.get("error");
+    const isConfirmed = url.searchParams.get("confirmed") === "1"
+        || url.searchParams.get("type") === "signup"
+        || hashParams.get("type") === "signup";
+
+    if (authError) {
+        setAuthMode("login");
+        setStatus("login", authError, "error");
+        showAuthFeedback({
+            title: "Confirmation link issue",
+            message: authError,
+            tone: "error",
+            dismissible: true,
+        });
+        cleanAuthUrl();
+        return;
+    }
+
+    if (!isConfirmed) {
+        return;
+    }
+
+    setAuthMode("login");
+    setStatus("login", "Your account has been confirmed. You can now sign in.", "success");
+    showAuthFeedback({
+        title: "Account confirmed",
+        message: "Your email is confirmed. Sign in to finish setting up your workspace.",
+        tone: "success",
+        dismissible: true,
+    });
+    cleanAuthUrl();
+}
+
 function setAuthMode(mode) {
     document.body.dataset.authMode = mode;
 
@@ -296,7 +369,7 @@ if (signupForm) {
             email,
             password,
             options: {
-                emailRedirectTo: new URL("./onboarding.html", window.location.href).href,
+                emailRedirectTo: getLoginRedirectUrl(),
             },
         });
 
@@ -337,3 +410,4 @@ if (signupForm) {
 }
 
 setAuthMode(activeMode);
+handleAuthRedirectState();
