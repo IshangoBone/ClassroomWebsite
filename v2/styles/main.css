@@ -3023,7 +3023,7 @@ h2 {
     display: inline-flex;
     justify-content: center;
     min-height: 40px;
-    min-width: 104px;
+    min-width: 0;
     padding: 8px 12px;
     text-align: center;
     white-space: nowrap;
@@ -3032,7 +3032,15 @@ h2 {
 .lesson-action-group {
     align-items: center;
     display: flex;
+    flex: 1 1 280px;
+    flex-wrap: wrap;
     gap: 8px;
+    justify-content: flex-end;
+    min-width: 0;
+}
+
+.lesson-action-group .lesson-action {
+    flex: 1 1 108px;
 }
 
 .lesson-reorder-controls {
@@ -3041,7 +3049,10 @@ h2 {
     border: 1px solid #e3eaf5;
     border-radius: 12px;
     display: flex;
+    flex: 1 1 260px;
+    flex-wrap: wrap;
     gap: 8px;
+    min-width: 0;
     padding: 4px;
 }
 
@@ -3054,6 +3065,7 @@ h2 {
 }
 
 .lesson-position-select {
+    flex: 0 0 72px;
     min-height: 42px;
     min-width: 64px;
     border: 1px solid #d7e2f1;
@@ -3066,6 +3078,7 @@ h2 {
 }
 
 .lesson-move-button {
+    flex: 0 0 auto;
     min-height: 42px;
     padding: 8px 12px;
 }
@@ -3090,6 +3103,7 @@ h2 {
 .management-layout .lesson-card {
     gap: 10px;
     padding: 14px 16px;
+    overflow: hidden;
 }
 
 .lesson-card[draggable="true"] {
@@ -3115,16 +3129,20 @@ h2 {
 
 .management-layout .lesson-card-header {
     display: grid;
-    grid-template-columns: minmax(260px, 1fr) auto;
-    gap: 16px;
-    align-items: center;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
 }
 
 .management-layout .lesson-header-actions {
     align-items: center;
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
-    justify-content: flex-end;
+    justify-content: flex-start;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
 }
 
 .lesson-drag-hint {
@@ -3141,6 +3159,7 @@ h2 {
 
 .management-layout .lesson-card-header > div:first-child {
     min-width: 0;
+    width: 100%;
 }
 
 .management-layout .lesson-card-header > div:first-child > .course-muted {
