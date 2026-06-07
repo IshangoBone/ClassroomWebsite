@@ -22,6 +22,7 @@ const headingElement = qs(".auth-card-title");
 const copyElement = qs(".auth-card-copy");
 const loginForm = qs("[data-login-form]");
 const signupForm = qs("[data-signup-form]");
+const resetRequestButtons = [...document.querySelectorAll("[data-password-reset-request]")];
 let authFeedback = null;
 const googleOAuthEnabled = supabaseConfig.googleOAuthEnabled === true;
 const googleOAuthDisabledMessage = [
@@ -33,6 +34,10 @@ function getLoginRedirectUrl() {
     const redirectUrl = new URL("./login.html", window.location.href);
     redirectUrl.searchParams.set("confirmed", "1");
     return redirectUrl.href;
+}
+
+function getPasswordResetRedirectUrl() {
+    return new URL("./reset-password.html", window.location.href).href;
 }
 
 function isDuplicateSignupResponse(data) {
@@ -349,6 +354,49 @@ if (loginForm) {
         await continueFromAuth(data.user, "login");
     });
 }
+
+resetRequestButtons.forEach((button) => {
+    button.addEventListener("click", async () => {
+        const emailInput = qs("input[name='email']", loginForm);
+        const email = String(emailInput?.value || "").trim();
+
+        setAuthMode("login");
+
+        if (!email) {
+            setStatus("login", "Enter your email first, then click Forgot password.", "error");
+            emailInput?.focus();
+            return;
+        }
+
+        button.disabled = true;
+        showAuthFeedback({
+            title: "Sending reset link",
+            message: "If this email has an account, a password reset link will arrive shortly.",
+            loading: true,
+        });
+        setStatus("login", "Sending password reset email...", "info");
+
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: getPasswordResetRedirectUrl(),
+        });
+
+        button.disabled = false;
+
+        if (error) {
+            hideAuthFeedback();
+            setStatus("login", error.message, "error");
+            return;
+        }
+
+        showAuthFeedback({
+            title: "Check your email",
+            message: "If this email has an account, use the reset link we sent to choose a new password.",
+            tone: "success",
+            dismissible: true,
+        });
+        setStatus("login", "Password reset email sent. Check your inbox.", "success");
+    });
+});
 
 if (signupForm) {
     signupForm.addEventListener("submit", async (event) => {

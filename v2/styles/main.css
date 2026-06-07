@@ -700,6 +700,39 @@ h2 {
     max-width: 100%;
 }
 
+.auth-inline-action {
+    justify-self: end;
+    width: auto;
+    min-height: 0;
+    margin: -4px 0 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #4568a8;
+    font: inherit;
+    font-weight: 800;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    box-shadow: none;
+}
+
+.auth-inline-action:hover,
+.auth-inline-action:focus-visible {
+    color: #1d3764;
+}
+
+.auth-secondary-copy {
+    margin: 18px 0 0;
+    color: #5e7290;
+    font-weight: 650;
+    text-align: center;
+}
+
+.auth-secondary-copy a {
+    color: #4568a8;
+    font-weight: 850;
+}
+
 .form-field {
     display: grid;
     gap: 8px;
@@ -880,6 +913,17 @@ h2 {
 .auth-feedback-shell[data-tone="success"] .auth-feedback-icon::before {
     content: "OK";
     font-size: 1rem;
+    font-weight: 900;
+}
+
+.auth-feedback-shell[data-tone="error"] .auth-feedback-icon {
+    background: #fff0ed;
+    color: #b42318;
+}
+
+.auth-feedback-shell[data-tone="error"] .auth-feedback-icon::before {
+    content: "!";
+    font-size: 1.3rem;
     font-weight: 900;
 }
 
