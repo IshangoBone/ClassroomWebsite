@@ -35,6 +35,12 @@ function getLoginRedirectUrl() {
     return redirectUrl.href;
 }
 
+function isDuplicateSignupResponse(data) {
+    return data?.user
+        && Array.isArray(data.user.identities)
+        && data.user.identities.length === 0;
+}
+
 function getAuthFeedback() {
     if (authFeedback) {
         return authFeedback;
@@ -380,8 +386,20 @@ if (signupForm) {
             return;
         }
 
-        signupForm.reset();
         setFormBusy(signupForm, false);
+
+        if (isDuplicateSignupResponse(data)) {
+            showAuthFeedback({
+                title: "Account already exists",
+                message: "This email already has an account. Log in instead, or reset your password if you need help getting back in.",
+                tone: "error",
+                dismissible: true,
+            });
+            setStatus("signup", "This account already exists. Switch to Log In to continue.", "error");
+            return;
+        }
+
+        signupForm.reset();
 
         if (!data.session) {
             showAuthFeedback({
