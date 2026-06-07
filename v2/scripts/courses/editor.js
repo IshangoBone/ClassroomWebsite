@@ -752,14 +752,15 @@ function renderLessons(module, lessons, contentBlocks, questions) {
         const reorderControls = createElement("div", "lesson-reorder-controls");
         const moveLabel = createElement("span", "course-muted lesson-move-label", "Move to");
         const positionSelect = document.createElement("select");
-        const moveButton = createElement("button", "secondary-button lesson-action", "Move");
-        const openLessonBuilderLink = createElement("a", "secondary-button lesson-action", "Open lesson builder");
+        const moveButton = createElement("button", "secondary-button lesson-move-button", "Move");
+        const lessonActionGroup = createElement("div", "lesson-action-group");
+        const openLessonBuilderLink = createElement("a", "secondary-button lesson-action", "Open builder");
         const toggleLessonLockButton = createElement(
             "button",
             lesson.is_locked ? "secondary-button lesson-action" : "secondary-button lesson-action",
-            lesson.is_locked ? "Unlock lesson" : "Lock lesson"
+            lesson.is_locked ? "Unlock" : "Lock"
         );
-        const deleteLessonButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete lesson");
+        const deleteLessonButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete");
         const lessonContentBlocks = contentBlocks.filter((contentBlock) => contentBlock.lesson_id === lesson.id);
         const lessonQuestions = questions.filter((question) => question.lesson_id === lesson.id);
         const metaRow = createElement("div", "badge-row lesson-meta-row");
@@ -808,7 +809,8 @@ function renderLessons(module, lessons, contentBlocks, questions) {
         reorderControls.append(moveLabel, positionSelect, moveButton);
         metaRow.append(contentCount, questionCount, lockStatus);
         content.append(title, objective, metaRow);
-        headerActions.append(dragHint, reorderControls, label, openLessonBuilderLink, toggleLessonLockButton, deleteLessonButton);
+        lessonActionGroup.append(openLessonBuilderLink, toggleLessonLockButton, deleteLessonButton);
+        headerActions.append(dragHint, reorderControls, label, lessonActionGroup);
         header.append(content, headerActions);
         item.append(header);
         list.append(item);
