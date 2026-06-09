@@ -34,9 +34,15 @@ const studentSubmissionsSummary = qs("[data-summary-my-submissions]");
 const studentSubmissionsSummaryLabel = qs("[data-summary-my-submissions-label]");
 const managedCoursesHeading = qs("[data-managed-courses-heading]");
 const managedCoursesCopy = qs("[data-managed-courses-copy]");
+const managedCoursesSection = qs("[data-managed-courses-section]");
 const teacherSubmissionsSection = qs("[data-teacher-submissions-section]");
 const studentJoinSection = qs("[data-student-join-section]");
 const teacherHomeSection = qs("[data-teacher-home-section]");
+const studentHomeSection = qs("[data-student-home-section]");
+const studentContinueHeading = qs("[data-student-continue-heading]");
+const studentContinueCopy = qs("[data-student-continue-copy]");
+const studentContinueActions = qs("[data-student-continue-actions]");
+const studentHomeClassesCount = qs("[data-student-home-classes-count]");
 const homeSubmissionsCount = qs("[data-home-submissions-count]");
 const studentSubmissionsSection = qs("[data-student-submissions-section]");
 const dashboardParams = new URLSearchParams(window.location.search);
@@ -942,6 +948,44 @@ function renderStudentActivity(submissions, courses, lessons) {
     studentActivityList.replaceChildren(buildStudentSubmissionList(submissions.slice(0, 3), courses, lessons));
 }
 
+function renderStudentHome(enrollments, lessons, submissions) {
+    studentHomeClassesCount.textContent = String(enrollments.length);
+    studentContinueActions.replaceChildren();
+
+    if (!enrollments.length) {
+        studentContinueHeading.textContent = "Join your first class";
+        studentContinueCopy.textContent = "Use a class code from your teacher or browse available courses to get started.";
+
+        const browseAction = createElement("a", "primary-button", "Browse courses");
+        browseAction.href = "../courses/discover.html";
+        studentContinueActions.append(browseAction);
+        return;
+    }
+
+    const nextLearning = enrollments
+        .map((enrollment) => getContinueLesson(enrollment, lessons, submissions))
+        .find(Boolean);
+
+    if (!nextLearning) {
+        studentContinueHeading.textContent = "No lessons are ready yet";
+        studentContinueCopy.textContent = "Your joined classes are ready, and lessons will appear when your teacher adds them.";
+
+        const classesAction = createElement("a", "primary-button", "Open My Classes");
+        classesAction.href = "../classrooms/index.html";
+        studentContinueActions.append(classesAction);
+        return;
+    }
+
+    studentContinueHeading.textContent = nextLearning.label;
+    studentContinueCopy.textContent = nextLearning.detail;
+
+    const continueAction = createElement("a", "primary-button", nextLearning.label);
+    const classesAction = createElement("a", "secondary-button", "View all classes");
+    continueAction.href = nextLearning.href;
+    classesAction.href = "../classrooms/index.html";
+    studentContinueActions.append(continueAction, classesAction);
+}
+
 async function deleteCourse(course) {
     const confirmed = window.confirm(
         `Delete "${course.title || "Untitled course"}"? This removes it from your dashboard while preserving its existing history.`
@@ -1018,6 +1062,8 @@ async function refreshDashboard() {
         courseFormPanel.hidden = true;
         teacherSubmissionsSection.hidden = isStudentOnly;
         teacherHomeSection.hidden = isStudentOnly;
+        studentHomeSection.hidden = !isStudentOnly;
+        managedCoursesSection.hidden = isStudentOnly;
         studentActivitySection.hidden = !isStudentOnly;
         studentJoinSection.hidden = !isStudentOnly;
         studentSubmissionsSection.hidden = !isStudentOnly;
@@ -1039,7 +1085,7 @@ async function refreshDashboard() {
             classroomsSummary.textContent = String(displayStudentEnrollments.filter((enrollment) => enrollment.enrollment_type === "classroom").length);
             submissionsSummary.textContent = `${overallProgress}%`;
             studentSubmissionsSummary.textContent = String(studentPoints);
-            renderStudentEnrollments(displayStudentEnrollments, visibleCourses, studentClassrooms, lessons, studentSubmissions);
+            renderStudentHome(displayStudentEnrollments, lessons, studentSubmissions);
         } else {
             greetingElement.textContent = `Welcome, ${currentProfile.username || "there"}. Start with the courses and classes you teach.`;
             coursesSummaryLabel.textContent = "My courses";
@@ -1053,6 +1099,7 @@ async function refreshDashboard() {
             submissionsSummary.textContent = String(submissions.length);
             studentSubmissionsSummary.textContent = String(displayStudentEnrollments.length);
             homeSubmissionsCount.textContent = String(submissions.length);
+            managedCoursesSection.hidden = false;
             renderCourses(courses, classrooms);
 
             if (hasStudentEnrollments && enrolledCourseList) {

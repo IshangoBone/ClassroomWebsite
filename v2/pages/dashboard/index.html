@@ -87,6 +87,28 @@
             </form>
         </section>
 
+        <section class="dashboard-home-grid" data-student-home-section hidden aria-label="Student home overview">
+            <article class="dashboard-home-card dashboard-home-card--primary" data-student-continue-card>
+                <div>
+                    <p class="eyebrow">Continue Learning</p>
+                    <h2 data-student-continue-heading>Loading next lesson...</h2>
+                    <p class="section-copy" data-student-continue-copy>
+                        Finding your next class activity.
+                    </p>
+                </div>
+                <div class="dashboard-home-actions" data-student-continue-actions></div>
+            </article>
+
+            <article class="dashboard-home-card">
+                <p class="eyebrow">My Classes</p>
+                <h2 data-student-home-classes-count>-</h2>
+                <p class="section-copy">joined classes and independent courses.</p>
+                <div class="dashboard-home-actions dashboard-home-actions--start">
+                    <a class="secondary-button" href="../classrooms/index.html">Open My Classes</a>
+                </div>
+            </article>
+        </section>
+
         <section class="course-create-panel" data-course-form-panel hidden aria-labelledby="create-course-heading">
             <div class="section-header">
                 <div>
@@ -215,7 +237,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260609-teacher-home"></script>
+    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260609-student-home"></script>
 </body>
 
 </html>
