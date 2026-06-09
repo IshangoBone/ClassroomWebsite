@@ -2174,6 +2174,20 @@ h2 {
     border-radius: 14px;
 }
 
+.student-classes-layout .dashboard-header {
+    align-items: end;
+}
+
+.student-class-card__title {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.student-class-card .course-muted {
+    max-width: 76ch;
+}
+
 .catalog-join-panel {
     display: grid;
     gap: 10px;

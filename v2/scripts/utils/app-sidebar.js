@@ -91,7 +91,7 @@ function getNavItems(hasTeachingAccess) {
 
     return [
         { label: "Home", path: "dashboard/index.html", icon: "H" },
-        { label: "My Classes", path: "dashboard/index.html#enrolled-courses-heading", icon: "M" },
+        { label: "My Classes", path: "classrooms/index.html", icon: "M" },
         { label: "Browse Courses", path: "courses/discover.html", icon: "B" },
         { label: "Profile", path: "profile/index.html", icon: "P" },
     ];
