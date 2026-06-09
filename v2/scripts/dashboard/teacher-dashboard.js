@@ -36,6 +36,9 @@ const managedCoursesHeading = qs("[data-managed-courses-heading]");
 const managedCoursesCopy = qs("[data-managed-courses-copy]");
 const teacherSubmissionsSection = qs("[data-teacher-submissions-section]");
 const studentJoinSection = qs("[data-student-join-section]");
+const teacherHomeSection = qs("[data-teacher-home-section]");
+const homeSubmissionsCount = qs("[data-home-submissions-count]");
+const studentSubmissionsSection = qs("[data-student-submissions-section]");
 const dashboardParams = new URLSearchParams(window.location.search);
 
 let currentProfile = null;
@@ -533,11 +536,11 @@ async function loadStudentTeacherMap() {
 function renderClassrooms(course, classrooms) {
     const courseClassrooms = classrooms.filter((classroom) => classroom.course_id === course.id);
     const area = createElement("div", "course-classrooms");
-    const title = createElement("strong", "course-subheading", "Managed classrooms");
+    const title = createElement("strong", "course-subheading", "Classes");
     area.append(title);
 
     if (!courseClassrooms.length) {
-        area.append(createElement("p", "course-muted", "No classrooms you manage in this course yet."));
+        area.append(createElement("p", "course-muted", "No classes are attached to this course yet."));
         return area;
     }
 
@@ -582,10 +585,10 @@ function renderCourses(courses, classrooms) {
             "course-muted",
             course.description || "No course description has been added yet."
         );
-        const actions = createElement("div", "course-actions");
-        const builderAction = createElement("a", "secondary-button", "Manage course");
-        const classroomAction = createElement("a", "secondary-button", "Manage classrooms");
-        const deleteAction = createElement("button", "secondary-button destructive-button", "Delete course");
+        const actions = createElement("div", "course-actions course-actions--teacher");
+        const builderAction = createElement("a", "primary-button", "Open course");
+        const classroomAction = createElement("a", "secondary-button", "Classes");
+        const deleteAction = createElement("button", "secondary-button destructive-button", "Delete");
         const courseParam = encodeURIComponent(course.id);
         builderAction.href = `../courses/editor.html?course=${courseParam}`;
         classroomAction.href = `../classrooms/manage.html?course=${courseParam}`;
@@ -1014,8 +1017,10 @@ async function refreshDashboard() {
         courseFormToggle.hidden = isStudentOnly;
         courseFormPanel.hidden = true;
         teacherSubmissionsSection.hidden = isStudentOnly;
+        teacherHomeSection.hidden = isStudentOnly;
         studentActivitySection.hidden = !isStudentOnly;
         studentJoinSection.hidden = !isStudentOnly;
+        studentSubmissionsSection.hidden = !isStudentOnly;
         if (enrolledCoursesSection) {
             enrolledCoursesSection.hidden = isStudentOnly || !hasStudentEnrollments;
         }
@@ -1036,17 +1041,18 @@ async function refreshDashboard() {
             studentSubmissionsSummary.textContent = String(studentPoints);
             renderStudentEnrollments(displayStudentEnrollments, visibleCourses, studentClassrooms, lessons, studentSubmissions);
         } else {
-            greetingElement.textContent = `Welcome, ${currentProfile.username || "there"}. Manage teaching work and continue saved lessons.`;
-            coursesSummaryLabel.textContent = "Courses I teach";
-            classroomsSummaryLabel.textContent = "Managed classrooms";
-            submissionsSummaryLabel.textContent = "Recent submissions";
-            studentSubmissionsSummaryLabel.textContent = "My lesson work";
-            managedCoursesHeading.textContent = "Your managed courses";
-            managedCoursesCopy.textContent = "Courses you own or help teach appear here. New courses start as private drafts.";
+            greetingElement.textContent = `Welcome, ${currentProfile.username || "there"}. Start with the courses and classes you teach.`;
+            coursesSummaryLabel.textContent = "My courses";
+            classroomsSummaryLabel.textContent = "Active classes";
+            submissionsSummaryLabel.textContent = "Student submissions";
+            studentSubmissionsSummaryLabel.textContent = "My enrolled courses";
+            managedCoursesHeading.textContent = "My Courses";
+            managedCoursesCopy.textContent = "Courses you teach. Open a course to build lessons, manage classes, and review setup.";
             coursesSummary.textContent = String(courses.length);
             classroomsSummary.textContent = String(classrooms.length);
             submissionsSummary.textContent = String(submissions.length);
-            studentSubmissionsSummary.textContent = String(studentSubmissions.length);
+            studentSubmissionsSummary.textContent = String(displayStudentEnrollments.length);
+            homeSubmissionsCount.textContent = String(submissions.length);
             renderCourses(courses, classrooms);
 
             if (hasStudentEnrollments && enrolledCourseList) {

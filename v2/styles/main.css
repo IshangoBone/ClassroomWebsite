@@ -1574,6 +1574,45 @@ h2 {
     min-width: 0;
 }
 
+.dashboard-home-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(220px, 0.8fr);
+    gap: 16px;
+    min-width: 0;
+}
+
+.dashboard-home-grid[hidden] {
+    display: none;
+}
+
+.dashboard-home-card {
+    display: grid;
+    align-content: space-between;
+    gap: 18px;
+    min-width: 0;
+    padding: 22px;
+    border: 1px solid #dbe4f1;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(24, 49, 83, 0.06);
+}
+
+.dashboard-home-card--primary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+}
+
+.dashboard-home-card h2 {
+    margin: 0 0 6px;
+}
+
+.dashboard-home-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
 .summary-card {
     display: grid;
     gap: 8px;
@@ -2023,6 +2062,18 @@ h2 {
     padding: 14px;
     border-radius: 14px;
     background: #f7faff;
+}
+
+.course-actions--teacher {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.course-actions--teacher .primary-button,
+.course-actions--teacher .secondary-button {
+    width: auto;
+    min-width: 118px;
 }
 
 .course-subheading {
@@ -5000,6 +5051,7 @@ h2 {
     }
 
     .dashboard-summary,
+    .dashboard-home-grid,
     .dashboard-summary--activity,
     .course-form,
     .roster-controls,
@@ -5020,6 +5072,26 @@ h2 {
 
     .summary-value {
         font-size: clamp(1.7rem, 10vw, 2.15rem);
+    }
+
+    .dashboard-home-card,
+    .dashboard-home-card--primary {
+        grid-template-columns: 1fr;
+        padding: 16px;
+        border-radius: 16px;
+    }
+
+    .dashboard-home-actions {
+        display: grid;
+        justify-content: stretch;
+    }
+
+    .dashboard-home-actions .primary-button,
+    .dashboard-home-actions .secondary-button,
+    .course-actions--teacher .primary-button,
+    .course-actions--teacher .secondary-button {
+        width: 100%;
+        min-width: 0;
     }
 
     .roster-item {

@@ -50,6 +50,28 @@
             </article>
         </section>
 
+        <section class="dashboard-home-grid" data-teacher-home-section hidden aria-label="Teacher home overview">
+            <article class="dashboard-home-card dashboard-home-card--primary">
+                <div>
+                    <p class="eyebrow">Teaching Today</p>
+                    <h2>Start with your courses</h2>
+                    <p class="section-copy">
+                        Open a course to build lessons, manage classes, review rosters, and keep classroom work moving.
+                    </p>
+                </div>
+                <div class="dashboard-home-actions">
+                    <a class="primary-button" href="#courses-heading">Open My Courses</a>
+                    <a class="secondary-button" href="../submissions/index.html">Review Student Work</a>
+                </div>
+            </article>
+
+            <article class="dashboard-home-card">
+                <p class="eyebrow">Recent Work</p>
+                <h2 data-home-submissions-count>-</h2>
+                <p class="section-copy">recent submitted lessons ready for review.</p>
+            </article>
+        </section>
+
         <section class="dashboard-join-panel" data-student-join-section hidden aria-labelledby="student-join-heading">
             <div>
                 <p class="eyebrow">Join Access</p>
@@ -179,7 +201,7 @@
             </div>
         </section>
 
-        <section class="dashboard-section dashboard-section--panel dashboard-section--lesson-work" aria-labelledby="student-submissions-heading">
+        <section class="dashboard-section dashboard-section--panel dashboard-section--lesson-work" aria-labelledby="student-submissions-heading" data-student-submissions-section>
             <div class="section-header">
                 <div>
                     <h2 id="student-submissions-heading">My lesson work</h2>
@@ -193,7 +215,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260605-teacher-role"></script>
+    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260609-teacher-home"></script>
 </body>
 
 </html>
