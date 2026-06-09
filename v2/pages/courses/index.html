@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | My Courses</title>
+    <link rel="stylesheet" href="../../styles/main.css?v=20260609-teacher-courses" />
+</head>
+
+<body>
+    <main class="management-layout teacher-courses-layout">
+        <header class="management-header">
+            <div>
+                <p class="eyebrow">Teaching</p>
+                <h1>My Courses</h1>
+                <p class="intro">Manage taught courses, open lesson builder, and organize your classes.</p>
+            </div>
+            <div class="section-actions">
+                <button type="button" class="primary-button" data-course-form-toggle>New course</button>
+                <a class="secondary-button" href="../lessons/index.html">Lesson builder hub</a>
+            </div>
+        </header>
+
+        <p class="auth-status management-status" data-courses-hub-status aria-live="polite"></p>
+
+        <section class="dashboard-summary dashboard-summary--compact" aria-label="Teaching course summary" data-courses-hub-summary hidden>
+            <article class="summary-card">
+                <span class="summary-label">Courses</span>
+                <strong class="summary-value" data-summary-courses>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Classrooms</span>
+                <strong class="summary-value" data-summary-classrooms>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Lessons</span>
+                <strong class="summary-value" data-summary-lessons>-</strong>
+            </article>
+            <article class="summary-card">
+                <span class="summary-label">Visible lessons</span>
+                <strong class="summary-value" data-summary-visible-lessons>-</strong>
+            </article>
+        </section>
+
+        <section class="course-create-panel" data-course-form-panel hidden aria-labelledby="create-course-heading">
+            <div class="section-header">
+                <div>
+                    <p class="eyebrow">Quick Action</p>
+                    <h2 id="create-course-heading">Create a draft course</h2>
+                    <p class="section-copy">Start with course basics, then add modules, lessons, and classes.</p>
+                </div>
+            </div>
+
+            <form class="course-form" data-course-form>
+                <label class="form-field">
+                    <span>Course title</span>
+                    <input type="text" name="title" maxlength="120" required />
+                </label>
+
+                <label class="form-field">
+                    <span>Subject area</span>
+                    <input type="text" name="subject-area" maxlength="80" required />
+                </label>
+
+                <label class="form-field">
+                    <span>Estimated length</span>
+                    <input type="text" name="estimated-length" maxlength="80" placeholder="Example: 4 weeks" required />
+                </label>
+
+                <label class="form-field form-field--wide">
+                    <span>Description</span>
+                    <textarea name="description" rows="3" maxlength="600"></textarea>
+                </label>
+
+                <div class="course-form-actions form-field--wide">
+                    <button type="submit" class="primary-button">Create draft course</button>
+                    <button type="button" class="secondary-button" data-course-form-cancel>Cancel</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="dashboard-section dashboard-section--panel teacher-courses-section" aria-labelledby="teacher-courses-heading">
+            <div class="section-header">
+                <div>
+                    <h2 id="teacher-courses-heading">Courses I teach</h2>
+                    <p class="section-copy">Each course shows its classes, lesson status, and shortcuts for daily teaching work.</p>
+                </div>
+            </div>
+
+            <div class="teacher-course-list" data-courses-hub-list>
+                <p class="empty-state">Loading courses...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/courses/index.js?v=20260609-teacher-courses"></script>
+</body>
+
+</html>

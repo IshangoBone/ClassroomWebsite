@@ -13,6 +13,7 @@ const summaryCourses = qs("[data-summary-courses]");
 const summaryModules = qs("[data-summary-modules]");
 const summaryLessons = qs("[data-summary-lessons]");
 const summaryVisible = qs("[data-summary-visible]");
+const hubParams = new URLSearchParams(window.location.search);
 
 let loadedCourses = [];
 let loadedModules = [];
@@ -88,6 +89,7 @@ function lessonMatchesSearch(course, module, lesson, searchTerm) {
 
 function buildCourseFilterOptions() {
     const selectedValue = courseFilter.value;
+    const requestedCourseId = hubParams.get("course");
 
     courseFilter.replaceChildren(createElement("option", "", "All taught courses"));
     courseFilter.firstElementChild.value = "";
@@ -97,6 +99,11 @@ function buildCourseFilterOptions() {
         option.value = course.id;
         courseFilter.append(option);
     });
+
+    if (requestedCourseId && loadedCourses.some((course) => course.id === requestedCourseId)) {
+        courseFilter.value = requestedCourseId;
+        return;
+    }
 
     courseFilter.value = selectedValue;
 }
