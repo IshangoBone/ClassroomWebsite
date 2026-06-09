@@ -4845,8 +4845,7 @@ h2 {
 
 .managed-classroom-card {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 6px 16px;
+    gap: 14px;
     padding: 18px;
     border: 1px solid #dbe4f1;
     border-radius: 16px;
@@ -4868,13 +4867,66 @@ h2 {
     box-shadow: 0 0 0 2px rgba(57, 86, 135, 0.12);
 }
 
-.managed-classroom-card .course-muted {
-    grid-column: 1;
+.class-hub-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+    min-width: 0;
 }
 
-.managed-classroom-card .badge {
-    grid-column: 2;
-    grid-row: 1 / span 2;
+.class-hub-card-copy {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+}
+
+.class-hub-card-copy .course-title,
+.class-hub-card-copy .course-muted {
+    margin: 0;
+}
+
+.class-hub-card-copy .course-muted {
+    max-width: 68ch;
+}
+
+.class-hub-card-header .badge {
+    flex: 0 0 auto;
+}
+
+.class-hub-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.class-hub-metric {
+    display: grid;
+    gap: 2px;
+    padding: 12px;
+    border: 1px solid #dbe4f1;
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.class-hub-metric strong {
+    color: #182b4d;
+    font-size: 1.05rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+
+.class-hub-metric span {
+    color: #60728e;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.class-hub-access {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
 }
 
 .managed-classroom-actions {
@@ -4882,7 +4934,6 @@ h2 {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
-    grid-column: 1 / -1;
     margin-top: 8px;
 }
 
@@ -4893,15 +4944,19 @@ h2 {
 }
 
 .managed-classroom-join-code {
-    grid-column: 1 / -1;
     margin: 0;
+    padding: 12px;
+    border-radius: 14px;
+    background: #ffffff;
     color: #1d3760;
     font-weight: 800;
 }
 
 .managed-classroom-join-state {
-    grid-column: 1 / -1;
     margin: 0;
+    padding: 12px;
+    border-radius: 14px;
+    background: #ffffff;
     color: #237a4f;
     font-weight: 800;
 }
@@ -4911,8 +4966,10 @@ h2 {
 }
 
 .managed-classroom-invite-state {
-    grid-column: 1 / -1;
     margin: 0;
+    padding: 12px;
+    border-radius: 14px;
+    background: #ffffff;
     color: #49617f;
     font-weight: 700;
 }
@@ -4932,6 +4989,26 @@ h2 {
     border: 1px solid #dbe4f1;
     border-radius: 16px;
     background: #f7faff;
+}
+
+@media (max-width: 760px) {
+    .class-hub-card-header,
+    .managed-classroom-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .class-hub-metrics,
+    .class-hub-access {
+        grid-template-columns: 1fr;
+    }
+
+    .managed-classroom-actions .lesson-action,
+    .managed-classroom-actions .primary-button,
+    .managed-classroom-actions .secondary-button {
+        width: 100%;
+        min-width: 0;
+    }
 }
 
 .roster-add-form {

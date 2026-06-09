@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CodeTheCurrent V2 | Manage Classrooms</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260609-mvp-topnav" />
+    <title>CodeTheCurrent V2 | Course Classes</title>
+    <link rel="stylesheet" href="../../styles/main.css?v=20260609-class-hub" />
 </head>
 
 <body>
@@ -13,11 +13,10 @@
         <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
 
         <header class="management-header">
-            <p class="eyebrow">Classroom Management</p>
+            <p class="eyebrow">Teaching</p>
             <h1 data-classrooms-heading>Loading classrooms...</h1>
             <p class="intro">
-                Classrooms created from this course will appear here. Generate join codes for student access,
-                then review roster and progress work as those tools come online.
+                Organize each class period, share join access, and open the roster or review tools for daily teaching.
             </p>
         </header>
 
@@ -26,15 +25,15 @@
         <section class="management-section" data-classrooms-content hidden aria-labelledby="managed-classrooms-heading">
             <div class="section-header section-header--actions">
                 <div>
-                    <h2 id="managed-classrooms-heading">Managed classrooms</h2>
-                    <p class="section-copy">Only classrooms you are authorized to manage are displayed. Drag classroom cards to arrange their order.</p>
+                    <h2 id="managed-classrooms-heading">Classes for this course</h2>
+                    <p class="section-copy">Each class has its own roster, join code, submissions, and student progress context.</p>
                 </div>
-                <button type="button" class="primary-button management-action" data-toggle-classroom-form>Create classroom</button>
+                <button type="button" class="primary-button management-action" data-toggle-classroom-form>Create class</button>
             </div>
 
             <form class="management-create-form" data-classroom-form hidden>
-                <h3 data-classroom-form-heading>Create classroom</h3>
-                <p class="section-copy" data-classroom-form-copy>Create one classroom for this course. Join access and roster tools come later.</p>
+                <h3 data-classroom-form-heading>Create class</h3>
+                <p class="section-copy" data-classroom-form-copy>Create one class period for this course. Students can join with the class code or invite link.</p>
                 <input type="hidden" name="classroom-id" />
 
                 <div class="management-form-grid">
@@ -55,7 +54,7 @@
                 </div>
 
                 <div class="course-form-actions">
-                    <button type="submit" class="primary-button" data-classroom-submit>Create classroom</button>
+                    <button type="submit" class="primary-button" data-classroom-submit>Create class</button>
                     <button type="button" class="secondary-button" data-cancel-classroom-form>Cancel</button>
                 </div>
             </form>
@@ -64,18 +63,9 @@
                 <p class="empty-state">Loading classrooms...</p>
             </div>
         </section>
-
-        <section class="management-section management-section--pending" data-classrooms-content hidden>
-            <h2>Coming in the classroom manager</h2>
-            <ul class="feature-list">
-                <li>View and manage enrolled student rosters</li>
-                <li>Review classroom progress and submissions</li>
-                <li>Restore archived classroom history when needed</li>
-            </ul>
-        </section>
     </main>
 
-    <script type="module" src="../../scripts/classrooms/manage.js?v=20260602-route-guards"></script>
+    <script type="module" src="../../scripts/classrooms/manage.js?v=20260609-class-hub"></script>
 </body>
 
 </html>
