@@ -119,6 +119,12 @@ function createNavLink(item, pagesRoot, currentPath) {
     return link;
 }
 
+function setMobileMenuState(nav, toggle, isOpen) {
+    nav.classList.toggle("app-topnav--open", isOpen);
+    toggle.setAttribute("aria-expanded", String(isOpen));
+    toggle.setAttribute("aria-label", isOpen ? "Close navigation menu" : "Open navigation menu");
+}
+
 function wrapPage(nav) {
     let shell = document.querySelector("[data-app-shell]");
     const main = document.querySelector("main");
@@ -170,6 +176,8 @@ export async function renderAppSidebar(profile) {
     const titleGroup = createElement("span", "app-topnav-title-group");
     const title = createElement("strong", "app-topnav-title", "CodeTheCurrent");
     const role = createElement("span", "app-topnav-role", getRoleLabel(profile, hasTeachingAccess));
+    const menuToggle = createElement("button", "app-topnav-toggle");
+    const navMenu = createElement("div", "app-topnav-menu");
     const links = createElement("nav", "app-topnav-links");
     const account = createElement("details", "app-topnav-account");
     const accountSummary = createElement("summary", "app-topnav-account-summary");
@@ -190,6 +198,14 @@ export async function renderAppSidebar(profile) {
     titleGroup.append(title, role);
     brand.append(mark, titleGroup);
 
+    menuToggle.type = "button";
+    menuToggle.setAttribute("aria-controls", "app-topnav-menu");
+    menuToggle.setAttribute("aria-expanded", "false");
+    menuToggle.setAttribute("aria-label", "Open navigation menu");
+    menuToggle.innerHTML = "<span></span><span></span><span></span>";
+
+    navMenu.id = "app-topnav-menu";
+
     links.setAttribute("aria-label", "Primary");
     getNavItems(hasTeachingAccess).forEach((item) => {
         links.append(createNavLink(item, pagesRoot, currentPath));
@@ -205,5 +221,30 @@ export async function renderAppSidebar(profile) {
     accountMenu.append(settingsLink, logoutButton);
     account.append(accountSummary, accountMenu);
 
-    nav.append(brand, links, account);
+    menuToggle.addEventListener("click", () => {
+        const isOpen = !nav.classList.contains("app-topnav--open");
+        setMobileMenuState(nav, menuToggle, isOpen);
+    });
+
+    links.addEventListener("click", (event) => {
+        if (event.target.closest("a")) {
+            setMobileMenuState(nav, menuToggle, false);
+        }
+    });
+
+    document.addEventListener("click", (event) => {
+        if (!nav.contains(event.target)) {
+            setMobileMenuState(nav, menuToggle, false);
+        }
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            setMobileMenuState(nav, menuToggle, false);
+            account.open = false;
+        }
+    });
+
+    navMenu.append(links, account);
+    nav.append(brand, menuToggle, navMenu);
 }

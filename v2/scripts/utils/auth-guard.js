@@ -1,5 +1,5 @@
 import { supabase } from "../../services/supabase/client.js";
-import { renderAppSidebar } from "./app-sidebar.js";
+import { renderAppSidebar } from "./app-sidebar.js?v=20260609-sticky-nav";
 
 export function isPlatformAdmin(role) {
     return role === "admin" || role === "supreme_admin";
