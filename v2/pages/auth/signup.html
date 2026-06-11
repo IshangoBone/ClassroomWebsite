@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CodeTheCurrent V2 | Sign Up</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260605-app-responsive" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260610-button-system" />
 </head>
 
 <body data-auth-mode="signup">
@@ -47,6 +47,10 @@
                         <input type="password" name="password" placeholder="Enter your password" required />
                     </label>
 
+                    <button type="button" class="auth-inline-action" data-password-reset-request>
+                        Forgot password?
+                    </button>
+
                     <button type="submit" class="primary-button">Log In</button>
                 </form>
 
@@ -74,7 +78,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/auth/auth-shell.js?v=20260605-auth-mobile"></script>
+    <script type="module" src="../../scripts/auth/auth-shell.js?v=20260607-password-reset"></script>
 </body>
 
 </html>

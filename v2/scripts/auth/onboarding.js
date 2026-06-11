@@ -2,6 +2,25 @@ import { supabase } from "../../services/supabase/client.js";
 import { qs } from "../utils/dom.js";
 import { notifyStatus } from "../utils/ui-components.js";
 
+function redirectConfirmedSignupToLogin() {
+    const url = new URL(window.location.href);
+    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+    const isSignupConfirmation = url.searchParams.get("confirmed") === "1"
+        || url.searchParams.get("type") === "signup"
+        || hashParams.get("type") === "signup";
+
+    if (!isSignupConfirmation) {
+        return false;
+    }
+
+    window.location.replace("./login.html?confirmed=1");
+    return true;
+}
+
+if (redirectConfirmedSignupToLogin()) {
+    await new Promise(() => {});
+}
+
 const onboardingForm = qs("[data-onboarding-form]");
 const statusElement = qs("[data-onboarding-status]");
 const profilePhotoInput = onboardingForm.elements["profile-photo"];

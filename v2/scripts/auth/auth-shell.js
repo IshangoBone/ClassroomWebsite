@@ -22,12 +22,21 @@ const headingElement = qs(".auth-card-title");
 const copyElement = qs(".auth-card-copy");
 const loginForm = qs("[data-login-form]");
 const signupForm = qs("[data-signup-form]");
-let authFeedback = null;
-const googleOAuthEnabled = supabaseConfig.googleOAuthEnabled === true;
-const googleOAuthDisabledMessage = [
-    "Google sign-in is not enabled for this Supabase project yet.",
-    "Enable Google OAuth in Supabase, then set googleOAuthEnabled to true in config.js.",
-].join(" ");
+function getLoginRedirectUrl() {
+    const redirectUrl = new URL("./login.html", window.location.href);
+    redirectUrl.searchParams.set("confirmed", "1");
+    return redirectUrl.href;
+}
+
+function getPasswordResetRedirectUrl() {
+    return new URL("./reset-password.html", window.location.href).href;
+}
+
+function isDuplicateSignupResponse(data) {
+    return data?.user
+        && Array.isArray(data.user.identities)
+        && data.user.identities.length === 0;
+}
 
 function getAuthFeedback() {
     if (authFeedback) {
@@ -178,6 +187,73 @@ function clearInactiveStatuses(mode) {
         });
 }
 
+function cleanAuthUrl() {
+    if (!window.history.replaceState) {
+        return;
+    }
+
+    const cleanUrl = new URL(window.location.href);
+    const hashParams = new URLSearchParams(cleanUrl.hash.replace(/^#/, ""));
+    const shouldClearHash = hashParams.has("type")
+        || hashParams.has("error")
+        || hashParams.has("error_description")
+        || hashParams.has("access_token")
+        || hashParams.has("refresh_token");
+
+    [
+        "confirmed",
+        "error",
+        "error_code",
+        "error_description",
+        "type",
+    ].forEach((param) => cleanUrl.searchParams.delete(param));
+
+    window.history.replaceState(
+        {},
+        document.title,
+        cleanUrl.pathname + cleanUrl.search + (shouldClearHash ? "" : cleanUrl.hash)
+    );
+}
+
+function handleAuthRedirectState() {
+    const url = new URL(window.location.href);
+    const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+    const authError = url.searchParams.get("error_description")
+        || hashParams.get("error_description")
+        || url.searchParams.get("error")
+        || hashParams.get("error");
+    const isConfirmed = url.searchParams.get("confirmed") === "1"
+        || url.searchParams.get("type") === "signup"
+        || hashParams.get("type") === "signup";
+
+    if (authError) {
+        setAuthMode("login");
+        setStatus("login", authError, "error");
+        showAuthFeedback({
+            title: "Confirmation link issue",
+            message: authError,
+            tone: "error",
+            dismissible: true,
+        });
+        cleanAuthUrl();
+        return;
+    }
+
+    if (!isConfirmed) {
+        return;
+    }
+
+    setAuthMode("login");
+    setStatus("login", "Your account has been confirmed. You can now sign in.", "success");
+    showAuthFeedback({
+        title: "Account confirmed",
+        message: "Your email is confirmed. Sign in to finish setting up your workspace.",
+        tone: "success",
+        dismissible: true,
+    });
+    cleanAuthUrl();
+}
+
 function setAuthMode(mode) {
     document.body.dataset.authMode = mode;
 
@@ -271,6 +347,49 @@ if (loginForm) {
     });
 }
 
+resetRequestButtons.forEach((button) => {
+    button.addEventListener("click", async () => {
+        const emailInput = qs("input[name='email']", loginForm);
+        const email = String(emailInput?.value || "").trim();
+
+        setAuthMode("login");
+
+        if (!email) {
+            setStatus("login", "Enter your email first, then click Forgot password.", "error");
+            emailInput?.focus();
+            return;
+        }
+
+        button.disabled = true;
+        showAuthFeedback({
+            title: "Sending reset link",
+            message: "If this email has an account, a password reset link will arrive shortly.",
+            loading: true,
+        });
+        setStatus("login", "Sending password reset email...", "info");
+
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: getPasswordResetRedirectUrl(),
+        });
+
+        button.disabled = false;
+
+        if (error) {
+            hideAuthFeedback();
+            setStatus("login", error.message, "error");
+            return;
+        }
+
+        showAuthFeedback({
+            title: "Check your email",
+            message: "If this email has an account, use the reset link we sent to choose a new password.",
+            tone: "success",
+            dismissible: true,
+        });
+        setStatus("login", "Password reset email sent. Check your inbox.", "success");
+    });
+});
+
 if (signupForm) {
     signupForm.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -296,7 +415,7 @@ if (signupForm) {
             email,
             password,
             options: {
-                emailRedirectTo: new URL("./onboarding.html", window.location.href).href,
+                emailRedirectTo: getLoginRedirectUrl(),
             },
         });
 
@@ -304,6 +423,19 @@ if (signupForm) {
             setFormBusy(signupForm, false);
             hideAuthFeedback();
             setStatus("signup", error.message, "error");
+            return;
+        }
+
+        setFormBusy(signupForm, false);
+
+        if (isDuplicateSignupResponse(data)) {
+            showAuthFeedback({
+                title: "Account already exists",
+                message: "This email already has an account. Log in instead, or reset your password if you need help getting back in.",
+                tone: "error",
+                dismissible: true,
+            });
+            setStatus("signup", "This account already exists. Switch to Log In to continue.", "error");
             return;
         }
 
@@ -337,3 +469,4 @@ if (signupForm) {
 }
 
 setAuthMode(activeMode);
+handleAuthRedirectState();

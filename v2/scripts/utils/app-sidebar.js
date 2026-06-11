@@ -1,8 +1,6 @@
 import { supabase } from "../../services/supabase/client.js";
 import { createElement } from "./dom.js";
 
-const SIDEBAR_STORAGE_KEY = "codethecurrent-sidebar-collapsed";
-
 function isPlatformAdminRole(role) {
     return role === "admin" || role === "supreme_admin";
 }
@@ -49,38 +47,23 @@ function getRoleLabel(profile, hasTeachingTools) {
     return hasTeachingTools ? "Teacher" : "Student";
 }
 
-function createNavLink(item, pagesRoot, currentPath) {
-    const link = createElement("a", "app-sidebar-link");
-    const itemPath = item.path.replace(/^\/+/, "");
-    const [pagePath, hash = ""] = itemPath.split("#");
-    const isAnchorLink = Boolean(hash);
-    const currentHash = window.location.hash.replace(/^#/, "");
-
-    link.href = `${pagesRoot}/${itemPath}`;
-    link.dataset.sidebarLabel = item.label;
-    link.setAttribute("aria-label", item.label);
-    link.innerHTML = `<span class="app-sidebar-icon" aria-hidden="true">${item.icon}</span><span class="app-sidebar-label">${item.label}</span>`;
-
-    if (currentPath === pagePath && (isAnchorLink ? currentHash === hash : !currentHash)) {
-        link.classList.add("app-sidebar-link--active");
-        link.setAttribute("aria-current", "page");
-    }
-
-    return link;
+function getDisplayName(profile) {
+    return profile.username || profile.legal_first_name || profile.email || "Account";
 }
 
-function createNavSection(title, items, pagesRoot, currentPath) {
-    const section = createElement("section", "app-sidebar-section");
-    const heading = createElement("h2", "app-sidebar-heading", title);
-    const nav = createElement("nav", "app-sidebar-nav");
+function getInitials(profile) {
+    const source = getDisplayName(profile).trim();
+    const words = source.split(/\s+/).filter(Boolean);
 
-    nav.setAttribute("aria-label", title);
-    items.forEach((item) => {
-        nav.append(createNavLink(item, pagesRoot, currentPath));
-    });
-    section.append(heading, nav);
+    if (!words.length) {
+        return "CTC";
+    }
 
-    return section;
+    if (words.length === 1) {
+        return words[0].slice(0, 2).toUpperCase();
+    }
+
+    return `${words[0][0]}${words[1][0]}`.toUpperCase();
 }
 
 async function hasTeachingTools(profile) {
@@ -97,67 +80,52 @@ async function hasTeachingTools(profile) {
     return !error && Boolean(count);
 }
 
-function getSidebarSections(profile, hasTeachingAccess) {
-    const accountItems = [
-        { label: "Home", path: "dashboard/index.html", icon: "H" },
-        { label: "Profile", path: "profile/index.html", icon: "U" },
-    ];
-
-    const sections = [
-        {
-            title: "Account",
-            items: accountItems,
-        },
-        {
-            title: "My Learning",
-            items: [
-                { label: "Browse courses", path: "courses/discover.html", icon: "B" },
-                { label: "My courses", path: "dashboard/index.html#enrolled-courses-heading", icon: "M" },
-                { label: "My work", path: "submissions/index.html", icon: "W" },
-            ],
-        },
-    ];
-
+function getNavItems(hasTeachingAccess) {
     if (hasTeachingAccess) {
-        sections.push({
-            title: "Teaching",
-            items: [
-                { label: "Courses I teach", path: "dashboard/index.html#courses-heading", icon: "T" },
-                { label: "Student work", path: "submissions/index.html", icon: "S" },
-                { label: "Teaching analytics", path: "analytics/index.html", icon: "A" },
-            ],
-        });
-    }
-
-    if (isPlatformAdminRole(profile.platform_role)) {
-        const adminItems = [
-            { label: "Admin overview", path: "admin/index.html", icon: "A" },
-            { label: "Platform analytics", path: "admin/analytics.html", icon: "N" },
-            { label: "Activity logs", path: "activity/index.html", icon: "L" },
+        return [
+            { label: "Home", path: "dashboard/index.html", icon: "H" },
+            { label: "My Courses", path: "courses/index.html", icon: "C" },
+            { label: "Profile", path: "profile/index.html", icon: "P" },
         ];
-
-        if (profile.platform_role === "supreme_admin") {
-            adminItems.push({ label: "Moderation", path: "admin/moderation.html", icon: "M" });
-        }
-
-        sections.push({
-            title: "Administration",
-            items: adminItems,
-        });
     }
 
-    sections.push({
-        title: "Help",
-        items: [
-            { label: "About", path: "about/index.html", icon: "A" },
-            { label: "Contact", path: "contact/index.html", icon: "C" },
-        ],
-    });
-
-    return sections;
+    return [
+        { label: "Home", path: "dashboard/index.html", icon: "H" },
+        { label: "My Classes", path: "classrooms/index.html", icon: "M" },
+        { label: "Browse Courses", path: "courses/discover.html", icon: "B" },
+        { label: "Profile", path: "profile/index.html", icon: "P" },
+    ];
 }
 
-function wrapPage(sidebar) {
+function isCurrentNavItem(item, currentPath) {
+    const itemPath = item.path.replace(/^\/+/, "");
+    const [pagePath, hash = ""] = itemPath.split("#");
+    const currentHash = window.location.hash.replace(/^#/, "");
+
+    return currentPath === pagePath && (hash ? currentHash === hash : !currentHash);
+}
+
+function createNavLink(item, pagesRoot, currentPath) {
+    const link = createElement("a", "app-topnav-link");
+
+    link.href = `${pagesRoot}/${item.path}`;
+    link.innerHTML = `<span class="app-topnav-link-icon" aria-hidden="true">${item.icon}</span><span>${item.label}</span>`;
+
+    if (isCurrentNavItem(item, currentPath)) {
+        link.classList.add("app-topnav-link--active");
+        link.setAttribute("aria-current", "page");
+    }
+
+    return link;
+}
+
+function setMobileMenuState(nav, toggle, isOpen) {
+    nav.classList.toggle("app-topnav--open", isOpen);
+    toggle.setAttribute("aria-expanded", String(isOpen));
+    toggle.setAttribute("aria-label", isOpen ? "Close navigation menu" : "Open navigation menu");
+}
+
+function wrapPage(nav) {
     let shell = document.querySelector("[data-app-shell]");
     const main = document.querySelector("main");
 
@@ -166,72 +134,117 @@ function wrapPage(sidebar) {
     }
 
     if (!shell) {
-        shell = createElement("div", "app-shell");
+        shell = createElement("div", "app-frame");
         shell.dataset.appShell = "true";
         main.parentNode.insertBefore(shell, main);
         shell.append(main);
+    } else {
+        shell.classList.remove("app-shell", "app-shell--collapsed");
+        shell.classList.add("app-frame");
     }
 
-    shell.insertBefore(sidebar, shell.firstElementChild);
-    document.body.classList.add("has-app-sidebar");
+    shell.insertBefore(nav, shell.firstElementChild);
+    document.body.classList.remove("has-app-sidebar");
+    document.body.classList.add("has-app-nav");
 
     return shell;
 }
 
-function applyCollapsedState(shell, toggle, isCollapsed) {
-    shell.classList.toggle("app-shell--collapsed", isCollapsed);
-    toggle.setAttribute("aria-expanded", String(!isCollapsed));
-    toggle.setAttribute("aria-label", isCollapsed ? "Expand navigation" : "Collapse navigation");
-    toggle.title = isCollapsed ? "Expand navigation" : "Collapse navigation";
+async function handleLogout(pagesRoot, button) {
+    button.disabled = true;
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+        button.disabled = false;
+        return;
+    }
+
+    window.location.href = `${pagesRoot}/auth/login.html`;
 }
 
 export async function renderAppSidebar(profile) {
-    if (!profile || document.querySelector("[data-app-sidebar]")) {
+    if (!profile || document.querySelector("[data-app-nav]")) {
         return;
     }
 
     const pagesRoot = getPagesRootUrl();
     const currentPath = getRelativePagePath();
     const hasTeachingAccess = await hasTeachingTools(profile);
-    const sidebar = createElement("aside", "app-sidebar");
-    const brand = createElement("div", "app-sidebar-brand");
-    const mark = createElement("a", "app-sidebar-mark", "CTC");
-    const titleGroup = createElement("div", "app-sidebar-title-group");
-    const title = createElement("strong", "app-sidebar-title", "CodeTheCurrent");
-    const role = createElement("span", "app-sidebar-role", getRoleLabel(profile, hasTeachingAccess));
-    const toggle = createElement("button", "app-sidebar-toggle");
-    const toggleIcon = createElement("span", "app-sidebar-toggle-icon");
-    const shell = wrapPage(sidebar);
+    const nav = createElement("header", "app-topnav");
+    const brand = createElement("a", "app-topnav-brand");
+    const mark = createElement("span", "app-topnav-mark", "CTC");
+    const titleGroup = createElement("span", "app-topnav-title-group");
+    const title = createElement("strong", "app-topnav-title", "CodeTheCurrent");
+    const role = createElement("span", "app-topnav-role", getRoleLabel(profile, hasTeachingAccess));
+    const menuToggle = createElement("button", "app-topnav-toggle");
+    const navMenu = createElement("div", "app-topnav-menu");
+    const links = createElement("nav", "app-topnav-links");
+    const account = createElement("details", "app-topnav-account");
+    const accountSummary = createElement("summary", "app-topnav-account-summary");
+    const accountInitials = createElement("span", "app-topnav-account-avatar", getInitials(profile));
+    const accountName = createElement("span", "app-topnav-account-name", getDisplayName(profile));
+    const accountMenu = createElement("div", "app-topnav-account-menu");
+    const settingsLink = createElement("a", "app-topnav-menu-link", "Settings");
+    const logoutButton = createElement("button", "app-topnav-menu-link app-topnav-menu-button", "Log out");
+    const shell = wrapPage(nav);
 
     if (!shell) {
         return;
     }
 
-    sidebar.dataset.appSidebar = "true";
-    mark.href = `${pagesRoot}/dashboard/index.html`;
-    toggle.type = "button";
-    toggle.setAttribute("aria-controls", "app-sidebar-navigation");
-    toggleIcon.setAttribute("aria-hidden", "true");
-    toggle.append(toggleIcon);
+    nav.dataset.appNav = "true";
+    brand.href = `${pagesRoot}/dashboard/index.html`;
+    brand.setAttribute("aria-label", "CodeTheCurrent home");
     titleGroup.append(title, role);
     brand.append(mark, titleGroup);
 
-    const content = createElement("div", "app-sidebar-content");
-    content.id = "app-sidebar-navigation";
-    getSidebarSections(profile, hasTeachingAccess).forEach((section) => {
-        content.append(createNavSection(section.title, section.items, pagesRoot, currentPath));
+    menuToggle.type = "button";
+    menuToggle.setAttribute("aria-controls", "app-topnav-menu");
+    menuToggle.setAttribute("aria-expanded", "false");
+    menuToggle.setAttribute("aria-label", "Open navigation menu");
+    menuToggle.innerHTML = "<span></span><span></span><span></span>";
+
+    navMenu.id = "app-topnav-menu";
+
+    links.setAttribute("aria-label", "Primary");
+    getNavItems(hasTeachingAccess).forEach((item) => {
+        links.append(createNavLink(item, pagesRoot, currentPath));
     });
 
-    const footer = createElement("div", "app-sidebar-footer");
-    footer.append(toggle);
-
-    sidebar.append(brand, content, footer);
-
-    const savedState = window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
-    applyCollapsedState(shell, toggle, savedState);
-    toggle.addEventListener("click", () => {
-        const nextState = !shell.classList.contains("app-shell--collapsed");
-        window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(nextState));
-        applyCollapsedState(shell, toggle, nextState);
+    settingsLink.href = `${pagesRoot}/settings/index.html`;
+    logoutButton.type = "button";
+    logoutButton.addEventListener("click", () => {
+        handleLogout(pagesRoot, logoutButton);
     });
+
+    accountSummary.append(accountInitials, accountName);
+    accountMenu.append(settingsLink, logoutButton);
+    account.append(accountSummary, accountMenu);
+
+    menuToggle.addEventListener("click", () => {
+        const isOpen = !nav.classList.contains("app-topnav--open");
+        setMobileMenuState(nav, menuToggle, isOpen);
+    });
+
+    links.addEventListener("click", (event) => {
+        if (event.target.closest("a")) {
+            setMobileMenuState(nav, menuToggle, false);
+        }
+    });
+
+    document.addEventListener("click", (event) => {
+        if (!nav.contains(event.target)) {
+            setMobileMenuState(nav, menuToggle, false);
+        }
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            setMobileMenuState(nav, menuToggle, false);
+            account.open = false;
+        }
+    });
+
+    navMenu.append(links, account);
+    nav.append(brand, menuToggle, navMenu);
 }

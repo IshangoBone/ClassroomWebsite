@@ -7,8 +7,9 @@ const params = new URLSearchParams(window.location.search);
 const lessonId = params.get("lesson");
 const classroomId = params.get("classroom");
 const isTeacherPreview = params.get("preview") === "teacher";
-const previewCourseId = params.get("course");
 const backLink = qs("[data-lesson-back-link]");
+const teacherPreviewBanner = qs("[data-teacher-preview-banner]");
+const previewBuilderLink = qs("[data-preview-builder-link]");
 const headingElement = qs("[data-lesson-heading]");
 const contextElement = qs("[data-lesson-context]");
 const statusElement = qs("[data-lesson-status]");
@@ -36,6 +37,7 @@ const questionPhases = [
 ];
 const optionQuestionTypes = ["multiple_choice", "select_all_that_apply"];
 const responseQuestionTypes = ["short_response", "long_response", "fill_in_the_blank"];
+const lessonLayoutMarker = "__ctc_lesson_layout_v1__";
 let currentProfileId = "";
 let currentLessonContext = null;
 let currentSubmission = null;
@@ -48,6 +50,18 @@ let lastSavedAt = null;
 let submittedAt = null;
 let currentAvailabilityContext = null;
 const lessonResourceBucket = "lesson-resources";
+
+function decodeLessonLayout(bodyText = "") {
+    if (!bodyText.startsWith(lessonLayoutMarker)) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(bodyText.slice(lessonLayoutMarker.length).trim());
+    } catch {
+        return null;
+    }
+}
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -360,15 +374,21 @@ function showTeacherPreviewState() {
     setQuestionInputsDisabled(true);
 }
 
-function updateTeacherPreviewBackLink(courseId) {
-    const targetCourseId = previewCourseId || courseId;
-
-    if (!targetCourseId) {
+function updateTeacherPreviewBackLink() {
+    if (!lessonId) {
         return;
     }
 
-    backLink.href = `../courses/preview.html?course=${encodeURIComponent(targetCourseId)}`;
-    backLink.textContent = "Back to course preview";
+    const builderHref = `builder.html?lesson=${encodeURIComponent(lessonId)}`;
+
+    backLink.href = builderHref;
+    backLink.textContent = "Back to lesson builder";
+    if (previewBuilderLink) {
+        previewBuilderLink.href = builderHref;
+    }
+    if (teacherPreviewBanner) {
+        teacherPreviewBanner.hidden = false;
+    }
 }
 
 function isAudioUrl(url) {
@@ -574,11 +594,134 @@ function createExternalLink(url, label = "Open resource") {
     return link;
 }
 
+function hasImageCopy(contentBlock) {
+    return Boolean((contentBlock.title || "").trim() || (contentBlock.body_text || "").trim());
+}
+
+async function createLessonLayoutContent(layout) {
+    if (layout?.type === "text" || layout?.type === "wide") {
+        const wrapper = createElement("div", `lesson-layout-text-preview lesson-layout-text-preview--${layout.type}`);
+
+        if (layout.title) {
+            wrapper.append(createElement("h3", "", layout.title));
+        }
+        if (layout.body) {
+            wrapper.append(createFormattedTextContent(layout.body));
+        }
+
+        return wrapper;
+    }
+
+    if (layout?.type === "imageText") {
+        const wrapper = createElement("div", "lesson-render-media-text");
+        const media = createElement("div", "lesson-render-media-frame");
+        const copy = createElement("div", "lesson-render-media-copy");
+        const image = createElement("img", "lesson-render-image");
+        const imageUrl = await getDisplayResourceUrl({ file_url: layout.image?.url || "" });
+
+        image.src = imageUrl || layout.image?.url || "";
+        image.alt = layout.image?.title || layout.title || "Lesson image";
+        media.append(image);
+        if (layout.title) {
+            copy.append(createElement("h3", "", layout.title));
+        }
+        if (layout.body) {
+            copy.append(createFormattedTextContent(layout.body));
+        }
+        wrapper.append(media, copy);
+        return wrapper;
+    }
+
+    if (layout?.type === "featureImage") {
+        const wrapper = createElement("div", "lesson-layout-feature-preview");
+        const image = createElement("img", "", "");
+        const imageUrl = await getDisplayResourceUrl({ file_url: layout.image?.url || "" });
+
+        image.src = imageUrl || layout.image?.url || "";
+        image.alt = layout.image?.title || "Feature image";
+        wrapper.append(image);
+        return wrapper;
+    }
+
+    if (layout?.type === "columns") {
+        const wrapper = createElement("div", "lesson-layout-columns-preview");
+
+        (layout.columns || []).forEach((column) => {
+            const item = createElement("article", "lesson-layout-column");
+
+            if (column.title) {
+                item.append(createElement("h3", "", column.title));
+            }
+            if (column.body) {
+                item.append(createElement("p", "", column.body));
+            }
+            wrapper.append(item);
+        });
+
+        return wrapper;
+    }
+
+    if (layout?.type === "gallery") {
+        const wrapper = createElement("div", "lesson-layout-gallery-preview");
+        const images = await Promise.all((layout.images || []).map(async (image) => ({
+            ...image,
+            displayUrl: await getDisplayResourceUrl({ file_url: image.url }),
+        })));
+
+        images.forEach((image) => {
+            const img = createElement("img", "", "");
+
+            img.src = image.displayUrl || image.url || "";
+            img.alt = image.title || "Gallery image";
+            wrapper.append(img);
+        });
+
+        return wrapper;
+    }
+
+    if (layout?.type === "divider") {
+        return createElement("hr", "lesson-inline-divider");
+    }
+
+    if (layout?.type === "spacer") {
+        return createElement("div", "lesson-inline-spacer");
+    }
+
+    return createElement("p", "lesson-render-text", "");
+}
+
 async function createContentBlock(contentBlock) {
     const article = createElement("article", `lesson-render-block lesson-render-block--${contentBlock.block_type}`);
     const title = createElement("h3", "", getDefaultContentBlockTitle(contentBlock));
     const label = createElement("span", "badge badge--quiet", `Block ${contentBlock.order_index + 1}`);
     const url = await getDisplayResourceUrl(contentBlock);
+    const layout = decodeLessonLayout(contentBlock.body_text || "");
+
+    if (layout) {
+        article.classList.add("lesson-render-block--layout");
+        article.append(await createLessonLayoutContent(layout));
+        return article;
+    }
+
+    if (contentBlock.block_type === "file" && contentBlock.file_type === "image" && hasImageCopy(contentBlock)) {
+        const shell = createElement("div", "lesson-render-media-text");
+        const media = createElement("div", "lesson-render-media-frame");
+        const copy = createElement("div", "lesson-render-media-copy");
+        const image = createElement("img", "lesson-render-image");
+
+        image.src = url || "";
+        image.alt = contentBlock.title || "Lesson image";
+        media.append(image);
+        copy.append(title);
+        if (contentBlock.body_text) {
+            copy.append(createFormattedTextContent(contentBlock.body_text || ""));
+        }
+        copy.append(createExternalLink(url, "Open image"));
+        shell.append(media, copy);
+        article.classList.add("lesson-render-block--media-text");
+        article.append(label, shell);
+        return article;
+    }
 
     article.append(title, label);
 
@@ -1384,7 +1527,7 @@ async function initializePage() {
 
     currentLessonContext = context;
     if (isTeacherPreview) {
-        updateTeacherPreviewBackLink(course.id);
+        updateTeacherPreviewBackLink();
     } else if (!(await canAccessLessonContext(context))) {
         return;
     } else if (!lesson.is_visible) {

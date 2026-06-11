@@ -16,7 +16,6 @@ const courseFormPanel = qs("[data-course-form-panel]");
 const courseForm = qs("[data-course-form]");
 const courseFormToggle = qs("[data-course-form-toggle]");
 const courseFormCancel = qs("[data-course-form-cancel]");
-const logoutButton = qs("[data-logout-button]");
 const studentJoinForm = qs("[data-student-join-form]");
 const submissionFilterForm = qs("[data-submission-filter-form]");
 const studentActivitySection = qs("[data-student-activity-section]");
@@ -35,9 +34,19 @@ const studentSubmissionsSummary = qs("[data-summary-my-submissions]");
 const studentSubmissionsSummaryLabel = qs("[data-summary-my-submissions-label]");
 const managedCoursesHeading = qs("[data-managed-courses-heading]");
 const managedCoursesCopy = qs("[data-managed-courses-copy]");
+const managedCoursesSection = qs("[data-managed-courses-section]");
 const teacherSubmissionsSection = qs("[data-teacher-submissions-section]");
 const studentJoinSection = qs("[data-student-join-section]");
+const teacherHomeSection = qs("[data-teacher-home-section]");
+const studentHomeSection = qs("[data-student-home-section]");
+const studentContinueHeading = qs("[data-student-continue-heading]");
+const studentContinueCopy = qs("[data-student-continue-copy]");
+const studentContinueActions = qs("[data-student-continue-actions]");
+const studentHomeClassesCount = qs("[data-student-home-classes-count]");
+const homeSubmissionsCount = qs("[data-home-submissions-count]");
+const studentSubmissionsSection = qs("[data-student-submissions-section]");
 const dashboardParams = new URLSearchParams(window.location.search);
+const MANAGED_COURSE_PREVIEW_LIMIT = 6;
 
 let currentProfile = null;
 let dashboardCourses = [];
@@ -46,6 +55,7 @@ let dashboardLessons = [];
 let dashboardSubmissions = [];
 let dashboardStudentNames = new Map();
 let dashboardStudentTeachers = new Map();
+let showAllManagedCourses = false;
 
 function setStatus(message, tone = "info") {
     dashboardStatus.textContent = message;
@@ -95,42 +105,6 @@ function setCourseFormVisible(isVisible) {
 
 function renderDashboardAvatar(profile) {
     profileAvatarElement.replaceChildren(createProfileAvatar(profile, "profile-avatar profile-avatar--large", "U"));
-}
-
-async function logDashboardActivity(actionType) {
-    if (!currentProfile) {
-        return;
-    }
-
-    const { error } = await supabase.rpc("log_activity", {
-        action_type_input: actionType,
-        target_type_input: "user",
-        target_id_input: currentProfile.id,
-        metadata_json_input: {
-            source: "dashboard",
-        },
-    });
-
-    if (error) {
-        console.warn("Activity logging failed:", error.message);
-    }
-}
-
-async function handleLogout() {
-    logoutButton.disabled = true;
-    setStatus("Logging out...");
-
-    await logDashboardActivity("user_logout");
-
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-        logoutButton.disabled = false;
-        setStatus(error.message || "Logout failed. Please try again.", "error");
-        return;
-    }
-
-    window.location.href = "../auth/login.html";
 }
 
 function getSubmissionFilters() {
@@ -570,11 +544,11 @@ async function loadStudentTeacherMap() {
 function renderClassrooms(course, classrooms) {
     const courseClassrooms = classrooms.filter((classroom) => classroom.course_id === course.id);
     const area = createElement("div", "course-classrooms");
-    const title = createElement("strong", "course-subheading", "Managed classrooms");
+    const title = createElement("strong", "course-subheading", "Classes");
     area.append(title);
 
     if (!courseClassrooms.length) {
-        area.append(createElement("p", "course-muted", "No classrooms you manage in this course yet."));
+        area.append(createElement("p", "course-muted", "No classes are attached to this course yet."));
         return area;
     }
 
@@ -598,41 +572,54 @@ function renderCourses(courses, classrooms) {
         return;
     }
 
-    const cards = courses.map((course) => {
-        const card = createElement("article", "course-card");
+    const visibleCourses = showAllManagedCourses ? courses : courses.slice(0, MANAGED_COURSE_PREVIEW_LIMIT);
+    const hiddenCourseCount = Math.max(courses.length - visibleCourses.length, 0);
+    const cards = visibleCourses.map((course) => {
+        const courseClassrooms = classrooms.filter((classroom) => classroom.course_id === course.id);
+        const activeClassrooms = courseClassrooms.filter((classroom) => classroom.status !== "archived").length;
+        const courseParam = encodeURIComponent(course.id);
+        const card = createElement("a", "course-card course-card--compact course-card--link");
         const heading = createElement("div", "course-card-header");
         const name = createElement("h3", "course-title", course.title || "Untitled course");
         const badges = createElement("div", "badge-row");
+        const meta = createElement("p", "course-details", `${course.subject_area || "General"} | ${course.estimated_length || "Flexible pace"}`);
+        const classSummary = createElement(
+            "p",
+            "course-muted",
+            activeClassrooms === 1 ? "1 active class" : `${activeClassrooms} active classes`
+        );
+
+        card.href = `../courses/editor.html?course=${courseParam}`;
+        card.setAttribute("aria-label", `Open ${course.title || "course"}`);
         badges.append(
             createElement("span", "badge", course.relationship),
             createElement("span", "badge badge--quiet", formatStatus(course.status))
         );
         heading.append(name, badges);
 
-        const details = createElement(
-            "p",
-            "course-details",
-            `${course.subject_area} | ${course.estimated_length}`
-        );
-        const description = createElement(
-            "p",
-            "course-muted",
-            course.description || "No course description has been added yet."
-        );
-        const actions = createElement("div", "course-actions");
-        const builderAction = createElement("a", "secondary-button", "Manage course");
-        const classroomAction = createElement("a", "secondary-button", "Manage classrooms");
-        const deleteAction = createElement("button", "secondary-button destructive-button", "Delete course");
-        const courseParam = encodeURIComponent(course.id);
-        builderAction.href = `../courses/editor.html?course=${courseParam}`;
-        classroomAction.href = `../classrooms/manage.html?course=${courseParam}`;
-        deleteAction.type = "button";
-        deleteAction.addEventListener("click", () => deleteCourse(course));
-        actions.append(builderAction, classroomAction, deleteAction);
-
-        card.append(heading, details, description, renderClassrooms(course, classrooms), actions);
+        card.append(heading, meta, classSummary);
         return card;
     });
+
+    if (courses.length > MANAGED_COURSE_PREVIEW_LIMIT) {
+        const toggleCard = createElement("div", "course-grid-toggle-card");
+        const toggleCopy = showAllManagedCourses
+            ? `Showing all ${courses.length} courses.`
+            : `${hiddenCourseCount} more ${hiddenCourseCount === 1 ? "course" : "courses"} hidden.`;
+        const toggleButton = createElement(
+            "button",
+            "secondary-button course-grid-toggle",
+            showAllManagedCourses ? "Show fewer courses" : `Show all ${courses.length} courses`
+        );
+
+        toggleButton.type = "button";
+        toggleButton.addEventListener("click", () => {
+            showAllManagedCourses = !showAllManagedCourses;
+            renderCourses(courses, classrooms);
+        });
+        toggleCard.append(createElement("p", "course-muted", toggleCopy), toggleButton);
+        cards.push(toggleCard);
+    }
 
     courseList.replaceChildren(...cards);
 }
@@ -976,6 +963,44 @@ function renderStudentActivity(submissions, courses, lessons) {
     studentActivityList.replaceChildren(buildStudentSubmissionList(submissions.slice(0, 3), courses, lessons));
 }
 
+function renderStudentHome(enrollments, lessons, submissions) {
+    studentHomeClassesCount.textContent = String(enrollments.length);
+    studentContinueActions.replaceChildren();
+
+    if (!enrollments.length) {
+        studentContinueHeading.textContent = "Join your first class";
+        studentContinueCopy.textContent = "Use a class code from your teacher or browse available courses to get started.";
+
+        const browseAction = createElement("a", "primary-button", "Browse courses");
+        browseAction.href = "../courses/discover.html";
+        studentContinueActions.append(browseAction);
+        return;
+    }
+
+    const nextLearning = enrollments
+        .map((enrollment) => getContinueLesson(enrollment, lessons, submissions))
+        .find(Boolean);
+
+    if (!nextLearning) {
+        studentContinueHeading.textContent = "No lessons are ready yet";
+        studentContinueCopy.textContent = "Your joined classes are ready, and lessons will appear when your teacher adds them.";
+
+        const classesAction = createElement("a", "primary-button", "Open My Classes");
+        classesAction.href = "../classrooms/index.html";
+        studentContinueActions.append(classesAction);
+        return;
+    }
+
+    studentContinueHeading.textContent = nextLearning.label;
+    studentContinueCopy.textContent = nextLearning.detail;
+
+    const continueAction = createElement("a", "primary-button", nextLearning.label);
+    const classesAction = createElement("a", "secondary-button", "View all classes");
+    continueAction.href = nextLearning.href;
+    classesAction.href = "../classrooms/index.html";
+    studentContinueActions.append(continueAction, classesAction);
+}
+
 async function deleteCourse(course) {
     const confirmed = window.confirm(
         `Delete "${course.title || "Untitled course"}"? This removes it from your dashboard while preserving its existing history.`
@@ -1051,8 +1076,12 @@ async function refreshDashboard() {
         courseFormToggle.hidden = isStudentOnly;
         courseFormPanel.hidden = true;
         teacherSubmissionsSection.hidden = isStudentOnly;
+        teacherHomeSection.hidden = isStudentOnly;
+        studentHomeSection.hidden = !isStudentOnly;
+        managedCoursesSection.hidden = isStudentOnly;
         studentActivitySection.hidden = !isStudentOnly;
         studentJoinSection.hidden = !isStudentOnly;
+        studentSubmissionsSection.hidden = !isStudentOnly;
         if (enrolledCoursesSection) {
             enrolledCoursesSection.hidden = isStudentOnly || !hasStudentEnrollments;
         }
@@ -1071,19 +1100,21 @@ async function refreshDashboard() {
             classroomsSummary.textContent = String(displayStudentEnrollments.filter((enrollment) => enrollment.enrollment_type === "classroom").length);
             submissionsSummary.textContent = `${overallProgress}%`;
             studentSubmissionsSummary.textContent = String(studentPoints);
-            renderStudentEnrollments(displayStudentEnrollments, visibleCourses, studentClassrooms, lessons, studentSubmissions);
+            renderStudentHome(displayStudentEnrollments, lessons, studentSubmissions);
         } else {
-            greetingElement.textContent = `Welcome, ${currentProfile.username || "there"}. Manage teaching work and continue saved lessons.`;
-            coursesSummaryLabel.textContent = "Courses I teach";
-            classroomsSummaryLabel.textContent = "Managed classrooms";
-            submissionsSummaryLabel.textContent = "Recent submissions";
-            studentSubmissionsSummaryLabel.textContent = "My lesson work";
-            managedCoursesHeading.textContent = "Your managed courses";
-            managedCoursesCopy.textContent = "Courses you own or help teach appear here. New courses start as private drafts.";
+            greetingElement.textContent = `Welcome, ${currentProfile.username || "there"}. Start with the courses and classes you teach.`;
+            coursesSummaryLabel.textContent = "My courses";
+            classroomsSummaryLabel.textContent = "Active classes";
+            submissionsSummaryLabel.textContent = "Student submissions";
+            studentSubmissionsSummaryLabel.textContent = "My enrolled courses";
+            managedCoursesHeading.textContent = "My Courses";
+            managedCoursesCopy.textContent = "Courses you teach. Open a course to build lessons, manage classes, and review setup.";
             coursesSummary.textContent = String(courses.length);
             classroomsSummary.textContent = String(classrooms.length);
             submissionsSummary.textContent = String(submissions.length);
-            studentSubmissionsSummary.textContent = String(studentSubmissions.length);
+            studentSubmissionsSummary.textContent = String(displayStudentEnrollments.length);
+            homeSubmissionsCount.textContent = String(submissions.length);
+            managedCoursesSection.hidden = false;
             renderCourses(courses, classrooms);
 
             if (hasStudentEnrollments && enrolledCourseList) {
@@ -1118,7 +1149,6 @@ async function initializeDashboard() {
     renderDashboardAvatar(profile);
     greetingElement.textContent = `Welcome, ${profile.username || "there"}. Manage teaching work and continue saved lessons.`;
     courseFormToggle.disabled = false;
-    logoutButton.disabled = false;
     await refreshDashboard();
     await handleClassroomInvite(dashboardParams.get("classroomInvite"));
     await handlePublicCourseJoin(dashboardParams.get("courseJoin"));
@@ -1135,7 +1165,6 @@ courseFormCancel.addEventListener("click", () => {
 
 submissionFilterForm.addEventListener("change", refreshSubmissionList);
 studentJoinForm.addEventListener("submit", handleStudentJoinSubmit);
-logoutButton.addEventListener("click", handleLogout);
 
 courseForm.addEventListener("submit", async (event) => {
     event.preventDefault();
