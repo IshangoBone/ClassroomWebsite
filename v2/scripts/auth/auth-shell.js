@@ -22,6 +22,14 @@ const headingElement = qs(".auth-card-title");
 const copyElement = qs(".auth-card-copy");
 const loginForm = qs("[data-login-form]");
 const signupForm = qs("[data-signup-form]");
+const resetRequestButtons = [...document.querySelectorAll("[data-password-reset-request]")];
+let authFeedback = null;
+const googleOAuthEnabled = supabaseConfig.googleOAuthEnabled === true;
+const googleOAuthDisabledMessage = [
+    "Google sign-in is not enabled for this Supabase project yet.",
+    "Enable Google OAuth in Supabase, then set googleOAuthEnabled to true in config.js.",
+].join(" ");
+
 function getLoginRedirectUrl() {
     const redirectUrl = new URL("./login.html", window.location.href);
     redirectUrl.searchParams.set("confirmed", "1");
@@ -440,7 +448,6 @@ if (signupForm) {
         }
 
         signupForm.reset();
-        setFormBusy(signupForm, false);
 
         if (!data.session) {
             showAuthFeedback({
