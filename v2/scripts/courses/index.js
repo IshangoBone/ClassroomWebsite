@@ -68,31 +68,6 @@ function createCourseMetric(label, value) {
     return item;
 }
 
-function createClassroomList(classrooms) {
-    const wrapper = createElement("div", "teacher-course-classrooms");
-    const heading = createElement("h3", "", "Classes");
-    const list = createElement("div", "teacher-course-classroom-list");
-
-    if (!classrooms.length) {
-        list.append(createEmptyState("No classes have been created for this course yet."));
-    } else {
-        classrooms.forEach((classroom) => {
-            const item = createElement("article", "teacher-course-classroom-item");
-            const copy = createElement("div", "");
-            const classroomName = classroom.period_block ? `${classroom.name} - ${classroom.period_block}` : classroom.name;
-            const name = createElement("strong", "", classroomName || "Untitled class");
-            const details = createElement("span", "", classroom.join_code ? `Join code ${classroom.join_code}` : "No join code");
-
-            copy.append(name, details);
-            item.append(copy, createBadge(classroom.status || "active", { quiet: true }));
-            list.append(item);
-        });
-    }
-
-    wrapper.append(heading, list);
-    return wrapper;
-}
-
 function createCourseCard(course) {
     const classrooms = getCourseClassrooms(course.id);
     const modules = getCourseModules(course.id);
@@ -102,6 +77,8 @@ function createCourseCard(course) {
     const card = createElement("article", "teacher-course-card");
     const header = createElement("div", "teacher-course-card-header");
     const copy = createElement("div", "teacher-course-card-copy");
+    const titleRow = createElement("div", "teacher-course-title-row");
+    const titleGroup = createElement("div", "teacher-course-title-group");
     const title = createElement("h3", "", course.title || "Untitled course");
     const detail = createElement(
         "p",
@@ -110,7 +87,7 @@ function createCourseCard(course) {
     );
     const description = createElement(
         "p",
-        "course-muted",
+        "course-muted teacher-course-description",
         course.description || "No course description has been added yet."
     );
     const badges = createElement("div", "badge-row");
@@ -137,10 +114,12 @@ function createCourseCard(course) {
     lessonHubLink.href = `../lessons/index.html?course=${course.id}`;
     classesLink.href = `../classrooms/manage.html?course=${course.id}`;
 
+    titleGroup.append(title, detail);
+    titleRow.append(titleGroup, badges);
     actions.append(openCourseLink, lessonHubLink, classesLink);
-    copy.append(title, detail, description, badges);
+    copy.append(titleRow, description);
     header.append(copy, actions);
-    card.append(header, metrics, createClassroomList(classrooms));
+    card.append(header, metrics);
 
     return card;
 }
@@ -314,7 +293,7 @@ async function refreshCourses({ quiet = false } = {}) {
 
     updateSummary();
     renderCourses();
-    setStatus(loadedCourses.length ? "My Courses loaded." : "Create a draft course to begin.", loadedCourses.length ? "success" : "warning");
+    setStatus(loadedCourses.length ? "" : "Create a draft course to begin.", loadedCourses.length ? "" : "warning");
 }
 
 function toggleCourseForm(show) {

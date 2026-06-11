@@ -1086,7 +1086,7 @@ editorForm.addEventListener("submit", async (event) => {
         return;
     }
 
-    setStatus("Saving course basics...");
+    setStatus("Saving course setup...");
 
     if (courseThumbnail) {
         try {
@@ -1117,7 +1117,7 @@ editorForm.addEventListener("submit", async (event) => {
     renderCourseAccess(course);
     fillCourseForm(course);
     fillPacingForm(course);
-    setStatus("Course basics saved.", "success");
+    setStatus("Course setup saved.", "success");
 });
 
 pacingForm.addEventListener("submit", async (event) => {

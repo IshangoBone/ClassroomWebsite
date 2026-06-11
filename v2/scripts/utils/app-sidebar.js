@@ -211,7 +211,7 @@ export async function renderAppSidebar(profile) {
         links.append(createNavLink(item, pagesRoot, currentPath));
     });
 
-    settingsLink.href = `${pagesRoot}/profile/index.html`;
+    settingsLink.href = `${pagesRoot}/settings/index.html`;
     logoutButton.type = "button";
     logoutButton.addEventListener("click", () => {
         handleLogout(pagesRoot, logoutButton);

@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CodeTheCurrent V2 | Manage Course</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260609-sticky-nav" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260610-button-system" />
 </head>
 
 <body>
@@ -23,74 +23,100 @@
 
         <p class="auth-status management-status" data-course-status aria-live="polite"></p>
 
-        <section class="management-section" data-course-content hidden aria-labelledby="course-access-heading">
-            <div class="section-header section-header--actions">
-                <div>
-                    <h2 id="course-access-heading">Course access</h2>
-                    <p class="section-copy">Publish the course when students can join it without a classroom code.</p>
-                </div>
-                <span class="badge badge--quiet" data-course-visibility>Loading...</span>
-            </div>
-
-            <p class="course-muted" data-public-course-copy>Public course joining is unavailable until this course is published.</p>
-            <label class="form-field course-discovery-toggle">
-                <span>Discovery listing</span>
-                <select name="discovery-listing" data-course-discovery-select disabled>
-                    <option value="hidden">Hidden from public discovery</option>
-                    <option value="listed">Listed in public discovery</option>
-                </select>
-            </label>
-            <div class="course-form-actions">
-                <button type="button" class="secondary-button" data-toggle-course-visibility>Publish course</button>
-                <button type="button" class="secondary-button" data-copy-public-course-link>Copy public course link</button>
-                <a class="secondary-button" href="preview.html" data-course-preview-link>Preview as student</a>
-                <button type="button" class="secondary-button" data-archive-course>Archive course</button>
-                <button type="button" class="secondary-button destructive-button" data-delete-course>Delete course</button>
-            </div>
-        </section>
-
-        <section class="management-section" data-course-content hidden aria-labelledby="course-basics-heading">
+        <section class="management-section course-setup-section" data-course-content hidden aria-labelledby="course-setup-heading">
             <div class="section-header">
-                <h2 id="course-basics-heading">Course basics</h2>
-                <p class="section-copy">These fields define the starting information for your draft course.</p>
+                <h2 id="course-setup-heading">Course setup</h2>
+                <p class="section-copy">Manage the information students see, how they find the course, and the image used for discovery.</p>
             </div>
 
-            <form class="course-form" data-course-editor-form>
-                <label class="form-field">
-                    <span>Course title</span>
-                    <input type="text" name="title" maxlength="120" required />
-                </label>
+            <div class="course-setup-grid">
+                <article class="course-setup-card course-setup-card--access" aria-labelledby="course-access-heading">
+                    <div class="section-header section-header--actions">
+                        <div>
+                            <h3 id="course-access-heading">Access and preview</h3>
+                            <p class="section-copy">Publish the course when students can join it without a classroom code.</p>
+                        </div>
+                        <span class="badge badge--quiet" data-course-visibility>Loading...</span>
+                    </div>
 
-                <label class="form-field">
-                    <span>Subject area</span>
-                    <input type="text" name="subject-area" maxlength="80" required />
-                </label>
+                    <p class="course-muted" data-public-course-copy>Public course joining is unavailable until this course is published.</p>
+                    <div class="course-access-grid">
+                        <label class="form-field course-discovery-toggle">
+                            <span>Discovery listing</span>
+                            <select name="discovery-listing" data-course-discovery-select disabled>
+                                <option value="hidden">Hidden from public discovery</option>
+                                <option value="listed">Listed in public discovery</option>
+                            </select>
+                        </label>
+                        <div class="course-access-actions">
+                            <button type="button" class="primary-button" data-toggle-course-visibility>Publish course</button>
+                            <button type="button" class="secondary-button" data-copy-public-course-link>Copy public link</button>
+                            <a class="secondary-button" href="preview.html" data-course-preview-link>Preview as student</a>
+                        </div>
+                    </div>
+                    <details class="course-danger-zone">
+                        <summary>Advanced course options</summary>
+                        <div class="course-danger-actions">
+                            <button type="button" class="secondary-button" data-archive-course>Archive course</button>
+                            <button type="button" class="secondary-button destructive-button" data-delete-course>Delete course</button>
+                        </div>
+                    </details>
+                </article>
 
-                <label class="form-field">
-                    <span>Estimated length</span>
-                    <input type="text" name="estimated-length" maxlength="80" required />
-                </label>
+                <form class="course-form course-form--setup" data-course-editor-form>
+                    <div class="course-setup-card course-setup-card--details">
+                        <div class="section-header">
+                            <h3>Course details</h3>
+                            <p class="section-copy">Keep the title, subject, length, and description clear for students.</p>
+                        </div>
 
-                <label class="form-field form-field--wide">
-                    <span>Description</span>
-                    <textarea name="description" rows="4" maxlength="600" required></textarea>
-                </label>
+                        <div class="course-details-grid">
+                            <label class="form-field">
+                                <span>Course title</span>
+                                <input type="text" name="title" maxlength="120" required />
+                            </label>
 
-                <label class="form-field form-field--wide">
-                    <span>Course thumbnail</span>
-                    <input type="file" name="course-thumbnail" accept="image/png,image/jpeg,image/webp,image/gif" />
-                    <small class="form-hint">Optional public image for course discovery. PNG, JPEG, WebP, or GIF up to 10 MB.</small>
-                </label>
+                            <label class="form-field">
+                                <span>Subject area</span>
+                                <input type="text" name="subject-area" maxlength="80" required />
+                            </label>
 
-                <div class="file-preview form-field--wide" data-course-thumbnail-preview hidden>
-                    <img alt="Course thumbnail preview" data-course-thumbnail-preview-image />
-                    <span data-course-thumbnail-preview-name></span>
-                </div>
+                            <label class="form-field">
+                                <span>Estimated length</span>
+                                <input type="text" name="estimated-length" maxlength="80" required />
+                            </label>
 
-                <div class="course-form-actions form-field--wide">
-                    <button type="submit" class="primary-button">Save course basics</button>
-                </div>
-            </form>
+                            <label class="form-field form-field--wide">
+                                <span>Description</span>
+                                <textarea name="description" rows="4" maxlength="600" required></textarea>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="course-setup-card course-thumbnail-card">
+                        <div class="section-header">
+                            <h3>Course image</h3>
+                            <p class="section-copy">Optional thumbnail for course discovery and student course cards.</p>
+                        </div>
+
+                        <div class="course-thumbnail-grid">
+                            <label class="form-field course-thumbnail-upload">
+                                <span>Upload thumbnail</span>
+                                <input type="file" name="course-thumbnail" accept="image/png,image/jpeg,image/webp,image/gif" />
+                                <small class="form-hint">PNG, JPEG, WebP, or GIF up to 10 MB.</small>
+                            </label>
+
+                            <div class="file-preview course-thumbnail-preview" data-course-thumbnail-preview hidden>
+                                <img alt="Course thumbnail preview" data-course-thumbnail-preview-image />
+                                <span data-course-thumbnail-preview-name></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="course-form-actions course-form-actions--setup">
+                        <button type="submit" class="primary-button">Save course setup</button>
+                    </div>
+                </form>
         </section>
 
         <section class="management-section" data-course-content hidden aria-labelledby="course-pacing-heading">

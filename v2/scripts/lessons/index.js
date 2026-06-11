@@ -136,7 +136,7 @@ function createLessonCard(course, module, lesson, contentCount, questionCount) {
     const previewLink = createElement("a", "secondary-button lesson-hub-action", "View student page");
 
     builderLink.href = `builder.html?lesson=${lesson.id}`;
-    previewLink.href = `view.html?lesson=${lesson.id}`;
+    previewLink.href = `view.html?lesson=${lesson.id}&preview=teacher&course=${course.id}`;
 
     meta.append(
         createBadge(`Lesson ${getLessonNumber(lesson)}`, { quiet: true }),

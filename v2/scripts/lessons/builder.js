@@ -115,6 +115,24 @@ const questionPhases = [
     ["during", "During lesson"],
     ["reflection", "Reflection"],
 ];
+const lessonLayoutMarker = "__ctc_lesson_layout_v1__";
+const savedLayoutTemplates = new Set(["text", "wide", "image-text", "feature", "image", "columns", "gallery", "carousel", "divider", "spacer", "toc"]);
+
+function encodeLessonLayout(layout) {
+    return `${lessonLayoutMarker}\n${JSON.stringify(layout)}`;
+}
+
+function decodeLessonLayout(bodyText = "") {
+    if (!bodyText.startsWith(lessonLayoutMarker)) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(bodyText.slice(lessonLayoutMarker.length).trim());
+    } catch {
+        return null;
+    }
+}
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -378,7 +396,7 @@ function setToolButtonState(buttons, activeValue) {
     });
 }
 
-function activateToolTab(tabName = "content-blocks") {
+function activateToolTab(tabName = "lesson-inserts") {
     toolTabButtons.forEach((button) => {
         const isActive = button.dataset.toolTab === tabName;
 
@@ -519,6 +537,18 @@ function setInlineSlotContent(slot, content) {
     plusButton.setAttribute("aria-label", "Replace media");
 }
 
+function getInlineLayoutTemplate(slot) {
+    return slot.closest(".lesson-inline-block")?.dataset.layoutTemplate || "";
+}
+
+function shouldDeferInlineImageSave(slot) {
+    return savedLayoutTemplates.has(getInlineLayoutTemplate(slot));
+}
+
+function removeInlineDraftBlock(slot) {
+    slot.closest(".lesson-inline-block")?.remove();
+}
+
 function chooseInlineFile(slot, type) {
     const input = document.createElement("input");
     input.type = "file";
@@ -545,20 +575,31 @@ function chooseInlineFile(slot, type) {
         const objectUrl = URL.createObjectURL(file);
 
         if (type === "image" && file.type.startsWith("image/")) {
+            const draftText = getInlineDraftText(slot);
             const image = createElement("img", "lesson-inline-image-preview");
             image.src = objectUrl;
-            image.alt = file.name;
+            image.alt = draftText.title || file.name;
             setInlineSlotContent(slot, image);
             setStatus("Uploading image...");
             try {
-                const fileRecord = await uploadLessonResource(file, file.name);
-                await createSavedContentBlock({
+                const fileRecord = await uploadLessonResource(file, draftText.title || file.name);
+                if (shouldDeferInlineImageSave(slot)) {
+                    slot.dataset.mediaUrl = fileRecord.storage_path;
+                    slot.dataset.mediaTitle = file.name;
+                    setStatus("Image added to the gallery draft. Save the layout when it is ready.", "success");
+                    return;
+                }
+
+                const contentBlock = await createSavedContentBlock({
                     blockType: "file",
-                    title: file.name,
+                    title: draftText.title || file.name,
+                    bodyText: draftText.bodyText,
                     fileUrl: fileRecord.storage_path,
                     fileType: "image",
                     fileRecord,
                 });
+                slot.closest(".lesson-inline-block").dataset.savedContentBlockId = contentBlock.id;
+                removeInlineDraftBlock(slot);
                 setStatus("Image added to the lesson.", "success");
             } catch (error) {
                 setStatus(`Image could not be saved: ${error.message}`, "error");
@@ -581,6 +622,7 @@ function chooseInlineFile(slot, type) {
                 fileType: getFileTypeForInlineUpload(file, type),
                 fileRecord,
             });
+            removeInlineDraftBlock(slot);
             setStatus("Upload added to the lesson.", "success");
         } catch (error) {
             setStatus(`Upload could not be saved: ${error.message}`, "error");
@@ -622,23 +664,40 @@ function addInlineUrl(slot, type) {
             title: "YouTube video",
             externalUrl: value,
         })
-            .then(() => setStatus("YouTube video embedded in the lesson.", "success"))
+            .then(() => {
+                removeInlineDraftBlock(slot);
+                setStatus("YouTube video embedded in the lesson.", "success");
+            })
             .catch((error) => setStatus(`YouTube video could not be saved: ${error.message}`, "error"));
         return;
     }
 
     if (type === "image") {
+        const draftText = getInlineDraftText(slot);
         const image = createElement("img", "lesson-inline-image-preview");
         image.src = value;
-        image.alt = "Lesson image";
+        image.alt = draftText.title || "Lesson image";
         setInlineSlotContent(slot, image);
+
+        if (shouldDeferInlineImageSave(slot)) {
+            slot.dataset.mediaUrl = value;
+            slot.dataset.mediaTitle = draftText.title || "Image";
+            setStatus("Image added to the gallery draft. Save the layout when it is ready.", "success");
+            return;
+        }
+
         createSavedContentBlock({
             blockType: "file",
-            title: "Image",
+            title: draftText.title || "Image",
+            bodyText: draftText.bodyText,
             fileUrl: value,
             fileType: "image",
         })
-            .then(() => setStatus("Image added to the lesson.", "success"))
+            .then((contentBlock) => {
+                slot.closest(".lesson-inline-block").dataset.savedContentBlockId = contentBlock.id;
+                removeInlineDraftBlock(slot);
+                setStatus("Image added to the lesson.", "success");
+            })
             .catch((error) => setStatus(`Image could not be saved: ${error.message}`, "error"));
         return;
     }
@@ -661,7 +720,10 @@ function addInlineUrl(slot, type) {
             title: "Slides",
             externalUrl: value,
         })
-            .then(() => setStatus("Slides embedded in the lesson.", "success"))
+            .then(() => {
+                removeInlineDraftBlock(slot);
+                setStatus("Slides embedded in the lesson.", "success");
+            })
             .catch((error) => setStatus(`Slides could not be saved: ${error.message}`, "error"));
         return;
     }
@@ -676,7 +738,10 @@ function addInlineUrl(slot, type) {
         title: "Link",
         externalUrl: value,
     })
-        .then(() => setStatus("Link added to the lesson.", "success"))
+        .then(() => {
+            removeInlineDraftBlock(slot);
+            setStatus("Link added to the lesson.", "success");
+        })
         .catch((error) => setStatus(`Link could not be saved: ${error.message}`, "error"));
 }
 
@@ -753,6 +818,215 @@ function getFileTypeForInlineUpload(file, requestedType) {
     return "file";
 }
 
+function isLessonStoragePath(url = "") {
+    return Boolean(url) && !isExternalUrl(url) && !url.startsWith("data:") && !url.startsWith("blob:");
+}
+
+async function getDisplayResourceUrl(contentBlock) {
+    const url = contentBlock.file_url || contentBlock.external_url || "";
+
+    if (!isLessonStoragePath(url)) {
+        return url;
+    }
+
+    const { data, error } = await supabase.storage
+        .from(lessonResourceBucket)
+        .createSignedUrl(url, 60 * 60);
+
+    if (error) {
+        console.warn("Lesson resource signed URL failed", error);
+        return "";
+    }
+
+    return data?.signedUrl || "";
+}
+
+async function hydrateLessonLayout(bodyText = "") {
+    const layout = decodeLessonLayout(bodyText);
+
+    if (!layout) {
+        return null;
+    }
+
+    if (layout.type === "gallery") {
+        const images = await Promise.all((layout.images || []).map(async (image) => ({
+            ...image,
+            displayUrl: await getDisplayResourceUrl({ file_url: image.url }),
+        })));
+
+        return { ...layout, images };
+    }
+
+    if ((layout.type === "imageText" || layout.type === "featureImage") && layout.image?.url) {
+        return {
+            ...layout,
+            image: {
+                ...layout.image,
+                displayUrl: await getDisplayResourceUrl({ file_url: layout.image.url }),
+            },
+        };
+    }
+
+    return layout;
+}
+
+function getInlineDraftText(slot) {
+    const block = slot.closest(".lesson-inline-block");
+    const title = block?.querySelector(".lesson-inline-title")?.textContent.trim() || "";
+    const bodyText = block?.querySelector(".lesson-inline-body")?.textContent.trim() || "";
+
+    return { title, bodyText };
+}
+
+async function syncInlineDraftText(block) {
+    const contentBlockId = block.dataset.savedContentBlockId;
+
+    if (!contentBlockId) {
+        return;
+    }
+
+    const title = block.querySelector(".lesson-inline-title")?.textContent.trim() || "";
+    const bodyText = block.querySelector(".lesson-inline-body")?.textContent.trim() || "";
+    const { error } = await supabase
+        .from("lesson_content_blocks")
+        .update({
+            title: title || null,
+            body_text: bodyText || null,
+        })
+        .eq("id", contentBlockId)
+        .eq("lesson_id", lessonId);
+
+    if (error) {
+        setStatus(error.message || "The content block text could not be saved.", "error");
+        return;
+    }
+
+    await loadContentBlocks();
+    setStatus("Content block text saved.", "success");
+}
+
+function getInlineTextStackData(block) {
+    return [...block.querySelectorAll(".lesson-inline-text-stack")]
+        .map((stack) => ({
+            title: stack.querySelector(".lesson-inline-title")?.textContent.trim() || "",
+            body: stack.querySelector(".lesson-inline-body")?.textContent.trim() || "",
+        }))
+        .filter((column) => column.title || column.body);
+}
+
+function getInlineGalleryData(block) {
+    return [...block.querySelectorAll(".lesson-inline-media-slot")]
+        .map((slot) => ({
+            url: slot.dataset.mediaUrl || "",
+            title: slot.dataset.mediaTitle || slot.querySelector("img")?.alt || "Image",
+        }))
+        .filter((image) => image.url);
+}
+
+function getInlineSingleImageData(block) {
+    const slot = block.querySelector(".lesson-inline-media-slot");
+
+    if (!slot?.dataset.mediaUrl) {
+        return null;
+    }
+
+    return {
+        url: slot.dataset.mediaUrl,
+        title: slot.dataset.mediaTitle || slot.querySelector("img")?.alt || "Image",
+    };
+}
+
+async function saveInlineLayoutBlock(block) {
+    const template = block.dataset.layoutTemplate || "";
+    let layout = null;
+    let title = "";
+
+    if (template === "text" || template === "wide" || template === "toc") {
+        const [section] = getInlineTextStackData(block);
+
+        if (!section) {
+            setStatus("Add text before saving this layout.", "error");
+            return;
+        }
+
+        title = section.title || "Text section";
+        layout = {
+            type: template === "toc" ? "text" : template,
+            title: section.title,
+            body: section.body,
+        };
+    } else if (template === "columns") {
+        const columns = getInlineTextStackData(block);
+
+        if (!columns.length) {
+            setStatus("Add text to at least one column before saving this layout.", "error");
+            return;
+        }
+
+        title = "Column layout";
+        layout = { type: "columns", columns };
+    } else if (template === "image-text") {
+        const image = getInlineSingleImageData(block);
+        const [copy] = getInlineTextStackData(block);
+
+        if (!image) {
+            setStatus("Add an image before saving this layout.", "error");
+            return;
+        }
+
+        title = copy?.title || image.title || "Image and text";
+        layout = {
+            type: "imageText",
+            image,
+            title: copy?.title || "",
+            body: copy?.body || "",
+        };
+    } else if (template === "feature" || template === "image") {
+        const image = getInlineSingleImageData(block);
+
+        if (!image) {
+            setStatus("Add an image before saving this layout.", "error");
+            return;
+        }
+
+        title = image.title || "Feature image";
+        layout = {
+            type: "featureImage",
+            image,
+        };
+    } else if (template === "gallery" || template === "carousel") {
+        const images = getInlineGalleryData(block);
+
+        if (!images.length) {
+            setStatus("Add at least one image before saving this gallery.", "error");
+            return;
+        }
+
+        title = "Image gallery";
+        layout = { type: "gallery", images };
+    } else if (template === "divider" || template === "spacer") {
+        title = template === "divider" ? "Divider" : "Spacer";
+        layout = { type: template };
+    }
+
+    if (!layout) {
+        return;
+    }
+
+    setStatus("Saving layout block...");
+    try {
+        await createSavedContentBlock({
+            blockType: "text",
+            title,
+            bodyText: encodeLessonLayout(layout),
+        });
+        block.remove();
+        setStatus("Layout block saved.", "success");
+    } catch (error) {
+        setStatus(`Layout block could not be saved: ${error.message}`, "error");
+    }
+}
+
 async function createSavedContentBlock({
     blockType = "text",
     title = "",
@@ -766,7 +1040,7 @@ async function createSavedContentBlock({
         lesson_id: lessonId,
         block_type: getStoredBlockType(blockType),
         title: title || null,
-        body_text: blockType === "text" ? bodyText : null,
+        body_text: bodyText || null,
         external_url: ["link", "slides", "youtube"].includes(blockType) ? externalUrl : null,
         file_url: blockType === "file" ? fileUrl : null,
         file_type: blockType === "file" ? fileType : null,
@@ -798,12 +1072,25 @@ function createInlineDraftBlock(button) {
     const block = createElement("article", `lesson-inline-block lesson-inline-block--${template}`);
     const toolbar = createElement("div", "lesson-inline-toolbar");
     const label = createElement("span", "", "Draft content block");
+    const saveLayoutButton = createElement("button", "lesson-inline-remove lesson-inline-save", "Save layout");
     const removeButton = createElement("button", "lesson-inline-remove", "Remove");
     const body = createElement("div", "lesson-inline-block-body");
 
+    block.dataset.layoutTemplate = template;
+    saveLayoutButton.type = "button";
+    saveLayoutButton.addEventListener("click", () => saveInlineLayoutBlock(block));
     removeButton.type = "button";
     removeButton.addEventListener("click", () => block.remove());
-    toolbar.append(label, removeButton);
+    block.addEventListener("focusout", (event) => {
+        if (event.target.matches(".lesson-inline-title, .lesson-inline-body")) {
+            syncInlineDraftText(block);
+        }
+    });
+    toolbar.append(label);
+    if (savedLayoutTemplates.has(template)) {
+        toolbar.append(saveLayoutButton);
+    }
+    toolbar.append(removeButton);
 
     if (template === "divider") {
         body.append(createElement("hr", "lesson-inline-divider"));
@@ -1715,6 +2002,115 @@ async function saveQuestionOrder(list, phase) {
     setStatus("Question block order saved.", "success");
 }
 
+function createSavedLayoutPreview(layout) {
+    if (layout?.type === "text" || layout?.type === "wide") {
+        const wrapper = createElement("div", `lesson-layout-text-preview lesson-layout-text-preview--${layout.type}`);
+
+        if (layout.title) {
+            wrapper.append(createElement("h4", "", layout.title));
+        }
+        if (layout.body) {
+            wrapper.append(createElement("p", "", layout.body));
+        }
+
+        return wrapper;
+    }
+
+    if (layout?.type === "imageText") {
+        const wrapper = createElement("div", "content-block-layout-preview");
+        const media = createElement("div", "content-block-layout-media");
+        const copy = createElement("div", "content-block-layout-copy");
+        const image = createElement("img", "content-block-image-preview");
+
+        image.src = layout.image?.displayUrl || layout.image?.url || "";
+        image.alt = layout.image?.title || layout.title || "Lesson image";
+        media.append(image);
+        if (layout.title) {
+            copy.append(createElement("h4", "", layout.title));
+        }
+        if (layout.body) {
+            copy.append(createElement("p", "", layout.body));
+        }
+        wrapper.append(media, copy);
+        return wrapper;
+    }
+
+    if (layout?.type === "featureImage") {
+        const wrapper = createElement("div", "lesson-layout-feature-preview");
+        const image = createElement("img", "", "");
+
+        image.src = layout.image?.displayUrl || layout.image?.url || "";
+        image.alt = layout.image?.title || "Feature image";
+        wrapper.append(image);
+        return wrapper;
+    }
+
+    if (layout?.type === "columns") {
+        const wrapper = createElement("div", "lesson-layout-columns-preview");
+
+        (layout.columns || []).forEach((column) => {
+            const item = createElement("article", "lesson-layout-column");
+
+            if (column.title) {
+                item.append(createElement("h4", "", column.title));
+            }
+            if (column.body) {
+                item.append(createElement("p", "", column.body));
+            }
+            wrapper.append(item);
+        });
+
+        return wrapper;
+    }
+
+    if (layout?.type === "gallery") {
+        const wrapper = createElement("div", "lesson-layout-gallery-preview");
+
+        (layout.images || []).forEach((image) => {
+            const img = createElement("img", "", "");
+
+            img.src = image.displayUrl || image.url || "";
+            img.alt = image.title || "Gallery image";
+            wrapper.append(img);
+        });
+
+        return wrapper;
+    }
+
+    if (layout?.type === "divider") {
+        return createElement("hr", "lesson-inline-divider");
+    }
+
+    if (layout?.type === "spacer") {
+        return createElement("div", "lesson-inline-spacer");
+    }
+
+    return createElement("p", "", "Layout block");
+}
+
+function createSavedEmbedPreview(contentBlock, contentUrl) {
+    const embedUrl = contentBlock.block_type === "youtube"
+        ? getYouTubeEmbedUrl(contentUrl)
+        : getSlidesEmbedUrl(contentUrl);
+
+    if (!embedUrl) {
+        return null;
+    }
+
+    const wrapper = createElement("div", "content-block-embed-preview");
+    const frame = createElement("iframe", "", "");
+
+    frame.src = embedUrl;
+    frame.title = contentBlock.title || (contentBlock.block_type === "youtube" ? "YouTube video" : "Slides");
+    frame.loading = "lazy";
+    frame.allowFullscreen = true;
+    if (contentBlock.block_type === "youtube") {
+        frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+    }
+    wrapper.append(frame);
+    return wrapper;
+}
+
 function renderContentBlocks(contentBlocks) {
     if (!contentBlocks.length) {
         contentBlockList.replaceChildren(
@@ -1748,11 +2144,14 @@ function renderContentBlocks(contentBlocks) {
         const item = createElement("li", "content-block-card");
         const title = createElement("h3", "content-block-title", getDefaultContentBlockTitle(contentBlock));
         const label = createElement("span", "badge badge--quiet", `${getContentBlockTypeLabel(contentBlock)} ${contentBlock.order_index + 1}`);
-        const contentUrl = contentBlock.file_url || contentBlock.external_url || "";
+        const contentUrl = contentBlock.display_url || contentBlock.file_url || contentBlock.external_url || "";
         const isImageResource = contentBlock.block_type === "file" && contentBlock.file_type === "image";
+        const isEmbedResource = ["youtube", "slides"].includes(contentBlock.block_type);
         const attachedResource = contentBlock.file_resource;
-        const contentPreview = ["file", "link", "slides", "youtube"].includes(contentBlock.block_type)
-            ? createElement("a", "course-muted content-block-body", contentUrl)
+        const contentPreview = isEmbedResource
+            ? createElement("div", "course-muted content-block-body")
+            : ["file", "link"].includes(contentBlock.block_type)
+                ? createElement("a", "course-muted content-block-body", contentUrl)
             : createElement("p", "course-muted content-block-body", contentBlock.body_text || "");
         const moveUpButton = createElement("button", "secondary-button lesson-action", "Move up");
         const moveDownButton = createElement("button", "secondary-button lesson-action", "Move down");
@@ -1761,9 +2160,13 @@ function renderContentBlocks(contentBlocks) {
         const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete content");
         const actions = createElement("div", "content-block-actions");
         const dragHint = createElement("span", "content-block-drag-hint", "Drag to reorder");
+        const layout = contentBlock.layout;
 
         item.draggable = true;
         item.dataset.contentBlockId = contentBlock.id;
+        if (isImageResource || layout || isEmbedResource) {
+            item.classList.add("content-block-card--layout");
+        }
         item.addEventListener("dragstart", (event) => {
             event.dataTransfer.effectAllowed = "move";
             event.dataTransfer.setData("text/plain", contentBlock.id);
@@ -1773,19 +2176,38 @@ function renderContentBlocks(contentBlocks) {
             item.classList.remove("content-block-card--dragging");
             await saveContentBlockOrder(list);
         });
-        if (["file", "link", "slides", "youtube"].includes(contentBlock.block_type)) {
+        if (layout) {
+            contentPreview.replaceChildren(createSavedLayoutPreview(layout));
+        } else if (isEmbedResource && contentUrl) {
+            const embedPreview = createSavedEmbedPreview(contentBlock, contentUrl);
+
+            if (embedPreview) {
+                contentPreview.replaceChildren(embedPreview);
+            }
+        } else if (isImageResource && contentUrl) {
+            const preview = createElement("div", "content-block-layout-preview");
+            const media = createElement("div", "content-block-layout-media");
+            const copy = createElement("div", "content-block-layout-copy");
+            const image = createElement("img", "content-block-image-preview");
+
+            image.src = contentUrl;
+            image.alt = contentBlock.title || "Lesson image";
+            media.append(image);
+            copy.append(createElement("h4", "", contentBlock.title || getResourceDisplayName(attachedResource) || "Image"));
+            if (contentBlock.body_text) {
+                copy.append(createElement("p", "", contentBlock.body_text));
+            }
+            preview.append(media, copy);
+            contentPreview.replaceChildren(preview);
+            contentPreview.href = contentUrl;
+            contentPreview.target = "_blank";
+            contentPreview.rel = "noopener noreferrer";
+        } else if (["file", "link"].includes(contentBlock.block_type)) {
             contentPreview.href = contentUrl || "#";
             contentPreview.target = "_blank";
             contentPreview.rel = "noopener noreferrer";
 
-            if (isImageResource && contentUrl && !attachedResource) {
-                const image = createElement("img", "content-block-image-preview");
-                image.src = contentUrl;
-                image.alt = contentBlock.title || "Lesson image";
-                contentPreview.replaceChildren(image);
-            } else if (isImageResource && attachedResource) {
-                contentPreview.textContent = `${getResourceDisplayName(attachedResource)} (${formatFileSize(attachedResource.file_size)})`;
-            } else if (contentBlock.block_type === "file") {
+            if (contentBlock.block_type === "file") {
                 contentPreview.textContent = attachedResource
                     ? `${getResourceDisplayName(attachedResource)} (${formatFileSize(attachedResource.file_size)})`
                     : contentUrl
@@ -1847,10 +2269,12 @@ async function loadContentBlocks() {
         setStatus("Lesson content loaded, but attached file details could not be loaded.", "error");
     }
 
-    loadedContentBlocks = data.map((contentBlock) => ({
+    loadedContentBlocks = await Promise.all(data.map(async (contentBlock) => ({
         ...contentBlock,
+        display_url: await getDisplayResourceUrl(contentBlock),
         file_resource: (links || []).find((link) => link.lesson_content_block_id === contentBlock.id)?.files || null,
-    }));
+        layout: await hydrateLessonLayout(contentBlock.body_text || ""),
+    })));
     renderContentBlocks(loadedContentBlocks);
     return true;
 }
@@ -2279,7 +2703,7 @@ async function initializePage() {
     }
     courseEditorLink.href = `../courses/editor.html?course=${encodeURIComponent(course.id)}`;
     courseEditorLink.textContent = "Back to course editor";
-    studentViewLink.href = `view.html?lesson=${encodeURIComponent(lesson.id)}`;
+    studentViewLink.href = `view.html?lesson=${encodeURIComponent(lesson.id)}&preview=teacher&course=${encodeURIComponent(course.id)}`;
     studentViewLink.hidden = false;
     modulePosition.textContent = String(module.order_index + 1);
     lessonPosition.textContent = String(lesson.order_index + 1);
@@ -2383,7 +2807,7 @@ contentBlockForm.addEventListener("submit", async (event) => {
             .update({
                 block_type: storedBlockType,
                 title: title || null,
-                body_text: blockType === "text" ? bodyText : null,
+                body_text: bodyText || null,
                 external_url: ["link", "slides", "youtube"].includes(blockType) ? contentUrl : null,
                 file_url: ["file", "image", "audio"].includes(blockType) ? savedFileUrl : null,
                 file_type: blockType === "image" ? "image" : ["file", "audio"].includes(blockType) ? fileType : null,
@@ -2454,7 +2878,7 @@ contentBlockForm.addEventListener("submit", async (event) => {
         lesson_id: lessonId,
         block_type: storedBlockType,
         title: title || null,
-        body_text: blockType === "text" ? bodyText : null,
+        body_text: bodyText || null,
         external_url: ["link", "slides", "youtube"].includes(blockType) ? contentUrl : null,
         file_url: ["file", "image", "audio"].includes(blockType) ? savedFileUrl : null,
         file_type: blockType === "image" ? "image" : ["file", "audio"].includes(blockType) ? fileType : null,
@@ -2508,7 +2932,7 @@ contentToolButtons.forEach((button) => {
 
 toolTabButtons.forEach((button) => {
     button.addEventListener("click", () => {
-        activateToolTab(button.dataset.toolTab || "content-blocks");
+        activateToolTab(button.dataset.toolTab || "lesson-inserts");
     });
 });
 

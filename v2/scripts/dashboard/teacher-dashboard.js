@@ -46,6 +46,7 @@ const studentHomeClassesCount = qs("[data-student-home-classes-count]");
 const homeSubmissionsCount = qs("[data-home-submissions-count]");
 const studentSubmissionsSection = qs("[data-student-submissions-section]");
 const dashboardParams = new URLSearchParams(window.location.search);
+const MANAGED_COURSE_PREVIEW_LIMIT = 6;
 
 let currentProfile = null;
 let dashboardCourses = [];
@@ -54,6 +55,7 @@ let dashboardLessons = [];
 let dashboardSubmissions = [];
 let dashboardStudentNames = new Map();
 let dashboardStudentTeachers = new Map();
+let showAllManagedCourses = false;
 
 function setStatus(message, tone = "info") {
     dashboardStatus.textContent = message;
@@ -570,41 +572,54 @@ function renderCourses(courses, classrooms) {
         return;
     }
 
-    const cards = courses.map((course) => {
-        const card = createElement("article", "course-card");
+    const visibleCourses = showAllManagedCourses ? courses : courses.slice(0, MANAGED_COURSE_PREVIEW_LIMIT);
+    const hiddenCourseCount = Math.max(courses.length - visibleCourses.length, 0);
+    const cards = visibleCourses.map((course) => {
+        const courseClassrooms = classrooms.filter((classroom) => classroom.course_id === course.id);
+        const activeClassrooms = courseClassrooms.filter((classroom) => classroom.status !== "archived").length;
+        const courseParam = encodeURIComponent(course.id);
+        const card = createElement("a", "course-card course-card--compact course-card--link");
         const heading = createElement("div", "course-card-header");
         const name = createElement("h3", "course-title", course.title || "Untitled course");
         const badges = createElement("div", "badge-row");
+        const meta = createElement("p", "course-details", `${course.subject_area || "General"} | ${course.estimated_length || "Flexible pace"}`);
+        const classSummary = createElement(
+            "p",
+            "course-muted",
+            activeClassrooms === 1 ? "1 active class" : `${activeClassrooms} active classes`
+        );
+
+        card.href = `../courses/editor.html?course=${courseParam}`;
+        card.setAttribute("aria-label", `Open ${course.title || "course"}`);
         badges.append(
             createElement("span", "badge", course.relationship),
             createElement("span", "badge badge--quiet", formatStatus(course.status))
         );
         heading.append(name, badges);
 
-        const details = createElement(
-            "p",
-            "course-details",
-            `${course.subject_area} | ${course.estimated_length}`
-        );
-        const description = createElement(
-            "p",
-            "course-muted",
-            course.description || "No course description has been added yet."
-        );
-        const actions = createElement("div", "course-actions course-actions--teacher");
-        const builderAction = createElement("a", "primary-button", "Open course");
-        const classroomAction = createElement("a", "secondary-button", "Classes");
-        const deleteAction = createElement("button", "secondary-button destructive-button", "Delete");
-        const courseParam = encodeURIComponent(course.id);
-        builderAction.href = `../courses/editor.html?course=${courseParam}`;
-        classroomAction.href = `../classrooms/manage.html?course=${courseParam}`;
-        deleteAction.type = "button";
-        deleteAction.addEventListener("click", () => deleteCourse(course));
-        actions.append(builderAction, classroomAction, deleteAction);
-
-        card.append(heading, details, description, renderClassrooms(course, classrooms), actions);
+        card.append(heading, meta, classSummary);
         return card;
     });
+
+    if (courses.length > MANAGED_COURSE_PREVIEW_LIMIT) {
+        const toggleCard = createElement("div", "course-grid-toggle-card");
+        const toggleCopy = showAllManagedCourses
+            ? `Showing all ${courses.length} courses.`
+            : `${hiddenCourseCount} more ${hiddenCourseCount === 1 ? "course" : "courses"} hidden.`;
+        const toggleButton = createElement(
+            "button",
+            "secondary-button course-grid-toggle",
+            showAllManagedCourses ? "Show fewer courses" : `Show all ${courses.length} courses`
+        );
+
+        toggleButton.type = "button";
+        toggleButton.addEventListener("click", () => {
+            showAllManagedCourses = !showAllManagedCourses;
+            renderCourses(courses, classrooms);
+        });
+        toggleCard.append(createElement("p", "course-muted", toggleCopy), toggleButton);
+        cards.push(toggleCard);
+    }
 
     courseList.replaceChildren(...cards);
 }

@@ -379,7 +379,10 @@ function renderClassrooms(classrooms) {
         const badge = createElement("span", "badge badge--quiet", classroom.status || "active");
         const metrics = createElement("div", "class-hub-metrics");
         const access = createElement("div", "class-hub-access");
-        const actions = createElement("div", "managed-classroom-actions");
+        const actions = createElement("div", "managed-classroom-actions managed-classroom-actions--primary");
+        const settings = createElement("details", "managed-classroom-settings");
+        const settingsSummary = createElement("summary", "", "Class settings");
+        const settingsActions = createElement("div", "managed-classroom-settings-actions");
         const dragHint = createElement("span", "managed-classroom-drag-hint", "Drag to reorder");
         const editButton = createElement("button", "secondary-button lesson-action", "Edit");
         const joinButton = createElement(
@@ -446,8 +449,10 @@ function renderClassrooms(classrooms) {
         joinToggleButton.addEventListener("click", () => toggleJoining(classroom));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteClassroom(classroom));
-        actions.append(rosterLink, reviewLink, joinButton, inviteButton, joinToggleButton, editButton, regenerateButton, archiveButton, deleteButton, dragHint);
-        item.append(cardHeader, metrics, access, actions);
+        actions.append(rosterLink, reviewLink, joinButton, inviteButton);
+        settingsActions.append(joinToggleButton, editButton, regenerateButton, archiveButton, deleteButton);
+        settings.append(settingsSummary, settingsActions, dragHint);
+        item.append(cardHeader, metrics, access, actions, settings);
         list.append(item);
     });
 

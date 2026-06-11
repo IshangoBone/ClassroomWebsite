@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CodeTheCurrent V2 | Lesson</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260609-sticky-nav" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260610-preview-builder-button" />
 </head>
 
 <body>
@@ -17,6 +17,14 @@
             <p class="intro" data-lesson-context>Preparing your lesson content.</p>
             <p class="auth-status management-status" data-lesson-status aria-live="polite"></p>
         </header>
+
+        <aside class="teacher-preview-banner" data-teacher-preview-banner hidden>
+            <div>
+                <strong>Teacher preview</strong>
+                <p>You are viewing the lesson exactly as students will see it. Student submissions are disabled.</p>
+            </div>
+            <a class="primary-button" href="builder.html" data-preview-builder-link>Back to lesson builder</a>
+        </aside>
 
         <div class="lesson-view-shell" data-lesson-shell hidden>
             <section class="lesson-page-canvas lesson-view-page" aria-labelledby="lesson-content-heading">
@@ -67,7 +75,7 @@
         </div>
     </main>
 
-    <script type="module" src="../../scripts/lessons/viewer.js?v=20260604-data-tools"></script>
+    <script type="module" src="../../scripts/lessons/viewer.js?v=20260610-preview-builder-button"></script>
 </body>
 
 </html>
