@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="refresh" content="0; url=./pages/auth/login.html" />
+    <title>CodeTheCurrent</title>
+    <meta name="description" content="CodeTheCurrent account verification redirect." />
+    <meta name="theme-color" content="#1d3557" />
+    <script>
+        (() => {
+            const targetUrl = new URL("./pages/auth/login.html", window.location.href);
+
+            targetUrl.search = window.location.search;
+            targetUrl.hash = window.location.hash;
+            window.location.replace(targetUrl.href);
+        })();
+    </script>
+</head>
+
+<body>
+    <main>
+        <h1>CodeTheCurrent</h1>
+        <p>Opening account access...</p>
+        <p><a href="./pages/auth/login.html">Continue to CodeTheCurrent</a></p>
+    </main>
+</body>
+
+</html>

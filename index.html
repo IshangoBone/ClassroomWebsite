@@ -10,6 +10,15 @@
     <meta name="theme-color" content="#1d3557" />
     <link rel="canonical" href="https://codethecurrent.com/v2/pages/auth/login.html" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <script>
+        (() => {
+            const targetUrl = new URL("./v2/pages/auth/login.html", window.location.href);
+
+            targetUrl.search = window.location.search;
+            targetUrl.hash = window.location.hash;
+            window.location.replace(targetUrl.href);
+        })();
+    </script>
 </head>
 
 <body>
