@@ -37,6 +37,79 @@ const questionPhases = [
 ];
 const optionQuestionTypes = ["multiple_choice", "select_all_that_apply"];
 const responseQuestionTypes = ["short_response", "long_response", "fill_in_the_blank"];
+const defaultCodeSpaceCode = [
+    "public class Main {",
+    "    public static void main(String[] args) {",
+    "        System.out.println(\"Hello, CodeTheCurrent!\");",
+    "    }",
+    "}",
+].join("\n");
+const codeSpaceIndent = "    ";
+const codeSpaceJavaKeywords = new Set([
+    "abstract",
+    "assert",
+    "break",
+    "case",
+    "catch",
+    "class",
+    "const",
+    "continue",
+    "default",
+    "do",
+    "else",
+    "enum",
+    "extends",
+    "final",
+    "finally",
+    "for",
+    "goto",
+    "if",
+    "implements",
+    "import",
+    "instanceof",
+    "interface",
+    "native",
+    "new",
+    "package",
+    "private",
+    "protected",
+    "public",
+    "return",
+    "sealed",
+    "static",
+    "strictfp",
+    "super",
+    "switch",
+    "synchronized",
+    "this",
+    "throw",
+    "throws",
+    "transient",
+    "try",
+    "var",
+    "void",
+    "volatile",
+    "while",
+]);
+const codeSpaceJavaTypes = new Set([
+    "boolean",
+    "byte",
+    "char",
+    "double",
+    "float",
+    "int",
+    "long",
+    "short",
+    "Boolean",
+    "Character",
+    "Double",
+    "Integer",
+    "Long",
+    "Math",
+    "Object",
+    "String",
+    "System",
+]);
 const lessonLayoutMarker = "__ctc_lesson_layout_v1__";
 let currentProfileId = "";
 let currentLessonContext = null;
@@ -305,7 +378,7 @@ function getMissingRequiredQuestions() {
 }
 
 function setQuestionInputsDisabled(disabled) {
-    questionFlow.querySelectorAll("input, textarea, select").forEach((input) => {
+    questionFlow.querySelectorAll("input, textarea, select, button").forEach((input) => {
         input.disabled = disabled;
     });
 }
@@ -518,6 +591,73 @@ function createFormattedTextContent(text = "") {
     return wrapper;
 }
 
+function createFlashcardSet(layout) {
+    const cards = (layout.cards || []).filter((card) => card.term || card.definition || card.image?.url);
+    const wrapper = createElement("section", "lesson-flashcards");
+    const viewport = createElement("div", "lesson-flashcard-viewport");
+    const previousButton = createElement("button", "lesson-flashcard-arrow", "‹");
+    const nextButton = createElement("button", "lesson-flashcard-arrow", "›");
+    const cardButton = createElement("button", "lesson-flashcard-card", "");
+    const counter = createElement("span", "lesson-flashcard-count", "");
+    let index = 0;
+    let isRevealed = false;
+
+    previousButton.type = "button";
+    nextButton.type = "button";
+    cardButton.type = "button";
+    previousButton.setAttribute("aria-label", "Previous flashcard");
+    nextButton.setAttribute("aria-label", "Next flashcard");
+
+    function renderCard() {
+        const current = cards[index] || {};
+        const face = createElement("div", "lesson-flashcard-face");
+
+        cardButton.classList.toggle("lesson-flashcard-card--revealed", isRevealed);
+        if (current.image?.displayUrl || current.image?.url) {
+            const image = createElement("img", "lesson-flashcard-image");
+
+            image.src = current.image.displayUrl || current.image.url;
+            image.alt = current.image.title || current.term || "Flashcard image";
+            face.append(image);
+        }
+        face.append(createElement("span", "lesson-flashcard-kicker", isRevealed ? "Definition" : "Term"));
+        face.append(createElement("strong", "lesson-flashcard-text", isRevealed ? current.definition || "No definition added yet." : current.term || "No term added yet."));
+        face.append(createElement("small", "lesson-flashcard-hint", "Click to flip"));
+        cardButton.replaceChildren(face);
+        counter.textContent = `${index + 1} / ${cards.length || 1}`;
+        previousButton.disabled = cards.length <= 1;
+        nextButton.disabled = cards.length <= 1;
+    }
+
+    previousButton.addEventListener("click", () => {
+        index = (index - 1 + cards.length) % cards.length;
+        isRevealed = false;
+        renderCard();
+    });
+    nextButton.addEventListener("click", () => {
+        index = (index + 1) % cards.length;
+        isRevealed = false;
+        renderCard();
+    });
+    cardButton.addEventListener("click", () => {
+        isRevealed = !isRevealed;
+        cardButton.classList.remove("lesson-flashcard-card--flipping");
+        void cardButton.offsetWidth;
+        cardButton.classList.add("lesson-flashcard-card--flipping");
+        renderCard();
+    });
+
+    if (!cards.length) {
+        wrapper.append(createElement("p", "course-muted", "No flashcards have been added yet."));
+        return wrapper;
+    }
+
+    renderCard();
+    viewport.append(previousButton, cardButton, nextButton);
+    wrapper.append(viewport, counter);
+    return wrapper;
+}
+
 function getYouTubeEmbedUrl(url) {
     try {
         const parsedUrl = new URL(url);
@@ -677,6 +817,20 @@ async function createLessonLayoutContent(layout) {
         });
 
         return wrapper;
+    }
+
+    if (layout?.type === "flashcards") {
+        const cards = await Promise.all((layout.cards || []).map(async (card) => ({
+            ...card,
+            image: card.image?.url
+                ? {
+                    ...card.image,
+                    displayUrl: await getDisplayResourceUrl({ file_url: card.image.url }),
+                }
+                : null,
+        })));
+
+        return createFlashcardSet({ ...layout, cards });
     }
 
     if (layout?.type === "divider") {
@@ -946,7 +1100,685 @@ function createTextResponseControl(question) {
     return response;
 }
 
+function findLessonCodeMatchingDelimiter(source, openIndex, openChar, closeChar) {
+    let depth = 0;
+    let quote = "";
+    let isEscaped = false;
+
+    for (let index = openIndex; index < source.length; index += 1) {
+        const char = source[index];
+
+        if (quote) {
+            if (isEscaped) {
+                isEscaped = false;
+            } else if (char === "\\") {
+                isEscaped = true;
+            } else if (char === quote) {
+                quote = "";
+            }
+            continue;
+        }
+
+        if (char === "\"" || char === "'") {
+            quote = char;
+            continue;
+        }
+
+        if (char === openChar) {
+            depth += 1;
+        }
+
+        if (char === closeChar) {
+            depth -= 1;
+
+            if (depth === 0) {
+                return index;
+            }
+        }
+    }
+
+    return -1;
+}
+
+function extractLessonCodeMainBody(source) {
+    const mainMatch = source.match(/public\s+static\s+void\s+main\s*\(\s*String\s*\[\]\s+\w+\s*\)\s*\{/);
+
+    if (!mainMatch || typeof mainMatch.index !== "number") {
+        throw new Error("Add public static void main(String[] args) before running.");
+    }
+
+    const openIndex = mainMatch.index + mainMatch[0].lastIndexOf("{");
+    const closeIndex = findLessonCodeMatchingDelimiter(source, openIndex, "{", "}");
+
+    if (closeIndex === -1) {
+        throw new Error("Missing closing brace for main method.");
+    }
+
+    return source.slice(openIndex + 1, closeIndex);
+}
+
+function transformLessonJavaOutput(source) {
+    const callPattern = /System\.out\.(println|printf|print)\s*\(/g;
+    const outputCalls = { print: "__print", printf: "__printf", println: "__println" };
+    let transformed = "";
+    let cursor = 0;
+    let match = callPattern.exec(source);
+
+    while (match) {
+        const openIndex = callPattern.lastIndex - 1;
+        const closeIndex = findLessonCodeMatchingDelimiter(source, openIndex, "(", ")");
+
+        if (closeIndex === -1) {
+            throw new Error(`Missing closing parenthesis for System.out.${match[1]}.`);
+        }
+
+        let statementEnd = closeIndex + 1;
+
+        while (/\s/.test(source[statementEnd] || "")) {
+            statementEnd += 1;
+        }
+
+        if (source[statementEnd] !== ";") {
+            throw new Error(`Missing semicolon after System.out.${match[1]}.`);
+        }
+
+        transformed += source.slice(cursor, match.index);
+        transformed += `${outputCalls[match[1]]}(${source.slice(openIndex + 1, closeIndex)});`;
+        cursor = statementEnd + 1;
+        callPattern.lastIndex = cursor;
+        match = callPattern.exec(source);
+    }
+
+    return `${transformed}${source.slice(cursor)}`;
+}
+
+function createLessonJavaScriptFromJava(source) {
+    if (/\b(import|package)\b/.test(source)) {
+        throw new Error("Imports and packages are not available in this classroom runner yet.");
+    }
+
+    if (/\bScanner\b|System\.in|java\.io|java\.nio|Thread|Runtime|ProcessBuilder|System\.exit/.test(source)) {
+        throw new Error("This runner supports output, variables, loops, conditionals, and Math. Input and file access are not available.");
+    }
+
+    const mainBody = extractLessonCodeMainBody(source);
+    const withoutComments = mainBody
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/^\s*\/\/.*$/gm, "");
+    const withOutput = transformLessonJavaOutput(withoutComments);
+
+    return withOutput
+        .replace(/\b(final\s+)?(byte|short|int|long|float|double|boolean|char|String)\s+([A-Za-z_$][\w$]*)\s*=/g, "let $3 =")
+        .replace(/\b(final\s+)?(byte|short|int|long|float|double|boolean|char|String)\s+([A-Za-z_$][\w$]*)\s*;/g, "let $3;")
+        .replace(/\b(for\s*\(\s*)(byte|short|int|long|float|double|boolean|char|String)\s+([A-Za-z_$][\w$]*)\s*=/g, "$1let $3 =")
+        .replace(/([A-Za-z_$][\w$]*)\.equals\s*\(([^)]+)\)/g, "($1 === $2)")
+        .replace(/([A-Za-z_$][\w$]*)\.length\s*\(\s*\)/g, "$1.length");
+}
+
+function renderCodeLineNumbers(code, lineNumbers) {
+    const lineCount = Math.max(1, code.split("\n").length);
+
+    lineNumbers.textContent = Array.from({ length: lineCount }, (_, index) => String(index + 1)).join("\n");
+}
+
+function escapeCodeSpaceHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function wrapCodeSpaceToken(className, value) {
+    return `<span class="${className}">${escapeCodeSpaceHtml(value)}</span>`;
+}
+
+function readCodeSpaceQuotedToken(source, startIndex, quote) {
+    let index = startIndex + 1;
+    let isEscaped = false;
+
+    while (index < source.length) {
+        const char = source[index];
+
+        if (isEscaped) {
+            isEscaped = false;
+        } else if (char === "\\") {
+            isEscaped = true;
+        } else if (char === quote) {
+            index += 1;
+            break;
+        }
+
+        index += 1;
+    }
+
+    return source.slice(startIndex, index);
+}
+
+function getNextCodeSpaceNonSpace(source, index) {
+    let cursor = index;
+
+    while (/\s/.test(source[cursor] || "")) {
+        cursor += 1;
+    }
+
+    return source[cursor] || "";
+}
+
+function highlightCodeSpaceJava(source) {
+    let highlighted = "";
+    let index = 0;
+
+    while (index < source.length) {
+        const char = source[index];
+        const nextChar = source[index + 1] || "";
+
+        if (char === "/" && nextChar === "/") {
+            const endIndex = source.indexOf("\n", index);
+            const comment = endIndex === -1 ? source.slice(index) : source.slice(index, endIndex);
+
+            highlighted += wrapCodeSpaceToken("code-token-comment", comment);
+            index += comment.length;
+            continue;
+        }
+
+        if (char === "/" && nextChar === "*") {
+            const endIndex = source.indexOf("*/", index + 2);
+            const comment = endIndex === -1 ? source.slice(index) : source.slice(index, endIndex + 2);
+
+            highlighted += wrapCodeSpaceToken("code-token-comment", comment);
+            index += comment.length;
+            continue;
+        }
+
+        if (char === "\"" || char === "'") {
+            const value = readCodeSpaceQuotedToken(source, index, char);
+
+            highlighted += wrapCodeSpaceToken("code-token-string", value);
+            index += value.length;
+            continue;
+        }
+
+        if (/\d/.test(char)) {
+            const match = source.slice(index).match(/^\d+(?:\.\d+)?(?:[fFdDlL])?/);
+            const number = match?.[0] || char;
+
+            highlighted += wrapCodeSpaceToken("code-token-number", number);
+            index += number.length;
+            continue;
+        }
+
+        if (/[A-Za-z_$]/.test(char)) {
+            const match = source.slice(index).match(/^[A-Za-z_$][\w$]*/);
+            const identifier = match?.[0] || char;
+            const nextToken = getNextCodeSpaceNonSpace(source, index + identifier.length);
+
+            if (codeSpaceJavaKeywords.has(identifier) || identifier === "true" || identifier === "false" || identifier === "null") {
+                highlighted += wrapCodeSpaceToken("code-token-keyword", identifier);
+            } else if (codeSpaceJavaTypes.has(identifier) || /^[A-Z]/.test(identifier)) {
+                highlighted += wrapCodeSpaceToken("code-token-type", identifier);
+            } else if (nextToken === "(") {
+                highlighted += wrapCodeSpaceToken("code-token-function", identifier);
+            } else {
+                highlighted += escapeCodeSpaceHtml(identifier);
+            }
+
+            index += identifier.length;
+            continue;
+        }
+
+        highlighted += escapeCodeSpaceHtml(char);
+        index += 1;
+    }
+
+    return highlighted || " ";
+}
+
+function createCodeSpaceControl(question) {
+    const answer = getAnswer(question.id);
+    const savedCode = typeof answer === "object" ? answer.code : answer;
+    let projectFiles = normalizeCodeSpaceFiles(answer, savedCode);
+    let activeFileName = typeof answer?.activeFileName === "string"
+        ? answer.activeFileName
+        : projectFiles[0].name;
+    const workspace = createElement("div", "lesson-code-space");
+    const files = createElement("aside", "lesson-code-files");
+    const filesHeader = createElement("div", "lesson-code-files-header");
+    const fileList = createElement("div", "lesson-code-file-list");
+    const newFileButton = createElement("button", "lesson-code-file-add", "+ New file");
+    const main = createElement("div", "lesson-code-main");
+    const toolbar = createElement("div", "lesson-code-toolbar");
+    const title = createElement("strong", "", "Java workspace");
+    const runButton = createElement("button", "lesson-code-run", "");
+    const editorShell = createElement("div", "lesson-code-editor-shell");
+    const lineNumbers = createElement("pre", "lesson-code-lines", "1");
+    const editorLayer = createElement("div", "lesson-code-editor-layer");
+    const highlight = createElement("pre", "lesson-code-highlight", "");
+    const editor = document.createElement("textarea");
+    const consoleOutput = createElement("pre", "lesson-code-console", "");
+
+    editor.className = "lesson-code-editor";
+    editor.spellcheck = false;
+    editor.setAttribute("aria-label", `${question.prompt} Java code`);
+    newFileButton.type = "button";
+    newFileButton.setAttribute("aria-label", "Create file");
+    runButton.type = "button";
+    runButton.setAttribute("aria-label", "Run code");
+    consoleOutput.textContent = "Run your code to see output here.";
+
+    function getLanguageForCodeFile(fileName = "") {
+        if (fileName.endsWith(".java")) {
+            return "Java";
+        }
+
+        if (fileName.endsWith(".txt")) {
+            return "Text";
+        }
+
+        return "File";
+    }
+
+    function getActiveFile() {
+        return projectFiles.find((file) => file.name === activeFileName) || projectFiles[0];
+    }
+
+    function getStarterCodeForFile(fileName) {
+        if (!fileName.endsWith(".java")) {
+            return "";
+        }
+
+        const className = fileName.replace(/\.java$/i, "").replace(/[^\w$]/g, "") || "Exercise";
+
+        return [
+            `public class ${className} {`,
+            "    public static void main(String[] args) {",
+            "        System.out.println(\"New Java file ready.\");",
+            "    }",
+            "}",
+        ].join("\n");
+    }
+
+    function normalizeNewFileName(value) {
+        const cleaned = String(value || "")
+            .trim()
+            .replace(/[\\/]/g, "")
+            .replace(/\s+/g, "");
+
+        if (!cleaned) {
+            return "";
+        }
+
+        return /\.[A-Za-z0-9]+$/.test(cleaned) ? cleaned : `${cleaned}.java`;
+    }
+
+    function getNextFileName() {
+        let index = projectFiles.length + 1;
+        let nextName = `Exercise${index}.java`;
+
+        while (projectFiles.some((file) => file.name === nextName)) {
+            index += 1;
+            nextName = `Exercise${index}.java`;
+        }
+
+        return nextName;
+    }
+
+    function persistCodeProject() {
+        const activeFile = getActiveFile();
+
+        if (activeFile) {
+            activeFile.content = editor.value;
+        }
+
+        const mainFile = projectFiles.find((file) => file.name === "Main.java") || activeFile;
+
+        setAnswer(question.id, {
+            code: mainFile?.content || "",
+            activeFileName,
+            files: projectFiles.map((file) => ({ ...file })),
+        });
+    }
+
+    function renderFiles() {
+        fileList.replaceChildren(...projectFiles.map((projectFile) => {
+            const row = createElement("div", "lesson-code-file-row");
+            const fileButton = createElement("button", "lesson-code-file", projectFile.name);
+            const meta = createElement("span", "lesson-code-file-meta", getLanguageForCodeFile(projectFile.name));
+            const deleteButton = createElement("button", "lesson-code-file-delete", "×");
+
+            fileButton.type = "button";
+            fileButton.classList.toggle("lesson-code-file--active", projectFile.name === activeFileName);
+            fileButton.setAttribute("aria-label", `Open ${projectFile.name}`);
+            fileButton.addEventListener("click", () => {
+                const currentFile = getActiveFile();
+
+                if (currentFile) {
+                    currentFile.content = editor.value;
+                }
+
+                activeFileName = projectFile.name;
+                renderFiles();
+                renderEditor();
+                persistCodeProject();
+            });
+            deleteButton.type = "button";
+            deleteButton.disabled = projectFiles.length <= 1;
+            deleteButton.setAttribute("aria-label", `Delete ${projectFile.name}`);
+            deleteButton.addEventListener("click", (event) => {
+                event.stopPropagation();
+
+                if (projectFiles.length <= 1) {
+                    notifyStatus("Code space needs at least one file.", "error");
+                    return;
+                }
+
+                if (!window.confirm(`Delete ${projectFile.name}?`)) {
+                    return;
+                }
+
+                projectFiles = projectFiles.filter((file) => file.name !== projectFile.name);
+
+                if (activeFileName === projectFile.name) {
+                    activeFileName = projectFiles[0].name;
+                }
+
+                renderFiles();
+                renderEditor();
+                persistCodeProject();
+            });
+            fileButton.append(meta);
+            row.append(fileButton, deleteButton);
+
+            return row;
+        }));
+    }
+
+    function renderEditor() {
+        const activeFile = getActiveFile();
+
+        if (!activeFile) {
+            return;
+        }
+
+        activeFileName = activeFile.name;
+        title.textContent = `${getLanguageForCodeFile(activeFile.name)} workspace`;
+        editor.value = activeFile.content;
+        renderCodeLineNumbers(editor.value, lineNumbers);
+        renderSyntaxHighlight();
+    }
+
+    function syncEditorScroll() {
+        lineNumbers.scrollTop = editor.scrollTop;
+        highlight.scrollTop = editor.scrollTop;
+        highlight.scrollLeft = editor.scrollLeft;
+    }
+
+    function renderSyntaxHighlight() {
+        const activeFile = getActiveFile();
+
+        if (activeFile?.name.endsWith(".java")) {
+            highlight.innerHTML = `${highlightCodeSpaceJava(editor.value)}\n`;
+        } else {
+            highlight.textContent = `${editor.value || " "}\n`;
+        }
+
+        syncEditorScroll();
+    }
+
+    function insertEditorText(text, selectionOffset = text.length) {
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+
+        editor.value = `${editor.value.slice(0, start)}${text}${editor.value.slice(end)}`;
+        editor.selectionStart = start + selectionOffset;
+        editor.selectionEnd = start + selectionOffset;
+        handleEditorInput();
+    }
+
+    function getCurrentLineIndent(cursorPosition) {
+        const lineStart = editor.value.lastIndexOf("\n", cursorPosition - 1) + 1;
+        const line = editor.value.slice(lineStart, cursorPosition);
+        const match = line.match(/^\s*/);
+
+        return match ? match[0] : "";
+    }
+
+    function outdentSelectedLines() {
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        const lineStart = editor.value.lastIndexOf("\n", start - 1) + 1;
+        const lineEnd = end === start ? editor.value.indexOf("\n", end) : editor.value.indexOf("\n", end - 1);
+        const rangeEnd = lineEnd === -1 ? editor.value.length : lineEnd;
+        const before = editor.value.slice(0, lineStart);
+        const selected = editor.value.slice(lineStart, rangeEnd);
+        const after = editor.value.slice(rangeEnd);
+        let removedBeforeStart = 0;
+        const updated = selected
+            .split("\n")
+            .map((line, index) => {
+                if (line.startsWith(codeSpaceIndent)) {
+                    if (index === 0) {
+                        removedBeforeStart = Math.min(codeSpaceIndent.length, start - lineStart);
+                    }
+
+                    return line.slice(codeSpaceIndent.length);
+                }
+
+                if (line.startsWith("\t")) {
+                    if (index === 0) {
+                        removedBeforeStart = Math.min(1, start - lineStart);
+                    }
+
+                    return line.slice(1);
+                }
+
+                return line;
+            })
+            .join("\n");
+
+        editor.value = `${before}${updated}${after}`;
+        editor.selectionStart = Math.max(lineStart, start - removedBeforeStart);
+        editor.selectionEnd = Math.max(editor.selectionStart, end - (selected.length - updated.length));
+        handleEditorInput();
+    }
+
+    function indentSelectedLines() {
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        const lineStart = editor.value.lastIndexOf("\n", start - 1) + 1;
+        const lineEnd = end === start ? editor.value.indexOf("\n", end) : editor.value.indexOf("\n", end - 1);
+        const rangeEnd = lineEnd === -1 ? editor.value.length : lineEnd;
+        const before = editor.value.slice(0, lineStart);
+        const selected = editor.value.slice(lineStart, rangeEnd);
+        const after = editor.value.slice(rangeEnd);
+        const updated = selected.split("\n").map((line) => `${codeSpaceIndent}${line}`).join("\n");
+
+        editor.value = `${before}${updated}${after}`;
+        editor.selectionStart = start + codeSpaceIndent.length;
+        editor.selectionEnd = end + (updated.length - selected.length);
+        handleEditorInput();
+    }
+
+    function handleEnterKey(event) {
+        event.preventDefault();
+
+        const start = editor.selectionStart;
+        const value = editor.value;
+        const previousIndent = getCurrentLineIndent(start);
+        const nextChar = value[start] || "";
+        const shouldIndent = /[\{\[\(]$/.test(value.slice(0, start).trimEnd());
+
+        if (shouldIndent && /[\}\]\)]/.test(nextChar)) {
+            insertEditorText(`\n${previousIndent}${codeSpaceIndent}\n${previousIndent}`, previousIndent.length + codeSpaceIndent.length + 1);
+            return;
+        }
+
+        insertEditorText(`\n${previousIndent}${shouldIndent ? codeSpaceIndent : ""}`);
+    }
+
+    function handleClosingBrace(event) {
+        const start = editor.selectionStart;
+        const lineStart = editor.value.lastIndexOf("\n", start - 1) + 1;
+        const beforeCursor = editor.value.slice(lineStart, start);
+
+        if (!/^\s+$/.test(beforeCursor) || !beforeCursor.startsWith(codeSpaceIndent)) {
+            return false;
+        }
+
+        event.preventDefault();
+        editor.value = `${editor.value.slice(0, start - codeSpaceIndent.length)}}${editor.value.slice(editor.selectionEnd)}`;
+        editor.selectionStart = start - codeSpaceIndent.length + 1;
+        editor.selectionEnd = editor.selectionStart;
+        handleEditorInput();
+        return true;
+    }
+
+    function handleEditorKeydown(event) {
+        if (event.key === "Tab") {
+            event.preventDefault();
+
+            if (event.shiftKey) {
+                outdentSelectedLines();
+                return;
+            }
+
+            if (editor.selectionStart !== editor.selectionEnd) {
+                indentSelectedLines();
+                return;
+            }
+
+            insertEditorText(codeSpaceIndent);
+            return;
+        }
+
+        if (event.key === "Enter") {
+            handleEnterKey(event);
+            return;
+        }
+
+        if (event.key === "}") {
+            handleClosingBrace(event);
+        }
+    }
+
+    function handleEditorInput() {
+        const activeFile = getActiveFile();
+
+        if (activeFile) {
+            activeFile.content = editor.value;
+        }
+
+        renderCodeLineNumbers(editor.value, lineNumbers);
+        renderSyntaxHighlight();
+        persistCodeProject();
+    }
+
+    newFileButton.addEventListener("click", () => {
+        const requestedName = window.prompt("File name", getNextFileName());
+        const fileName = normalizeNewFileName(requestedName);
+
+        if (!fileName) {
+            return;
+        }
+
+        if (projectFiles.some((projectFile) => projectFile.name === fileName)) {
+            notifyStatus("A file with that name already exists.", "error");
+            return;
+        }
+
+        const activeFile = getActiveFile();
+
+        if (activeFile) {
+            activeFile.content = editor.value;
+        }
+
+        projectFiles = [
+            ...projectFiles,
+            {
+                name: fileName,
+                language: getLanguageForCodeFile(fileName),
+                content: getStarterCodeForFile(fileName),
+            },
+        ];
+        activeFileName = fileName;
+        renderFiles();
+        renderEditor();
+        persistCodeProject();
+        editor.focus();
+    });
+    editor.addEventListener("input", handleEditorInput);
+    editor.addEventListener("keydown", handleEditorKeydown);
+    editor.addEventListener("scroll", syncEditorScroll);
+    runButton.addEventListener("click", async () => {
+        const activeFile = getActiveFile();
+        const output = { current: "", lines: [] };
+        const print = (value = "") => {
+            output.current += String(value);
+        };
+        const println = (value = "") => {
+            output.lines.push(`${output.current}${String(value)}`);
+            output.current = "";
+        };
+        const printf = (template = "", ...values) => {
+            let valueIndex = 0;
+            output.current += String(template).replace(/%[dfs]/g, () => String(values[valueIndex++]));
+        };
+
+        consoleOutput.textContent = "";
+        try {
+            if (!activeFile?.name.endsWith(".java")) {
+                throw new Error("Open a Java file before running code.");
+            }
+
+            const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+            const execute = new AsyncFunction("__print", "__println", "__printf", "Math", `"use strict";\n${createLessonJavaScriptFromJava(activeFile.content)}`);
+
+            await execute(print, println, printf, Math);
+            if (output.current) {
+                output.lines.push(output.current);
+            }
+            consoleOutput.textContent = output.lines.join("\n") || "No console output.";
+        } catch (error) {
+            consoleOutput.textContent = `Java error: ${error.message}`;
+        }
+    });
+
+    filesHeader.append(createElement("span", "lesson-code-files-label", "Files"), newFileButton);
+    files.append(filesHeader, fileList);
+    toolbar.append(title, runButton);
+    editorLayer.append(highlight, editor);
+    editorShell.append(lineNumbers, editorLayer);
+    main.append(toolbar, editorShell, consoleOutput);
+    workspace.append(files, main);
+    renderFiles();
+    renderEditor();
+    return workspace;
+}
+
+function normalizeCodeSpaceFiles(answer, savedCode = "") {
+    if (Array.isArray(answer?.files) && answer.files.length) {
+        return answer.files
+            .filter((file) => file && typeof file.name === "string")
+            .map((file) => ({
+                name: file.name,
+                language: file.language || (file.name.endsWith(".java") ? "Java" : "Text"),
+                content: typeof file.content === "string" ? file.content : "",
+            }));
+    }
+
+    return [{
+        name: "Main.java",
+        language: "Java",
+        content: savedCode || defaultCodeSpaceCode,
+    }];
+}
+
 function createQuestionAnswerControl(question) {
+    if (question.question_type === "code_space") {
+        return createCodeSpaceControl(question);
+    }
+
     if (optionQuestionTypes.includes(question.question_type)) {
         return createChoiceControls(question);
     }

@@ -5,65 +5,152 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CodeTheCurrent V2 | Lesson Builder</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260610-roomy-builder-tools" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260619-authoring-topbar-simple" />
 </head>
 
-<body>
-    <main class="management-layout">
+<body class="lesson-authoring-shell">
+    <svg class="tool-icon-sprite" aria-hidden="true" focusable="false">
+        <symbol id="tool-icon-text" viewBox="0 0 24 24">
+            <path d="M5 6h14" />
+            <path d="M5 11h14" />
+            <path d="M5 16h9" />
+        </symbol>
+        <symbol id="tool-icon-image" viewBox="0 0 24 24">
+            <rect x="4" y="5" width="16" height="14" rx="2" />
+            <path d="M8 14l3-3 3 3 2-2 3 4" />
+            <circle cx="9" cy="9" r="1.5" />
+        </symbol>
+        <symbol id="tool-icon-flashcards" viewBox="0 0 24 24">
+            <rect x="7" y="5" width="12" height="14" rx="2" />
+            <path d="M5 8v9a2 2 0 0 0 2 2h9" />
+            <path d="M10 10h6" />
+            <path d="M10 14h4" />
+        </symbol>
+        <symbol id="tool-icon-video" viewBox="0 0 24 24">
+            <rect x="4" y="6" width="16" height="12" rx="3" />
+            <path d="M11 10l5 2-5 2z" />
+        </symbol>
+        <symbol id="tool-icon-upload" viewBox="0 0 24 24">
+            <path d="M12 16V5" />
+            <path d="M8 9l4-4 4 4" />
+            <path d="M5 18h14" />
+        </symbol>
+        <symbol id="tool-icon-slides" viewBox="0 0 24 24">
+            <rect x="4" y="5" width="16" height="11" rx="2" />
+            <path d="M12 16v3" />
+            <path d="M9 19h6" />
+        </symbol>
+        <symbol id="tool-icon-link" viewBox="0 0 24 24">
+            <path d="M10 13a4 4 0 0 0 5.66 0l2-2a4 4 0 0 0-5.66-5.66l-1 1" />
+            <path d="M14 11a4 4 0 0 0-5.66 0l-2 2A4 4 0 0 0 12 18.66l1-1" />
+        </symbol>
+        <symbol id="tool-icon-message" viewBox="0 0 24 24">
+            <path d="M5 6h14v10H9l-4 3z" />
+            <path d="M8 10h8" />
+        </symbol>
+        <symbol id="tool-icon-document" viewBox="0 0 24 24">
+            <path d="M7 4h7l3 3v13H7z" />
+            <path d="M14 4v4h4" />
+            <path d="M10 12h6" />
+            <path d="M10 16h5" />
+        </symbol>
+        <symbol id="tool-icon-choice" viewBox="0 0 24 24">
+            <circle cx="7" cy="7" r="2" />
+            <path d="M12 7h6" />
+            <circle cx="7" cy="17" r="2" />
+            <path d="M12 17h6" />
+        </symbol>
+        <symbol id="tool-icon-checklist" viewBox="0 0 24 24">
+            <path d="M5 7l2 2 4-4" />
+            <path d="M13 8h6" />
+            <path d="M5 16l2 2 4-4" />
+            <path d="M13 17h6" />
+        </symbol>
+        <symbol id="tool-icon-true-false" viewBox="0 0 24 24">
+            <path d="M5 7l2 2 4-4" />
+            <path d="M14 6l5 5" />
+            <path d="M19 6l-5 5" />
+            <path d="M5 17h14" />
+        </symbol>
+        <symbol id="tool-icon-star" viewBox="0 0 24 24">
+            <path d="M12 4l2.3 4.7 5.2.8-3.8 3.7.9 5.2-4.6-2.5-4.6 2.5.9-5.2-3.8-3.7 5.2-.8z" />
+        </symbol>
+        <symbol id="tool-icon-code" viewBox="0 0 24 24">
+            <path d="M8 8l-4 4 4 4" />
+            <path d="M16 8l4 4-4 4" />
+            <path d="M14 5l-4 14" />
+        </symbol>
+    </svg>
+
+    <main class="management-layout lesson-builder-page">
         <nav class="lesson-builder-nav" aria-label="Lesson builder navigation">
             <a class="back-link" href="../dashboard/index.html" data-course-editor-link>Back to dashboard</a>
             <a class="secondary-button" href="view.html" data-student-view-link hidden>View as student</a>
         </nav>
 
-        <header class="management-header">
-            <p class="eyebrow">Lesson Builder</p>
-            <h1 data-lesson-heading>Loading lesson...</h1>
-            <p class="intro" data-lesson-context>
-                Open a lesson from course management to begin focused lesson authoring.
-            </p>
+        <header class="management-header lesson-builder-hero">
+            <div>
+                <p class="eyebrow">Lesson Builder</p>
+                <h1 data-lesson-heading>Loading lesson...</h1>
+                <p class="intro" data-lesson-context>
+                    Open a lesson from course management to begin focused lesson authoring.
+                </p>
+            </div>
         </header>
 
         <p class="auth-status management-status" data-lesson-status aria-live="polite"></p>
 
-        <section class="management-section" data-lesson-content hidden aria-labelledby="lesson-overview-heading">
-            <div class="section-header">
-                <h2 id="lesson-overview-heading">Lesson overview</h2>
-                <p class="section-copy">Review the draft lesson details before adding content and questions.</p>
+        <section class="lesson-builder-overview" data-lesson-content hidden aria-labelledby="lesson-overview-heading">
+            <div class="lesson-builder-overview-intro">
+                <p class="eyebrow">Draft Details</p>
+                <h2 id="lesson-overview-heading">Lesson setup</h2>
+                <div class="lesson-builder-position-pills" aria-label="Lesson position">
+                    <article>
+                        <span>Module</span>
+                        <strong data-module-position>-</strong>
+                    </article>
+                    <article>
+                        <span>Lesson</span>
+                        <strong data-lesson-position>-</strong>
+                    </article>
+                </div>
             </div>
 
-            <div class="dashboard-summary dashboard-summary--compact">
-                <article class="summary-card">
-                    <span class="summary-label">Module</span>
-                    <strong class="summary-value" data-module-position>-</strong>
-                </article>
-                <article class="summary-card">
-                    <span class="summary-label">Lesson</span>
-                    <strong class="summary-value" data-lesson-position>-</strong>
-                </article>
-            </div>
-
-            <div data-lesson-details>
-                <p class="empty-state">Loading lesson details...</p>
+            <div class="lesson-builder-overview-grid">
+                <div data-lesson-details>
+                    <p class="empty-state empty-state--compact">Loading lesson details...</p>
+                </div>
             </div>
         </section>
 
-        <section class="management-section management-section--pending" data-lesson-content hidden>
-            <div class="section-header">
-                <h2>Authoring workspace</h2>
-                <p class="section-copy">Design the student lesson page, then add resources from the insert panel.</p>
+        <section class="management-section management-section--pending lesson-builder-authoring" data-lesson-content hidden>
+            <div class="lesson-authoring-topbar">
+                <div class="lesson-authoring-brand">
+                    <span class="lesson-authoring-mark" aria-hidden="true">CTC</span>
+                    <div>
+                        <p class="lesson-authoring-title" data-editor-lesson-title>Lesson workspace</p>
+                    </div>
+                </div>
+                <div class="lesson-authoring-status" aria-label="Save status">
+                    <span class="lesson-authoring-status-dot" aria-hidden="true"></span>
+                    <p class="lesson-authoring-save-state">All changes saved locally</p>
+                </div>
+                <div class="lesson-authoring-actions">
+                    <a class="secondary-button" href="../courses/editor.html" data-course-editor-link>Back to course editor</a>
+                    <a class="secondary-button" href="view.html" data-editor-preview-link>Preview</a>
+                    <span class="badge badge--quiet" data-lesson-visibility-state>Hidden from students</span>
+                    <button type="button" class="secondary-button" data-lesson-visibility-toggle>Make visible</button>
+                </div>
             </div>
 
             <div class="lesson-builder-workspace">
                 <div class="lesson-builder-main">
                     <section class="lesson-page-canvas" data-builder-canvas aria-labelledby="lesson-canvas-heading">
                         <div class="lesson-page-toolbar">
-                            <div>
-                                <p class="eyebrow">Lesson page</p>
-                                <h3 id="lesson-canvas-heading">Student view draft</h3>
-                            </div>
-                            <div class="lesson-page-toolbar-actions">
-                                <span class="badge badge--quiet" data-lesson-visibility-state>Hidden from students</span>
-                                <button type="button" class="secondary-button" data-lesson-visibility-toggle>Make visible</button>
+                            <div class="lesson-page-toolbar-title">
+                                <p class="eyebrow">Student Page</p>
+                                <h3 id="lesson-canvas-heading">Live draft</h3>
+                                <p>What students will see when this lesson opens.</p>
                             </div>
                         </div>
 
@@ -291,6 +378,10 @@
                 </div>
 
                 <aside class="lesson-builder-toolbox" aria-label="Lesson builder tools">
+                    <div class="lesson-toolbox-header">
+                        <p class="eyebrow">Add to lesson</p>
+                        <h2>Tool tray</h2>
+                    </div>
                     <div class="lesson-tool-tabs" aria-label="Builder side panel tabs">
                         <button type="button" class="lesson-tool-tab lesson-tool-tab--active" data-tool-tab="lesson-inserts" aria-controls="lesson-insert-tools" aria-selected="true">Lesson inserts</button>
                         <button type="button" class="lesson-tool-tab" data-tool-tab="data-collection" aria-controls="data-collection-tools" aria-selected="false">Data collection</button>
@@ -298,61 +389,111 @@
 
                     <div class="lesson-tool-window">
                         <section class="lesson-tool-card" id="lesson-insert-tools" data-tool-panel="lesson-inserts" aria-labelledby="insert-tools-heading">
-                            <h3 id="insert-tools-heading">Lesson inserts</h3>
+                            <h3 id="insert-tools-heading">Content blocks</h3>
                             <div class="lesson-tool-grid lesson-tool-grid--compact">
                                 <button type="button" class="lesson-insert-tile" data-content-tool="text" aria-controls="lesson-content-editor">
-                                    <span class="lesson-insert-icon">T</span>
-                                    <span>Text box</span>
+                                    <span class="lesson-insert-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-text"></use></svg></span>
+                                    <span>
+                                        <strong>Text box</strong>
+                                        <small>Directions or notes</small>
+                                    </span>
                                 </button>
                                 <button type="button" class="lesson-insert-tile" data-content-tool="image" aria-controls="lesson-content-editor">
-                                    <span class="lesson-insert-icon">I</span>
-                                    <span>Images</span>
+                                    <span class="lesson-insert-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-image"></use></svg></span>
+                                    <span>
+                                        <strong>Images</strong>
+                                        <small>Visual examples</small>
+                                    </span>
+                                </button>
+                                <button type="button" class="lesson-insert-tile" data-content-tool="flashcards" aria-controls="lesson-content-editor">
+                                    <span class="lesson-insert-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-flashcards"></use></svg></span>
+                                    <span>
+                                        <strong>Flashcards</strong>
+                                        <small>Terms and definitions</small>
+                                    </span>
                                 </button>
                                 <button type="button" class="lesson-insert-tile" data-content-tool="youtube" aria-controls="lesson-content-editor">
-                                    <span class="lesson-insert-icon">Y</span>
-                                    <span>YouTube</span>
+                                    <span class="lesson-insert-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-video"></use></svg></span>
+                                    <span>
+                                        <strong>YouTube</strong>
+                                        <small>Embedded video</small>
+                                    </span>
                                 </button>
                                 <button type="button" class="lesson-insert-tile" data-content-tool="file" aria-controls="lesson-content-editor">
-                                    <span class="lesson-insert-icon">U</span>
-                                    <span>Upload</span>
+                                    <span class="lesson-insert-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-upload"></use></svg></span>
+                                    <span>
+                                        <strong>Upload</strong>
+                                        <small>Files for class</small>
+                                    </span>
                                 </button>
                                 <button type="button" class="lesson-insert-tile" data-content-tool="slides" aria-controls="lesson-content-editor">
-                                    <span class="lesson-insert-icon">S</span>
-                                    <span>Slides</span>
+                                    <span class="lesson-insert-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-slides"></use></svg></span>
+                                    <span>
+                                        <strong>Slides</strong>
+                                        <small>Presentation link</small>
+                                    </span>
                                 </button>
                                 <button type="button" class="lesson-insert-tile" data-content-tool="link" aria-controls="lesson-content-editor">
-                                    <span class="lesson-insert-icon">L</span>
-                                    <span>Link</span>
+                                    <span class="lesson-insert-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-link"></use></svg></span>
+                                    <span>
+                                        <strong>Link</strong>
+                                        <small>External resource</small>
+                                    </span>
                                 </button>
                             </div>
                         </section>
 
                         <section class="lesson-tool-card" id="data-collection-tools" data-tool-panel="data-collection" aria-label="Data collection tools" hidden>
-                            <h3>Data collection tools</h3>
+                            <h3>Student responses</h3>
                             <div class="lesson-tool-list">
                                 <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="short_response" aria-controls="lesson-question-editor">
-                                    <span class="lesson-tool-icon">S</span>
-                                    <span>Short response</span>
+                                    <span class="lesson-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-message"></use></svg></span>
+                                    <span>
+                                        <strong>Short response</strong>
+                                        <small>Quick typed answer</small>
+                                    </span>
                                 </button>
                                 <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="long_response" aria-controls="lesson-question-editor">
-                                    <span class="lesson-tool-icon">L</span>
-                                    <span>Long response</span>
+                                    <span class="lesson-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-document"></use></svg></span>
+                                    <span>
+                                        <strong>Long response</strong>
+                                        <small>Paragraph answer</small>
+                                    </span>
                                 </button>
                                 <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="multiple_choice" aria-controls="lesson-question-editor">
-                                    <span class="lesson-tool-icon">M</span>
-                                    <span>Multiple choice</span>
+                                    <span class="lesson-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-choice"></use></svg></span>
+                                    <span>
+                                        <strong>Multiple choice</strong>
+                                        <small>One correct choice</small>
+                                    </span>
                                 </button>
                                 <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="select_all_that_apply" aria-controls="lesson-question-editor">
-                                    <span class="lesson-tool-icon">C</span>
-                                    <span>Select all</span>
+                                    <span class="lesson-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-checklist"></use></svg></span>
+                                    <span>
+                                        <strong>Select all</strong>
+                                        <small>Multiple answers</small>
+                                    </span>
                                 </button>
                                 <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="true_false" aria-controls="lesson-question-editor">
-                                    <span class="lesson-tool-icon">TF</span>
-                                    <span>True / false</span>
+                                    <span class="lesson-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-true-false"></use></svg></span>
+                                    <span>
+                                        <strong>True / false</strong>
+                                        <small>Fast check</small>
+                                    </span>
                                 </button>
                                 <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="rating_scale" aria-controls="lesson-question-editor">
-                                    <span class="lesson-tool-icon">R</span>
-                                    <span>Rating scale</span>
+                                    <span class="lesson-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-star"></use></svg></span>
+                                    <span>
+                                        <strong>Rating scale</strong>
+                                        <small>1 to 5 response</small>
+                                    </span>
+                                </button>
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="code_space" aria-controls="lesson-question-editor">
+                                    <span class="lesson-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-code"></use></svg></span>
+                                    <span>
+                                        <strong>Code space</strong>
+                                        <small>Java practice area</small>
+                                    </span>
                                 </button>
                             </div>
                         </section>
@@ -362,7 +503,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/lessons/builder.js?v=20260610-simplified-data-tools"></script>
+    <script type="module" src="../../scripts/lessons/builder.js?v=20260619-authoring-topbar-simple"></script>
 </body>
 
 </html>

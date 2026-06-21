@@ -1,240 +1,219 @@
 # Codex Handoff
 
-## Context
+## Start Here
 
-Repository: `/Users/jakebroos-williams/Developer/ClassroomWebsite`
+Repository:
 
-Branch: `v2`
+`/Users/jakebroos-williams/Developer/ClassroomWebsite`
 
-User wants small, complete GitHub issue chunks. Avoid long retry loops. If the same command or browser/test path fails twice the same way, stop and diagnose instead of rerunning blindly.
+Current branch:
 
-Preserve unrelated/untracked work. In particular, `v2/CREATE_USERS_PROFILES_SCHEMA_HANDOFF.md` is still untracked from older work and should not be committed unless the user explicitly asks.
+`codex/deidentified-mvp`
 
-## Current Goal
+Latest pushed commit:
 
-Working on GitHub issue #20: `TEACHER PORTAL: Build publish and archive controls`.
+`3546b2b Make shared navbar responsive`
 
-Issue #22 was completed, committed, and pushed earlier as:
+Current workflow:
 
-`cf1f737 Complete student course join flows`
+- Keep working on `codex/deidentified-mvp`.
+- Do not push every small change to live/main.
+- Preserve uncommitted and untracked work.
+- Do not commit `v2/CREATE_USERS_PROFILES_SCHEMA_HANDOFF.md` unless Jake explicitly asks.
+- Do not rerun `supabase db push` unless there is a clear database/migration reason.
+- Avoid retry loops. If something fails twice the same way, stop and diagnose.
 
-The user should be able to close #22 if they have not already.
+## Current State
 
-## Current Local State
-
-As of this handoff, `git status --short` showed:
+As of this handoff:
 
 ```text
- M v2/pages/courses/editor.html
- M v2/scripts/classrooms/manage.js
- M v2/scripts/courses/editor.js
-?? supabase/migrations/20260531000300_enforce_archive_visibility_rules.sql
+git branch --show-current
+codex/deidentified-mvp
+
+git log -1 --oneline
+3546b2b Make shared navbar responsive
+
+git status --short
 ?? v2/CREATE_USERS_PROFILES_SCHEMA_HANDOFF.md
 ```
 
-`v2/CODEX_HANDOFF.md` itself is also modified by this handoff.
+The only untracked file should still be:
 
-The next thread verified the non-destructive browser paths and source-backed
-confirmation behavior, then prepared the issue #20 files for commit.
+`v2/CREATE_USERS_PROFILES_SCHEMA_HANDOFF.md`
 
-## Work Done In This Chunk
+## What We Are Building Now
 
-### Course publish/archive controls
+We are carving a cleaner MVP out of the existing V2 app so it can run real classroom testing.
 
-Files changed:
+The MVP direction:
 
-- `v2/pages/courses/editor.html`
-- `v2/scripts/courses/editor.js`
+- Focus on student and teacher workflows first.
+- One main course for now: `Computing Foundations for a Digital Age`.
+- Four default classrooms/periods planned: 2, 3, 5, and 6.
+- Students can be identifiable.
+- A possible de-identified mode can exist later, but it is not the current blocker.
+- Keep the existing larger V2 work intact; do not delete broad functionality unless asked.
 
-Added course access controls:
+Core MVP workflows:
 
-- `Publish course` / `Make private`
-- `Copy public course link`
-- `Archive course`
-- `Delete course`
+1. Student signs up or logs in.
+2. Student joins a class with a class code.
+3. Student sees `Home`, `My Classes`, `Browse Courses`, and `Profile`.
+4. Student opens lessons, completes work, turns in lessons, and earns engagement points.
+5. Teacher logs in.
+6. Teacher sees courses/classes they teach.
+7. Teacher can manage rosters and individual students.
+8. Teacher can use the lesson builder inside the course/class workflow.
+9. Teacher can view class-level and student-level analytics.
+10. Teacher can create more classrooms if needed.
 
-Added publish validation blockers before a course can be published:
+## Recently Completed
 
-- course title required
-- course description required
-- subject area required
-- estimated course length required
-- at least one module required
-- at least one lesson required
-- at least one visible lesson content block required
-- each lesson needs objective
-- each lesson needs overview/summary
-- each lesson needs estimated time
-- each lesson needs visible `before`, `during`, and `reflection` questions
+### Shared Navbar
 
-Added confirmation warnings for:
+Commit:
 
-- publish
-- unpublish/make private
-- archive course
-- soft delete course
+`3546b2b Make shared navbar responsive`
 
-Archive behavior:
+What changed:
 
-- status becomes `archived`
-- public course link disabled
-- publish button disabled
-- copy link disabled
-- historical management screen remains visible
+- Replaced the old sidebar-style shared navigation with a full-width sticky top navbar.
+- Desktop now behaves like a normal website navbar.
+- Mobile and small screens now show a compact hamburger menu that expands into stacked links.
+- Shared nav is rendered through `v2/scripts/utils/app-sidebar.js`, despite the old filename.
+- `auth-guard.js` imports the cache-bumped shared nav.
+- V2 page stylesheet query strings were cache-bumped to load the new CSS.
 
-Delete behavior:
+Files involved:
 
-- status becomes `deleted`
-- redirects to dashboard
-- this is soft delete only
+- `v2/scripts/utils/app-sidebar.js`
+- `v2/scripts/utils/auth-guard.js`
+- `v2/styles/main.css`
+- V2 HTML pages with updated stylesheet cache tags.
 
-### Classroom archive controls
-
-File changed:
-
-- `v2/scripts/classrooms/manage.js`
-
-Added `Archive classroom` button with confirmation warning.
-
-Archived classroom behavior:
-
-- status becomes `archived`
-- `join_enabled` becomes `false`
-- card remains visible in classroom manager
-- card says archived classrooms are view-only
-- edit, join code, invite link, regenerate code, open/close joining, and drag reorder are disabled/hidden
-- delete remains available as a soft-delete action
-
-### Backend archive enforcement
-
-New migration:
-
-- `supabase/migrations/20260531000300_enforce_archive_visibility_rules.sql`
-
-This migration was successfully applied to the remote Supabase project with:
+Checks that passed:
 
 ```bash
-supabase db push
-```
-
-The first attempt failed because sandboxing blocked writing `~/.supabase/telemetry.json`. It was retried once with escalation and succeeded. Do not rerun blindly.
-
-The migration updates:
-
-- `preview_classroom_join_by_code`
-- `join_classroom_by_code`
-- `preview_classroom_join_by_invite`
-- `join_classroom_by_invite`
-- `can_submit_draft_for_context`
-
-Backend behavior now blocks:
-
-- joining classrooms when the course is `archived` or `deleted`
-- joining classrooms unless classroom status is `active`
-- student draft/submission writes when the course is `archived` or `deleted`
-- student draft/submission writes when the classroom context is not `active`
-
-Teacher review access remains allowed through `can_review_student_context`.
-
-## Verification Already Run
-
-Passed:
-
-```bash
-node --input-type=module --check < v2/scripts/courses/editor.js
-node --input-type=module --check < v2/scripts/classrooms/manage.js
+node --input-type=module --check < v2/scripts/utils/app-sidebar.js
+node --input-type=module --check < v2/scripts/utils/auth-guard.js
+python3 -m html.parser v2/pages/dashboard/index.html
+python3 -m html.parser v2/pages/lessons/builder.html
 git diff --check
-supabase db push
 ```
 
-Browser/local page checks:
+Browser note:
 
-- Login page loaded at `http://127.0.0.1:4173/pages/auth/login.html` through the in-app browser.
-- The local server appears to be running on `4173`; trying to start another server on `4173` returned `Address already in use`.
-- Dashboard loaded at `http://127.0.0.1:4173/pages/dashboard/index.html` with an authenticated teacher session.
-- Incomplete draft course `Introduction to Engineering Design` showed `Course access` controls.
-- Clicking `Publish course` on that incomplete draft did not change state and showed missing requirements:
-  course description, at least one lesson, and at least one visible content block.
-- Published course `AP Computer Science A` showed `Make private`, enabled public link copy, archive, and delete controls.
-- Public link copy fell back to displaying the join URL in-page when browser clipboard access was unavailable.
-- Classroom manager for `Intro to Computer Science` showed `Archive classroom` controls for active classrooms.
-- Native confirm dialogs were not accepted on live records to avoid unpublishing or archiving real course/classroom data.
-  Confirmation warning strings and post-confirm state updates were verified in source.
+- The in-app browser redirected protected pages to login because it was unauthenticated.
+- Attempts to use a data/file fixture for visual testing were blocked by browser policy.
+- Do not keep retrying that same fixture path.
 
-Browser asset verification was interrupted before completion. I tried one page-scope asset check, but browser runtime does not expose ordinary `fetch`/`XMLHttpRequest` constructors in that evaluation context. Do not repeat that path. Use normal page navigation/manual testing instead.
+## Current Local URLs
 
-## What Still Needs Testing
+If the local server is running:
 
-Use this link if the server is still running:
+- Dashboard: `http://127.0.0.1:4173/v2/pages/dashboard/index.html`
+- Browse courses: `http://127.0.0.1:4173/v2/pages/courses/discover.html`
+- Student course view: `http://127.0.0.1:4173/v2/pages/courses/student.html`
+- Lesson view: `http://127.0.0.1:4173/v2/pages/lessons/view.html?lesson=LESSON_ID`
+- Lesson builder: `http://127.0.0.1:4173/v2/pages/lessons/builder.html?lesson=LESSON_ID`
 
-`http://127.0.0.1:4173/pages/dashboard/index.html`
-
-If not running, start from VS Code terminal:
+If the server is off:
 
 ```bash
-cd /Users/jakebroos-williams/Developer/ClassroomWebsite/v2
+cd /Users/jakebroos-williams/Developer/ClassroomWebsite
 python3 -m http.server 4173 --bind 127.0.0.1
 ```
 
-Optional remaining destructive-ish test path, only with an explicit throwaway record or user approval:
+Note: Some older messages used `/pages/...` from inside `v2`. Current links above include `/v2/pages/...` from the repository root server.
 
-1. On a complete throwaway course, accept the `Publish course` confirmation.
-   - Badge should show public and public link copy should enable.
-2. Accept `Make private` on that throwaway course.
-   - Existing enrolled students/classrooms should keep access.
-3. Accept `Archive classroom` on a throwaway classroom.
-   - Classroom card should become view-only and joining should close.
-4. Optional deeper check:
-   - As a student in an archived classroom, try to submit work.
-   - The database should block the write.
+## Navigation Decisions
 
-Do not archive/delete the user’s real useful course/classroom unless they are okay with it. For destructive-ish tests, use a throwaway test course/classroom if possible.
+Current desired product navigation is top-navbar based, not sidebar based.
 
-## Likely Next Code Fixes If Testing Fails
+Student nav should be simple:
 
-Potential gaps to watch:
+- Home
+- My Classes
+- Browse Courses
+- Profile
 
-- Publish validation may be stricter than the user expects because it requires every lesson to have before/during/reflection questions and estimated time.
-- Course editor cache may need hard refresh because the script query string was changed to `v=20260531-publish-controls`.
-- If archived classroom still allows a student to open an existing lesson, that may be okay; #20 specifically says archived classrooms should not allow new submissions. The migration blocks saving/submitting.
-- If the UI should support unarchiving/restoring, that is not implemented yet. #20 did not explicitly require restore.
+Teacher nav should be simple:
 
-## Commit Guidance
+- Home
+- My Courses
+- Classes / class detail flows
+- Profile
 
-After manual testing, stage only the issue #20 files:
+Teacher analytics and student work should generally live inside the relevant course/class context instead of being top-level nav clutter.
 
-```bash
-git add \
-  supabase/migrations/20260531000300_enforce_archive_visibility_rules.sql \
-  v2/pages/courses/editor.html \
-  v2/scripts/classrooms/manage.js \
-  v2/scripts/courses/editor.js \
-  v2/CODEX_HANDOFF.md
-```
+Account/menu area should stay minimal:
 
-Do not add:
+- Settings
+- Log out
+
+Help/support items can exist, but should not dominate the MVP nav.
+
+## Next Best Task
+
+Start with responsive layout cleanup across MVP pages now that the navbar is fixed.
+
+Recommended order:
+
+1. Student dashboard / My Classes
+2. Browse Courses
+3. Student lesson view
+4. Profile
+5. Teacher home
+6. Teacher My Courses / Classes I Teach
+7. Class detail / roster
+8. Lesson builder
+
+Goals for the responsive cleanup:
+
+- Page content should not feel zoomed in.
+- Cards and buttons should never overflow the viewport.
+- Mobile should stack cleanly.
+- Tablet and desktop should use comfortable max-widths and padding.
+- Tables/filter bars should collapse or stack in a usable way.
+- The sticky top navbar should stay visible while scrolling.
+
+## Known Product Notes
+
+Lesson builder direction:
+
+- Should feel closer to Google Sites: lesson page canvas, right-side insert panel, clear content blocks.
+- Content tools: text, images, YouTube, upload/PDF, slides, dividers/spacers, etc.
+- Data collection tools should insert into the lesson page itself, not into a separate disconnected assessment section.
+- Student lesson view should show the full lesson page and a clean turn-in area at the bottom.
+
+Teacher/classroom direction:
+
+- Roster controls are a likely next major feature after responsive polish.
+- Teachers need class code joining, roster management, individual student views, and class analytics.
+- Lesson unlock timing is by class, based on lesson completion/unlock rules.
+- Students can submit late work.
+
+Authentication notes:
+
+- Login/signup loading feedback was improved earlier.
+- Password reset flow was added earlier.
+- Supabase redirect URLs may need production configuration when deploying.
+
+## Suggested New Thread Starter
+
+Paste this into the new thread:
 
 ```text
-v2/CREATE_USERS_PROFILES_SCHEMA_HANDOFF.md
+Please pick up from the handoff file at:
+
+/Users/jakebroos-williams/Developer/ClassroomWebsite/v2/CODEX_HANDOFF.md
+
+Read that first, then check git status --short, current branch, and latest commit before editing anything.
+
+We are on branch codex/deidentified-mvp. Preserve uncommitted work and do not commit v2/CREATE_USERS_PROFILES_SCHEMA_HANDOFF.md.
+
+The latest pushed commit should be 3546b2b Make shared navbar responsive.
+
+Next task: start responsive layout cleanup across the MVP pages, beginning with the student-facing pages. The navbar is now a sticky full-width responsive top navbar, but the page bodies still need to adapt better across mobile, tablet, desktop, and classroom displays.
 ```
-
-Suggested commit message after verified:
-
-```bash
-git commit -m "Add publish and archive controls"
-```
-
-Then push:
-
-```bash
-git push origin v2
-```
-
-After pushing and confirming behavior, issue #20 may likely be closed.
-
-## Anti-Stall Notes
-
-- Do not rerun `supabase db push`; it already succeeded for the new migration.
-- Do not repeat the failed browser asset `fetch` / `XMLHttpRequest` check; use normal page navigation or file-based checks.
-- If a page looks stale, hard refresh first (`Cmd + Shift + R`) because this is a static Python server.
-- If localhost commands fail in sandbox but browser works, trust the browser/server state and avoid spinning on `curl`.

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CodeTheCurrent V2 | Code Space</title>
+    <link rel="stylesheet" href="../../styles/main.css?v=20260612-code-space" />
+</head>
+
+<body>
+    <main class="code-space-page">
+        <header class="management-header code-space-header">
+            <div>
+                <p class="eyebrow">Teacher Tools</p>
+                <h1>Code Space</h1>
+                <p class="intro">
+                    A simple classroom Java workspace with files, structured editing, and a live console.
+                </p>
+            </div>
+            <div class="code-space-header-actions">
+                <button type="button" class="secondary-button" data-code-reset>Reset starter</button>
+            </div>
+        </header>
+
+        <p class="auth-status management-status" data-code-status aria-live="polite">Loading coding space...</p>
+
+        <section class="code-workspace" data-code-workspace hidden aria-label="Coding workspace">
+            <aside class="code-instructions-panel" aria-label="Instructions">
+                <div class="code-panel-header">
+                    <div>
+                        <p class="eyebrow">Instructions</p>
+                        <h2>Lesson task</h2>
+                    </div>
+                </div>
+                <div class="code-instructions-scroll">
+                    <div class="code-instructions-card">
+                        <p>Welcome to your coding space.</p>
+                        <h3>Do this</h3>
+                        <ol>
+                            <li>Open <code>Main.java</code> and read the starter code.</li>
+                            <li>Click <strong>Run code</strong> to send output to the console.</li>
+                            <li>Change the message, then run it again.</li>
+                        </ol>
+                        <p class="code-instruction-tip">
+                            Java support runs beginner classroom code locally: output, variables, loops, conditionals, and Math.
+                        </p>
+                    </div>
+                </div>
+            </aside>
+
+            <button
+                type="button"
+                class="code-resize-handle code-resize-handle--instructions"
+                data-code-instructions-resizer
+                aria-valuemin="220"
+                aria-valuemax="520"
+                aria-valuenow="300"
+                aria-label="Resize instructions panel"></button>
+
+            <aside class="code-file-panel" aria-label="Project files">
+                <div class="code-panel-header">
+                    <div>
+                        <p class="eyebrow">Files</p>
+                        <h2>Project</h2>
+                    </div>
+                    <button type="button" class="code-icon-button" data-code-new-file aria-label="New file">+</button>
+                </div>
+                <div class="code-file-list" data-code-file-list></div>
+            </aside>
+
+            <button
+                type="button"
+                class="code-resize-handle code-resize-handle--files"
+                data-code-files-resizer
+                aria-valuemin="140"
+                aria-valuemax="360"
+                aria-valuenow="190"
+                aria-label="Resize files panel"></button>
+
+            <section class="code-work-area" aria-label="Workspace">
+                <section class="code-editor-panel" aria-label="Code editor">
+                    <div class="code-editor-toolbar">
+                        <div>
+                            <p class="eyebrow">Workspace</p>
+                            <h2 data-code-active-file>Main.java</h2>
+                        </div>
+                        <div class="code-editor-meta">
+                            <span data-code-language>JavaScript</span>
+                            <span data-code-save-state>Saved locally</span>
+                            <div class="code-zoom-controls" aria-label="Editor zoom controls">
+                                <button type="button" class="code-icon-button" data-code-zoom-out aria-label="Zoom out">-</button>
+                                <span data-code-zoom-level>100%</span>
+                                <button type="button" class="code-icon-button" data-code-zoom-in aria-label="Zoom in">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="code-editor-shell">
+                        <div class="code-line-numbers" data-code-lines aria-hidden="true">1</div>
+                        <div class="code-editor-layer">
+                            <pre class="code-highlight" data-code-highlight aria-hidden="true"></pre>
+                            <textarea
+                                class="code-editor"
+                                data-code-editor
+                                spellcheck="false"
+                                autocapitalize="off"
+                                autocomplete="off"
+                                aria-label="Code editor"></textarea>
+                        </div>
+                        <div class="code-suggestions" data-code-suggestions hidden></div>
+                    </div>
+                </section>
+
+                <button
+                    type="button"
+                    class="code-resize-handle code-resize-handle--console"
+                    data-code-console-resizer
+                    aria-valuemin="72"
+                    aria-valuemax="520"
+                    aria-valuenow="240"
+                    aria-label="Resize console panel"></button>
+
+                <section class="code-console-panel" aria-label="Console">
+                    <div class="code-console-toolbar">
+                        <div>
+                            <p class="eyebrow">Output</p>
+                            <h2>Console</h2>
+                        </div>
+                        <div class="code-console-actions">
+                            <button type="button" class="code-run-button" data-code-run aria-label="Run code"></button>
+                            <button type="button" class="secondary-button" data-code-clear-console>Clear</button>
+                        </div>
+                    </div>
+                    <pre class="code-console" data-code-console aria-live="polite"></pre>
+                </section>
+            </section>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/tools/code-space.js?v=20260612-code-space"></script>
+</body>
+
+</html>
