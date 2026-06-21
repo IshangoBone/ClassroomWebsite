@@ -21,6 +21,7 @@ const cancelModuleButton = qs("[data-cancel-module-form]");
 const lessonForm = qs("[data-lesson-form]");
 const lessonFormHeading = qs("[data-lesson-form-heading]");
 const cancelLessonButton = qs("[data-cancel-lesson-form]");
+const lessonFormHome = document.createComment("lesson form home");
 const courseVisibility = qs("[data-course-visibility]");
 const publicCourseCopy = qs("[data-public-course-copy]");
 const courseDiscoverySelect = qs("[data-course-discovery-select]");
@@ -33,6 +34,9 @@ const courseThumbnailInput = editorForm.elements["course-thumbnail"];
 const courseThumbnailPreview = qs("[data-course-thumbnail-preview]");
 const courseThumbnailPreviewImage = qs("[data-course-thumbnail-preview-image]");
 const courseThumbnailPreviewName = qs("[data-course-thumbnail-preview-name]");
+
+lessonForm.after(lessonFormHome);
+
 const courseSelectColumns = [
     "id",
     "owner_user_id",
@@ -505,16 +509,42 @@ function toggleModuleForm(isOpen, module = null) {
     }
 }
 
+function resetLessonFormPlacement() {
+    if (lessonFormHome.parentNode) {
+        lessonFormHome.parentNode.insertBefore(lessonForm, lessonFormHome.nextSibling);
+    }
+}
+
+function moveLessonFormToModule(module) {
+    if (collapsedModuleIds.has(module.id)) {
+        collapsedModuleIds.delete(module.id);
+        renderModules(loadedModules, loadedLessons, loadedContentBlocks, loadedQuestions);
+    }
+
+    const moduleCard = [...moduleList.querySelectorAll("[data-module-id]")]
+        .find((card) => card.dataset.moduleId === module.id);
+    const lessonSection = moduleCard?.querySelector(".module-lessons");
+
+    if (lessonSection) {
+        lessonSection.append(lessonForm);
+    } else {
+        resetLessonFormPlacement();
+    }
+}
+
 function toggleLessonForm(isOpen, module = null) {
     lessonForm.hidden = !isOpen;
 
     if (isOpen && module) {
+        moveLessonFormToModule(module);
         lessonForm.elements["module-id"].value = module.id;
         lessonFormHeading.textContent = `Add lesson to ${module.title}`;
+        lessonForm.scrollIntoView({ behavior: "smooth", block: "center" });
         lessonForm.elements.title.focus();
     } else {
         lessonForm.reset();
         lessonFormHeading.textContent = "Add lesson";
+        resetLessonFormPlacement();
     }
 }
 

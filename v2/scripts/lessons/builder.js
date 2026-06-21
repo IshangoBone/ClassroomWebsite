@@ -3,14 +3,16 @@ import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
 import { notifyStatus } from "../utils/ui-components.js";
 
+document.body.classList.add("lesson-authoring-shell");
+
 const params = new URLSearchParams(window.location.search);
 const lessonId = params.get("lesson");
 const headingElement = qs("[data-lesson-heading]");
 const contextElement = qs("[data-lesson-context]");
 const statusElement = qs("[data-lesson-status]");
 const contentSections = [...document.querySelectorAll("[data-lesson-content]")];
-const courseEditorLink = qs("[data-course-editor-link]");
-const studentViewLink = qs("[data-student-view-link]");
+const courseEditorLinks = [...document.querySelectorAll("[data-course-editor-link]")];
+const studentViewLinks = [...document.querySelectorAll("[data-student-view-link]")];
 const modulePosition = qs("[data-module-position]");
 const lessonPosition = qs("[data-lesson-position]");
 const lessonDetails = qs("[data-lesson-details]");
@@ -51,6 +53,8 @@ const closeQuestionEditorButton = qs("[data-close-question-editor]");
 const questionToolButtons = [...document.querySelectorAll("[data-question-tool]")];
 const questionToolLabel = qs("[data-question-tool-label]");
 const builderCanvas = qs("[data-builder-canvas]");
+const editorLessonTitleElement = qs("[data-editor-lesson-title]");
+const editorPreviewLink = qs("[data-editor-preview-link]");
 const canvasContextElement = qs("[data-canvas-context]");
 const canvasTitleElement = qs("[data-canvas-title]");
 const canvasObjectiveElement = qs("[data-canvas-objective]");
@@ -93,12 +97,20 @@ const questionTypeLabels = {
     select_all_that_apply: "Select all",
     true_false: "True / false",
     rating_scale: "Rating scale",
+    code_space: "Code space",
     fill_in_the_blank: "Fill in the blank",
     matching: "Matching",
     ordering: "Ordering",
 };
+const questionDefaultPrompts = {
+    code_space: "Complete this Java coding task.",
+};
+const questionDefaultInstructions = {
+    code_space: "Write and run your Java code in the workspace. Your code will be saved with your lesson response.",
+};
 const contentTypeLabels = {
     text: "Text section",
+    flashcards: "Flashcards",
     link: "External link",
     youtube: "YouTube video",
     slides: "Slides embed",
@@ -116,7 +128,7 @@ const questionPhases = [
     ["reflection", "Reflection"],
 ];
 const lessonLayoutMarker = "__ctc_lesson_layout_v1__";
-const savedLayoutTemplates = new Set(["text", "wide", "image-text", "feature", "image", "columns", "gallery", "carousel", "divider", "spacer", "toc"]);
+const savedLayoutTemplates = new Set(["text", "wide", "image-text", "feature", "image", "columns", "gallery", "carousel", "divider", "spacer", "toc", "flashcards"]);
 
 function encodeLessonLayout(layout) {
     return `${lessonLayoutMarker}\n${JSON.stringify(layout)}`;
@@ -138,6 +150,20 @@ function setStatus(message, tone = "info") {
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
     notifyStatus(message, tone);
+}
+
+function getQuestionSaveErrorMessage(error, fallback) {
+    const message = error?.message || "";
+    const normalized = message.toLowerCase();
+
+    if (
+        normalized.includes("questions_type_check")
+        || (normalized.includes("violates check constraint") && normalized.includes("questions"))
+    ) {
+        return "Code space is not enabled in this database yet. Apply the latest question type migration, then try adding it again.";
+    }
+
+    return message || fallback;
 }
 
 function showContent() {
@@ -169,7 +195,7 @@ function buildDetailsList(lesson, module, course) {
 }
 
 function formatContentBlockType(blockType) {
-    return ["file", "image", "audio", "link", "slides", "youtube"].includes(blockType) ? blockType : "text";
+    return ["file", "image", "audio", "link", "slides", "youtube", "flashcards"].includes(blockType) ? blockType : "text";
 }
 
 function getContentBlockFormType(contentBlock) {
@@ -185,6 +211,10 @@ function getContentBlockFormType(contentBlock) {
 }
 
 function getStoredBlockType(formBlockType) {
+    if (formBlockType === "flashcards") {
+        return "text";
+    }
+
     return ["file", "image", "audio"].includes(formBlockType) ? "file" : formBlockType;
 }
 
@@ -194,6 +224,12 @@ function getDefaultContentBlockTitle(contentBlock) {
     }
 
     if (contentBlock.block_type === "text") {
+        const layout = decodeLessonLayout(contentBlock.body_text || "");
+
+        if (layout?.type === "flashcards") {
+            return "Flashcards";
+        }
+
         return "Text content";
     }
 
@@ -456,6 +492,10 @@ function openContentTool(blockType = "text") {
 
 function openQuestionTool(questionType = "short_response") {
     setQuestionFormMode(questionType);
+    if (!questionForm.elements["question-id"].value && questionDefaultPrompts[questionType]) {
+        questionForm.elements.prompt.value = questionDefaultPrompts[questionType];
+        questionForm.elements["student-instructions"].value = questionDefaultInstructions[questionType] || "";
+    }
     showQuestionDraftPlaceholder(questionType);
     showBuilderEditor(questionEditorCard);
     focusEditor("lesson-question-editor");
@@ -857,6 +897,20 @@ async function hydrateLessonLayout(bodyText = "") {
         return { ...layout, images };
     }
 
+    if (layout.type === "flashcards") {
+        const cards = await Promise.all((layout.cards || []).map(async (card) => ({
+            ...card,
+            image: card.image?.url
+                ? {
+                    ...card.image,
+                    displayUrl: await getDisplayResourceUrl({ file_url: card.image.url }),
+                }
+                : null,
+        })));
+
+        return { ...layout, cards };
+    }
+
     if ((layout.type === "imageText" || layout.type === "featureImage") && layout.image?.url) {
         return {
             ...layout,
@@ -936,6 +990,272 @@ function getInlineSingleImageData(block) {
     };
 }
 
+function createFlashcardEditorCard(card = {}) {
+    const item = createElement("article", "lesson-flashcard-editor-card");
+    const cardNumber = createElement("span", "lesson-flashcard-row-number", "");
+    const fields = createElement("div", "lesson-flashcard-editor-fields");
+    const termLabel = createElement("label", "form-field");
+    const definitionLabel = createElement("label", "form-field");
+    const termInput = document.createElement("textarea");
+    const definitionInput = document.createElement("textarea");
+    const deleteButton = createElement("button", "lesson-flashcard-delete", "Delete card");
+    const imageSlot = createInlineMediaSlot("Optional image", ["image"]);
+
+    cardNumber.dataset.flashcardRowNumber = "";
+    termInput.name = "flashcard-term";
+    termInput.rows = 3;
+    termInput.placeholder = "Term";
+    termInput.value = card.term || "";
+    definitionInput.name = "flashcard-definition";
+    definitionInput.rows = 3;
+    definitionInput.placeholder = "Definition";
+    definitionInput.value = card.definition || "";
+    if (card.image?.url) {
+        const image = createElement("img", "lesson-inline-image-preview");
+
+        image.src = card.image.displayUrl || card.image.url;
+        image.alt = card.image.title || card.term || "Flashcard image";
+        imageSlot.dataset.mediaUrl = card.image.url;
+        imageSlot.dataset.mediaTitle = card.image.title || "Flashcard image";
+        setInlineSlotContent(imageSlot, image);
+    }
+    new MutationObserver(() => updateInlineFlashcardPreview(getFlashcardEditorRoot(item))).observe(imageSlot, {
+        attributes: true,
+        childList: true,
+        subtree: true,
+    });
+
+    deleteButton.type = "button";
+    deleteButton.setAttribute("aria-label", "Delete flashcard");
+    deleteButton.addEventListener("click", () => {
+        const list = item.closest(".lesson-flashcard-editor-list");
+
+        if (list?.querySelectorAll(".lesson-flashcard-editor-card").length > 1) {
+            item.remove();
+            updateFlashcardRowNumbers(list);
+            updateInlineFlashcardPreview(getFlashcardEditorRoot(list));
+        }
+    });
+    termInput.addEventListener("input", () => updateInlineFlashcardPreview(getFlashcardEditorRoot(item)));
+    definitionInput.addEventListener("input", () => updateInlineFlashcardPreview(getFlashcardEditorRoot(item)));
+
+    termLabel.append(termInput, createElement("span", "", "Term"));
+    definitionLabel.append(definitionInput, createElement("span", "", "Definition"));
+    fields.append(termLabel, definitionLabel);
+    item.append(cardNumber, fields, imageSlot, deleteButton);
+    return item;
+}
+
+function getFlashcardEditorRoot(element) {
+    return element?.closest?.(".lesson-inline-block, .lesson-flashcard-modal-panel") || null;
+}
+
+function updateFlashcardRowNumbers(list) {
+    [...(list?.querySelectorAll(".lesson-flashcard-editor-card") || [])].forEach((card, index) => {
+        const number = card.querySelector("[data-flashcard-row-number]");
+
+        if (number) {
+            number.textContent = String(index + 1);
+        }
+    });
+}
+
+function getInlineFlashcardData(block) {
+    return [...block.querySelectorAll(".lesson-flashcard-editor-card")]
+        .map((card) => {
+            const imageSlot = card.querySelector(".lesson-inline-media-slot");
+            const term = card.querySelector("[name='flashcard-term']")?.value.trim() || "";
+            const definition = card.querySelector("[name='flashcard-definition']")?.value.trim() || "";
+
+            return {
+                term,
+                definition,
+                image: imageSlot?.dataset.mediaUrl
+                    ? {
+                        url: imageSlot.dataset.mediaUrl,
+                        title: imageSlot.dataset.mediaTitle || term || "Flashcard image",
+                    }
+                    : null,
+            };
+        })
+        .filter((card) => card.term || card.definition || card.image?.url);
+}
+
+function createFlashcardSetPreview(layout) {
+    const cards = (layout.cards || []).filter((card) => card.term || card.definition || card.image?.url);
+    const wrapper = createElement("section", "lesson-flashcards");
+    const viewport = createElement("div", "lesson-flashcard-viewport");
+    const previousButton = createElement("button", "lesson-flashcard-arrow", "‹");
+    const nextButton = createElement("button", "lesson-flashcard-arrow", "›");
+    const cardButton = createElement("button", "lesson-flashcard-card", "");
+    const counter = createElement("span", "lesson-flashcard-count", "");
+    let index = 0;
+    let isRevealed = false;
+
+    previousButton.type = "button";
+    nextButton.type = "button";
+    cardButton.type = "button";
+    previousButton.setAttribute("aria-label", "Previous flashcard");
+    nextButton.setAttribute("aria-label", "Next flashcard");
+
+    function renderCard() {
+        const current = cards[index] || {};
+        const face = createElement("div", "lesson-flashcard-face");
+
+        cardButton.classList.toggle("lesson-flashcard-card--revealed", isRevealed);
+        if (current.image?.displayUrl || current.image?.url) {
+            const image = createElement("img", "lesson-flashcard-image");
+
+            image.src = current.image.displayUrl || current.image.url;
+            image.alt = current.image.title || current.term || "Flashcard image";
+            face.append(image);
+        }
+        face.append(createElement("span", "lesson-flashcard-kicker", isRevealed ? "Definition" : "Term"));
+        face.append(createElement("strong", "lesson-flashcard-text", isRevealed ? current.definition || "No definition added yet." : current.term || "No term added yet."));
+        face.append(createElement("small", "lesson-flashcard-hint", "Click to flip"));
+        cardButton.replaceChildren(face);
+        counter.textContent = `${index + 1} / ${cards.length || 1}`;
+        previousButton.disabled = cards.length <= 1;
+        nextButton.disabled = cards.length <= 1;
+    }
+
+    previousButton.addEventListener("click", () => {
+        index = (index - 1 + cards.length) % cards.length;
+        isRevealed = false;
+        renderCard();
+    });
+    nextButton.addEventListener("click", () => {
+        index = (index + 1) % cards.length;
+        isRevealed = false;
+        renderCard();
+    });
+    cardButton.addEventListener("click", () => {
+        isRevealed = !isRevealed;
+        cardButton.classList.remove("lesson-flashcard-card--flipping");
+        void cardButton.offsetWidth;
+        cardButton.classList.add("lesson-flashcard-card--flipping");
+        renderCard();
+    });
+
+    if (!cards.length) {
+        wrapper.append(createElement("p", "course-muted", "Add a term and definition to preview this flashcard set."));
+        return wrapper;
+    }
+
+    renderCard();
+    viewport.append(previousButton, cardButton, nextButton);
+    wrapper.append(viewport, counter);
+    return wrapper;
+}
+
+function updateInlineFlashcardPreview(block) {
+    const preview = block?.querySelector("[data-flashcard-preview]");
+
+    if (!preview) {
+        return;
+    }
+
+    preview.replaceChildren(createFlashcardSetPreview({
+        type: "flashcards",
+        cards: getInlineFlashcardData(block),
+    }));
+}
+
+function createInlineFlashcardEditor(layout = {}) {
+    const wrapper = createElement("div", "lesson-flashcard-editor");
+    const titleLabel = createElement("label", "form-field lesson-flashcard-title-field");
+    const titleInput = document.createElement("input");
+    const list = createElement("div", "lesson-flashcard-editor-list");
+    const addButton = createElement("button", "secondary-button lesson-flashcard-add", "Add card");
+    const preview = createElement("div", "lesson-flashcard-editor-preview");
+
+    titleInput.name = "flashcard-set-title";
+    titleInput.placeholder = "Flashcard set title";
+    titleInput.value = layout.title || "Flashcards";
+    preview.dataset.flashcardPreview = "";
+    addButton.type = "button";
+    addButton.addEventListener("click", () => {
+        list.append(createFlashcardEditorCard());
+        updateFlashcardRowNumbers(list);
+        updateInlineFlashcardPreview(getFlashcardEditorRoot(wrapper));
+    });
+    titleLabel.append(createElement("span", "", "Set title"), titleInput);
+    const cards = Array.isArray(layout.cards) && layout.cards.length ? layout.cards : [{}];
+
+    cards.forEach((card) => list.append(createFlashcardEditorCard(card)));
+    updateFlashcardRowNumbers(list);
+    wrapper.append(
+        titleLabel,
+        list,
+        addButton,
+        createElement("h4", "lesson-flashcard-preview-heading", "Student preview"),
+        preview
+    );
+    window.setTimeout(() => updateInlineFlashcardPreview(getFlashcardEditorRoot(wrapper)), 0);
+    return wrapper;
+}
+
+function closeFlashcardModal(panel) {
+    panel?.closest(".lesson-flashcard-modal")?.remove();
+}
+
+function openFlashcardModal(layout = {}, existingContentBlock = null) {
+    const overlay = createElement("div", "lesson-flashcard-modal");
+    const panel = createElement("section", "lesson-flashcard-modal-panel");
+    const header = createElement("div", "lesson-flashcard-modal-header");
+    const headingGroup = createElement("div");
+    const actions = createElement("div", "lesson-flashcard-modal-actions");
+    const saveButton = createElement("button", "primary-button", existingContentBlock ? "Save flashcards" : "Add flashcards");
+    const closeButton = createElement("button", "secondary-button", "Close");
+    const editor = createInlineFlashcardEditor(layout);
+
+    panel.dataset.layoutTemplate = "flashcards";
+    if (existingContentBlock?.id) {
+        panel.dataset.savedContentBlockId = existingContentBlock.id;
+    }
+    overlay.setAttribute("role", "presentation");
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    panel.setAttribute("aria-labelledby", "flashcard-modal-title");
+    saveButton.type = "button";
+    closeButton.type = "button";
+    saveButton.addEventListener("click", () => saveInlineLayoutBlock(panel));
+    closeButton.addEventListener("click", () => closeFlashcardModal(panel));
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) {
+            closeFlashcardModal(panel);
+        }
+    });
+    document.addEventListener("keydown", function handleEscape(event) {
+        if (!overlay.isConnected) {
+            document.removeEventListener("keydown", handleEscape);
+            return;
+        }
+        if (event.key === "Escape") {
+            closeFlashcardModal(panel);
+        }
+    });
+
+    headingGroup.append(
+        createElement("p", "eyebrow", "Flashcard set"),
+        createElement("h3", "", existingContentBlock ? "Edit flashcards" : "Create flashcards")
+    );
+    actions.append(closeButton, saveButton);
+    header.append(headingGroup, actions);
+    panel.append(header, editor);
+    overlay.append(panel);
+    document.body.append(overlay);
+    hideBuilderEditors({ scrollToCanvas: false });
+    window.setTimeout(() => {
+        updateInlineFlashcardPreview(panel);
+        panel.querySelector("[name='flashcard-set-title']")?.focus();
+    }, 0);
+}
+
+function editFlashcardContentBlock(contentBlock) {
+    openFlashcardModal(contentBlock.layout || {}, contentBlock);
+}
+
 async function saveInlineLayoutBlock(block) {
     const template = block.dataset.layoutTemplate || "";
     let layout = null;
@@ -1004,6 +1324,16 @@ async function saveInlineLayoutBlock(block) {
 
         title = "Image gallery";
         layout = { type: "gallery", images };
+    } else if (template === "flashcards") {
+        const cards = getInlineFlashcardData(block).filter((card) => card.term && card.definition);
+
+        if (!cards.length) {
+            setStatus("Add at least one flashcard with a term and definition before saving.", "error");
+            return;
+        }
+
+        title = block.querySelector("[name='flashcard-set-title']")?.value.trim() || "Flashcards";
+        layout = { type: "flashcards", title, cards };
     } else if (template === "divider" || template === "spacer") {
         title = template === "divider" ? "Divider" : "Spacer";
         layout = { type: template };
@@ -1015,12 +1345,40 @@ async function saveInlineLayoutBlock(block) {
 
     setStatus("Saving layout block...");
     try {
-        await createSavedContentBlock({
-            blockType: "text",
-            title,
-            bodyText: encodeLessonLayout(layout),
-        });
-        block.remove();
+        const savedContentBlockId = block.dataset.savedContentBlockId;
+
+        if (savedContentBlockId) {
+            const { error } = await supabase
+                .from("lesson_content_blocks")
+                .update({
+                    block_type: "text",
+                    title,
+                    body_text: encodeLessonLayout(layout),
+                    external_url: null,
+                    file_url: null,
+                    file_type: null,
+                })
+                .eq("id", savedContentBlockId)
+                .eq("lesson_id", lessonId);
+
+            if (error) {
+                throw new Error(error.message);
+            }
+            await loadContentBlocks();
+        } else {
+            await createSavedContentBlock({
+                blockType: "text",
+                title,
+                bodyText: encodeLessonLayout(layout),
+            });
+        }
+        const flashcardModal = block.closest(".lesson-flashcard-modal");
+
+        if (flashcardModal) {
+            flashcardModal.remove();
+        } else {
+            block.remove();
+        }
         setStatus("Layout block saved.", "success");
     } catch (error) {
         setStatus(`Layout block could not be saved: ${error.message}`, "error");
@@ -1062,13 +1420,19 @@ async function createSavedContentBlock({
     return contentBlock;
 }
 
-function createInlineDraftBlock(button) {
+function createInlineDraftBlock(button, existingContentBlock = null) {
     if (!inlineDraftList) {
         openContentTool(button.dataset.contentTool || "text");
         return;
     }
 
     const template = button.dataset.layoutTemplate || button.dataset.contentTool || "text";
+
+    if (template === "flashcards") {
+        openFlashcardModal();
+        return;
+    }
+
     const block = createElement("article", `lesson-inline-block lesson-inline-block--${template}`);
     const toolbar = createElement("div", "lesson-inline-toolbar");
     const label = createElement("span", "", "Draft content block");
@@ -1077,6 +1441,9 @@ function createInlineDraftBlock(button) {
     const body = createElement("div", "lesson-inline-block-body");
 
     block.dataset.layoutTemplate = template;
+    if (existingContentBlock?.id) {
+        block.dataset.savedContentBlockId = existingContentBlock.id;
+    }
     saveLayoutButton.type = "button";
     saveLayoutButton.addEventListener("click", () => saveInlineLayoutBlock(block));
     removeButton.type = "button";
@@ -1136,6 +1503,8 @@ function createInlineDraftBlock(button) {
             createInlineTextStack("Column title", "Column description"),
             createInlineTextStack("Column title", "Column description")
         );
+    } else if (template === "flashcards") {
+        body.append(createInlineFlashcardEditor(existingContentBlock?.layout || {}));
     } else if (template === "link") {
         body.append(createInlineTextStack("Link title", "Paste or describe the resource"));
     } else {
@@ -1351,6 +1720,14 @@ function getContentBlockTypeLabel(contentBlock) {
 
     if (contentBlock.block_type === "link") {
         return contentBlock.is_visible ? "Link" : "Draft link";
+    }
+
+    if (contentBlock.block_type === "text") {
+        const layout = decodeLessonLayout(contentBlock.body_text || "");
+
+        if (layout?.type === "flashcards") {
+            return contentBlock.is_visible ? "Flashcards" : "Draft flashcards";
+        }
     }
 
     return contentBlock.is_visible ? "Text" : "Draft text";
@@ -2077,6 +2454,10 @@ function createSavedLayoutPreview(layout) {
         return wrapper;
     }
 
+    if (layout?.type === "flashcards") {
+        return createFlashcardSetPreview(layout);
+    }
+
     if (layout?.type === "divider") {
         return createElement("hr", "lesson-inline-divider");
     }
@@ -2223,7 +2604,14 @@ function renderContentBlocks(contentBlocks) {
         moveDownButton.disabled = index === contentBlocks.length - 1;
         moveDownButton.addEventListener("click", () => moveContentBlock(contentBlock, "down"));
         editButton.type = "button";
-        editButton.addEventListener("click", () => editContentBlock(contentBlock));
+        editButton.addEventListener("click", () => {
+            if (layout?.type === "flashcards") {
+                editFlashcardContentBlock(contentBlock);
+                return;
+            }
+
+            editContentBlock(contentBlock);
+        });
         removeFileButton.type = "button";
         removeFileButton.addEventListener("click", () => removeFileFromContentBlock(contentBlock));
         deleteButton.type = "button";
@@ -2453,6 +2841,7 @@ function renderQuestionPreview(questions) {
         const responseType = question.question_type || "short_response";
         const typeLabel = createElement("span", "badge badge--quiet", questionTypeLabels[responseType] || "Question");
         const requiredLabel = createElement("span", "badge badge--quiet", question.is_required ? "Required" : "Optional");
+        const cardHeader = createElement("div", "question-card-header");
         const instructions = createElement(
             "p",
             "course-muted question-instructions",
@@ -2466,8 +2855,9 @@ function renderQuestionPreview(questions) {
         editButton.addEventListener("click", () => editQuestion(question));
         deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteQuestion(question));
+        cardHeader.append(prompt, typeLabel);
         actions.append(editButton, deleteButton);
-        card.append(prompt, typeLabel, requiredLabel, instructions);
+        card.append(cardHeader, requiredLabel, instructions);
 
         if (responseType === "multiple_choice" || responseType === "select_all_that_apply") {
             const options = getQuestionOptions(question);
@@ -2548,6 +2938,22 @@ function renderQuestionPreview(questions) {
                 fieldset.append(label);
             });
             card.append(fieldset);
+        } else if (responseType === "code_space") {
+            const workspace = createElement("div", "lesson-code-space-preview");
+            const rail = createElement("div", "lesson-code-space-preview-files");
+            const editor = createElement("div", "lesson-code-space-preview-editor");
+            const consolePreview = createElement("div", "lesson-code-space-preview-console", "Console output");
+
+            rail.append(createElement("span", "", "Main.java"));
+            editor.append(
+                createElement("span", "", "public class Main {"),
+                createElement("span", "", "    public static void main(String[] args) {"),
+                createElement("span", "", "        System.out.println(\"Hello\");"),
+                createElement("span", "", "    }"),
+                createElement("span", "", "}")
+            );
+            workspace.append(rail, editor, consolePreview);
+            card.append(workspace);
         } else if (responseType === "fill_in_the_blank") {
             const response = document.createElement("input");
 
@@ -2686,6 +3092,9 @@ async function initializePage() {
 
     headingElement.textContent = lesson.title || "Untitled lesson";
     contextElement.textContent = `${course.title || "Untitled course"} / ${module.title || "Untitled module"}`;
+    if (editorLessonTitleElement) {
+        editorLessonTitleElement.textContent = lesson.title || "Untitled lesson";
+    }
     if (canvasContextElement) {
         canvasContextElement.textContent = `${course.title || "Untitled course"} / ${module.title || "Untitled module"}`;
     }
@@ -2701,10 +3110,19 @@ async function initializePage() {
     if (canvasDurationElement) {
         canvasDurationElement.textContent = lesson.estimated_time || "Not set";
     }
-    courseEditorLink.href = `../courses/editor.html?course=${encodeURIComponent(course.id)}`;
-    courseEditorLink.textContent = "Back to course editor";
-    studentViewLink.href = `view.html?lesson=${encodeURIComponent(lesson.id)}&preview=teacher&course=${encodeURIComponent(course.id)}`;
-    studentViewLink.hidden = false;
+    const courseEditorHref = `../courses/editor.html?course=${encodeURIComponent(course.id)}`;
+    const studentViewHref = `view.html?lesson=${encodeURIComponent(lesson.id)}&preview=teacher&course=${encodeURIComponent(course.id)}`;
+    courseEditorLinks.forEach((link) => {
+        link.href = courseEditorHref;
+        link.textContent = "Back to course editor";
+    });
+    studentViewLinks.forEach((link) => {
+        link.href = studentViewHref;
+        link.hidden = false;
+    });
+    if (editorPreviewLink) {
+        editorPreviewLink.href = studentViewHref;
+    }
     modulePosition.textContent = String(module.order_index + 1);
     lessonPosition.textContent = String(lesson.order_index + 1);
     lessonDetails.replaceChildren(buildDetailsList(lesson, module, course));
@@ -3063,7 +3481,7 @@ questionForm.addEventListener("submit", async (event) => {
 
         if (error) {
             submitButton.disabled = false;
-            setStatus(error.message || "The question block could not be saved.", "error");
+            setStatus(getQuestionSaveErrorMessage(error, "The question block could not be saved."), "error");
             return;
         }
 
@@ -3106,7 +3524,7 @@ questionForm.addEventListener("submit", async (event) => {
 
     if (error) {
         submitButton.disabled = false;
-        setStatus(error.message || "The question block could not be created.", "error");
+        setStatus(getQuestionSaveErrorMessage(error, "The question block could not be created."), "error");
         return;
     }
 
