@@ -3600,6 +3600,17 @@ h2 {
     box-shadow: 0 0 0 4px rgba(51, 134, 90, 0.1);
 }
 
+.lesson-authoring-status[data-save-state="saving"] .lesson-authoring-status-dot {
+    background: #b7791f;
+    box-shadow: 0 0 0 4px rgba(183, 121, 31, 0.12);
+}
+
+.lesson-authoring-status[data-save-state="unsaved"] .lesson-authoring-status-dot,
+.lesson-authoring-status[data-save-state="error"] .lesson-authoring-status-dot {
+    background: #b5322a;
+    box-shadow: 0 0 0 4px rgba(181, 50, 42, 0.12);
+}
+
 .lesson-authoring-save-state {
     color: #667892;
     font-size: 0.78rem;
@@ -3660,6 +3671,41 @@ h2 {
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
     -webkit-overflow-scrolling: touch;
+}
+
+.lesson-builder-exit-row {
+    display: flex;
+    justify-content: flex-start;
+    min-width: 0;
+    width: min(100%, 1120px);
+    max-width: 100%;
+    margin-inline: auto;
+}
+
+.lesson-builder-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    max-width: 100%;
+    color: #48617f;
+    font-size: 0.82rem;
+    font-weight: 900;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.lesson-builder-back-link::before {
+    content: "\2190";
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.lesson-builder-back-link:hover,
+.lesson-builder-back-link:focus-visible {
+    color: #183153;
+    text-decoration: underline;
+    text-underline-offset: 4px;
 }
 
 .lesson-page-canvas {
@@ -4304,12 +4350,6 @@ h2 {
     font: inherit;
     font-size: 0.8rem;
     font-weight: 900;
-}
-
-.lesson-inline-save {
-    border-color: #c9d6e8;
-    background: #f8fafc;
-    color: #183153;
 }
 
 .lesson-inline-block-body {
@@ -8427,7 +8467,6 @@ h2 {
 
     .lesson-builder-toolbox {
         position: static;
-        order: -1;
         max-height: none;
     }
 
@@ -8510,6 +8549,37 @@ h2 {
     .lesson-action-group {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .management-layout .lesson-header-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        justify-items: stretch;
+    }
+
+    .management-layout .lesson-drag-hint {
+        justify-self: center;
+        margin-top: 2px;
+        text-align: center;
+    }
+
+    .management-layout .lesson-reorder-controls {
+        display: grid;
+        grid-template-columns: auto minmax(72px, 1fr) minmax(92px, auto);
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+    }
+
+    .management-layout .lesson-reorder-controls .lesson-move-label {
+        margin: 0;
+    }
+
+    .management-layout .lesson-position-select,
+    .management-layout .lesson-move-button {
+        min-height: 42px;
+        width: 100%;
     }
 
     .management-layout .lesson-action {
@@ -8610,7 +8680,7 @@ h2 {
     }
 
     .lesson-page-canvas {
-        margin-inline: -8px;
+        margin-inline: 0;
     }
 
     .lesson-page-hero,
@@ -8664,6 +8734,19 @@ h2 {
 
     .lesson-action-group {
         grid-template-columns: 1fr;
+    }
+
+    .management-layout .lesson-action-group {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .management-layout .lesson-action-group .lesson-action {
+        min-height: 44px;
+        padding-inline: 10px;
+    }
+
+    .management-layout .lesson-reorder-controls {
+        grid-template-columns: auto minmax(64px, 1fr) minmax(82px, auto);
     }
 
     .lesson-code-space,

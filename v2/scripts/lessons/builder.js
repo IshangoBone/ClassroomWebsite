@@ -55,6 +55,8 @@ const questionToolLabel = qs("[data-question-tool-label]");
 const builderCanvas = qs("[data-builder-canvas]");
 const editorLessonTitleElement = qs("[data-editor-lesson-title]");
 const editorPreviewLink = qs("[data-editor-preview-link]");
+const authoringStatusElement = qs(".lesson-authoring-status");
+const authoringSaveStateElement = qs(".lesson-authoring-save-state");
 const canvasContextElement = qs("[data-canvas-context]");
 const canvasTitleElement = qs("[data-canvas-title]");
 const canvasObjectiveElement = qs("[data-canvas-objective]");
@@ -129,6 +131,7 @@ const questionPhases = [
 ];
 const lessonLayoutMarker = "__ctc_lesson_layout_v1__";
 const savedLayoutTemplates = new Set(["text", "wide", "image-text", "feature", "image", "columns", "gallery", "carousel", "divider", "spacer", "toc", "flashcards"]);
+const inlineAutosaveTimers = new WeakMap();
 
 function encodeLessonLayout(layout) {
     return `${lessonLayoutMarker}\n${JSON.stringify(layout)}`;
@@ -146,9 +149,49 @@ function decodeLessonLayout(bodyText = "") {
     }
 }
 
+function setAuthoringSaveState(state = "saved") {
+    if (!authoringStatusElement || !authoringSaveStateElement) {
+        return;
+    }
+
+    const states = {
+        saved: "Saved",
+        saving: "Saving...",
+        unsaved: "Unsaved changes",
+        error: "Unsaved changes",
+    };
+    const normalizedState = states[state] ? state : "saved";
+    const label = states[normalizedState];
+
+    authoringStatusElement.dataset.saveState = normalizedState;
+    authoringStatusElement.setAttribute("aria-label", `Save status: ${label}`);
+    authoringSaveStateElement.textContent = label;
+}
+
+function getAuthoringSaveState(message, tone) {
+    if (tone === "success") {
+        return "saved";
+    }
+
+    if (tone === "error") {
+        return "error";
+    }
+
+    if (/saving|creating|uploading|deleting|moving|making|hiding|loading|removing/i.test(message)) {
+        return "saving";
+    }
+
+    return null;
+}
+
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
+    const saveState = getAuthoringSaveState(message, tone);
+
+    if (saveState) {
+        setAuthoringSaveState(saveState);
+    }
     notifyStatus(message, tone);
 }
 
@@ -626,7 +669,10 @@ function chooseInlineFile(slot, type) {
                 if (shouldDeferInlineImageSave(slot)) {
                     slot.dataset.mediaUrl = fileRecord.storage_path;
                     slot.dataset.mediaTitle = file.name;
-                    setStatus("Image added to the gallery draft. Save the layout when it is ready.", "success");
+                    const saved = await autosaveInlineLayoutBlock(slot.closest(".lesson-inline-block"));
+                    if (saved) {
+                        setStatus("Image added to the lesson.", "success");
+                    }
                     return;
                 }
 
@@ -722,7 +768,13 @@ function addInlineUrl(slot, type) {
         if (shouldDeferInlineImageSave(slot)) {
             slot.dataset.mediaUrl = value;
             slot.dataset.mediaTitle = draftText.title || "Image";
-            setStatus("Image added to the gallery draft. Save the layout when it is ready.", "success");
+            autosaveInlineLayoutBlock(slot.closest(".lesson-inline-block"))
+                .then((saved) => {
+                    if (saved) {
+                        setStatus("Image added to the lesson.", "success");
+                    }
+                })
+                .catch((error) => setStatus(`Image could not be saved: ${error.message}`, "error"));
             return;
         }
 
@@ -932,40 +984,17 @@ function getInlineDraftText(slot) {
     return { title, bodyText };
 }
 
-async function syncInlineDraftText(block) {
-    const contentBlockId = block.dataset.savedContentBlockId;
-
-    if (!contentBlockId) {
-        return;
-    }
-
-    const title = block.querySelector(".lesson-inline-title")?.textContent.trim() || "";
-    const bodyText = block.querySelector(".lesson-inline-body")?.textContent.trim() || "";
-    const { error } = await supabase
-        .from("lesson_content_blocks")
-        .update({
-            title: title || null,
-            body_text: bodyText || null,
-        })
-        .eq("id", contentBlockId)
-        .eq("lesson_id", lessonId);
-
-    if (error) {
-        setStatus(error.message || "The content block text could not be saved.", "error");
-        return;
-    }
-
-    await loadContentBlocks();
-    setStatus("Content block text saved.", "success");
+function syncInlineDraftText(block) {
+    scheduleInlineAutosave(block);
 }
 
-function getInlineTextStackData(block) {
+function getInlineTextStackData(block, { includeEmpty = false } = {}) {
     return [...block.querySelectorAll(".lesson-inline-text-stack")]
         .map((stack) => ({
             title: stack.querySelector(".lesson-inline-title")?.textContent.trim() || "",
             body: stack.querySelector(".lesson-inline-body")?.textContent.trim() || "",
         }))
-        .filter((column) => column.title || column.body);
+        .filter((column) => includeEmpty || column.title || column.body);
 }
 
 function getInlineGalleryData(block) {
@@ -988,6 +1017,176 @@ function getInlineSingleImageData(block) {
         url: slot.dataset.mediaUrl,
         title: slot.dataset.mediaTitle || slot.querySelector("img")?.alt || "Image",
     };
+}
+
+function getInlineLayoutPayload(block, { allowIncomplete = false } = {}) {
+    const template = block.dataset.layoutTemplate || "";
+    let layout = null;
+    let title = "";
+
+    if (template === "text" || template === "wide" || template === "toc") {
+        const [section] = getInlineTextStackData(block, { includeEmpty: allowIncomplete });
+
+        if (!section || (!allowIncomplete && !section.title && !section.body)) {
+            return null;
+        }
+
+        title = section.title || "Text section";
+        layout = {
+            type: template === "toc" ? "text" : template,
+            title: section.title,
+            body: section.body,
+        };
+    } else if (template === "columns") {
+        const columns = getInlineTextStackData(block, { includeEmpty: allowIncomplete });
+        const hasColumnContent = columns.some((column) => column.title || column.body);
+
+        if (!columns.length || (!allowIncomplete && !hasColumnContent)) {
+            return null;
+        }
+
+        title = "Column layout";
+        layout = { type: "columns", columns };
+    } else if (template === "image-text") {
+        const image = getInlineSingleImageData(block);
+        const [copy] = getInlineTextStackData(block, { includeEmpty: allowIncomplete });
+
+        if (!image && !allowIncomplete) {
+            return null;
+        }
+
+        title = copy?.title || image?.title || "Image and text";
+        layout = {
+            type: "imageText",
+            image,
+            title: copy?.title || "",
+            body: copy?.body || "",
+        };
+    } else if (template === "feature" || template === "image") {
+        const image = getInlineSingleImageData(block);
+
+        if (!image) {
+            return null;
+        }
+
+        title = image.title || "Feature image";
+        layout = {
+            type: "featureImage",
+            image,
+        };
+    } else if (template === "gallery" || template === "carousel") {
+        const images = getInlineGalleryData(block);
+
+        if (!images.length) {
+            return null;
+        }
+
+        title = "Image gallery";
+        layout = { type: "gallery", images };
+    } else if (template === "flashcards") {
+        const cards = getInlineFlashcardData(block).filter((card) => card.term && card.definition);
+
+        if (!cards.length) {
+            return null;
+        }
+
+        title = block.querySelector("[name='flashcard-set-title']")?.value.trim() || "Flashcards";
+        layout = { type: "flashcards", title, cards };
+    } else if (template === "divider" || template === "spacer") {
+        title = template === "divider" ? "Divider" : "Spacer";
+        layout = { type: template };
+    }
+
+    return layout ? { title, layout } : null;
+}
+
+function updateLoadedContentBlockSnapshot(contentBlockId, updates = {}) {
+    loadedContentBlocks = loadedContentBlocks.map((contentBlock) => {
+        return contentBlock.id === contentBlockId
+            ? { ...contentBlock, ...updates }
+            : contentBlock;
+    });
+}
+
+async function autosaveInlineLayoutBlock(block) {
+    const payload = getInlineLayoutPayload(block);
+
+    if (!payload) {
+        return false;
+    }
+
+    if (block.dataset.autosaving === "true") {
+        block.dataset.needsAutosave = "true";
+        return false;
+    }
+
+    block.dataset.autosaving = "true";
+    setAuthoringSaveState("saving");
+
+    try {
+        const savedContentBlockId = block.dataset.savedContentBlockId;
+        const bodyText = encodeLessonLayout(payload.layout);
+
+        if (savedContentBlockId) {
+            const { error } = await supabase
+                .from("lesson_content_blocks")
+                .update({
+                    block_type: "text",
+                    title: payload.title,
+                    body_text: bodyText,
+                    external_url: null,
+                    file_url: null,
+                    file_type: null,
+                })
+                .eq("id", savedContentBlockId)
+                .eq("lesson_id", lessonId);
+
+            if (error) {
+                throw new Error(error.message);
+            }
+            updateLoadedContentBlockSnapshot(savedContentBlockId, {
+                block_type: "text",
+                title: payload.title,
+                body_text: bodyText,
+                external_url: null,
+                file_url: null,
+                file_type: null,
+                layout: payload.layout,
+            });
+        } else {
+            const contentBlock = await createSavedContentBlock({
+                blockType: "text",
+                title: payload.title,
+                bodyText,
+                reload: false,
+            });
+            block.dataset.savedContentBlockId = contentBlock.id;
+        }
+
+        setAuthoringSaveState("saved");
+        return true;
+    } catch (error) {
+        setStatus(`Content could not be autosaved: ${error.message}`, "error");
+        return false;
+    } finally {
+        delete block.dataset.autosaving;
+        if (block.dataset.needsAutosave === "true" && block.isConnected) {
+            delete block.dataset.needsAutosave;
+            scheduleInlineAutosave(block);
+        }
+    }
+}
+
+function scheduleInlineAutosave(block) {
+    if (!block || !savedLayoutTemplates.has(block.dataset.layoutTemplate || "")) {
+        return;
+    }
+
+    setAuthoringSaveState("unsaved");
+    window.clearTimeout(inlineAutosaveTimers.get(block));
+    inlineAutosaveTimers.set(block, window.setTimeout(() => {
+        autosaveInlineLayoutBlock(block);
+    }, 650));
 }
 
 function createFlashcardEditorCard(card = {}) {
@@ -1265,7 +1464,7 @@ async function saveInlineLayoutBlock(block) {
         const [section] = getInlineTextStackData(block);
 
         if (!section) {
-            setStatus("Add text before saving this layout.", "error");
+            setStatus("Add text before saving this content.", "error");
             return;
         }
 
@@ -1279,7 +1478,7 @@ async function saveInlineLayoutBlock(block) {
         const columns = getInlineTextStackData(block);
 
         if (!columns.length) {
-            setStatus("Add text to at least one column before saving this layout.", "error");
+            setStatus("Add text to at least one column before saving this content.", "error");
             return;
         }
 
@@ -1290,7 +1489,7 @@ async function saveInlineLayoutBlock(block) {
         const [copy] = getInlineTextStackData(block);
 
         if (!image) {
-            setStatus("Add an image before saving this layout.", "error");
+            setStatus("Add an image before saving this content.", "error");
             return;
         }
 
@@ -1305,7 +1504,7 @@ async function saveInlineLayoutBlock(block) {
         const image = getInlineSingleImageData(block);
 
         if (!image) {
-            setStatus("Add an image before saving this layout.", "error");
+            setStatus("Add an image before saving this content.", "error");
             return;
         }
 
@@ -1343,7 +1542,7 @@ async function saveInlineLayoutBlock(block) {
         return;
     }
 
-    setStatus("Saving layout block...");
+    setStatus("Saving content...");
     try {
         const savedContentBlockId = block.dataset.savedContentBlockId;
 
@@ -1379,9 +1578,9 @@ async function saveInlineLayoutBlock(block) {
         } else {
             block.remove();
         }
-        setStatus("Layout block saved.", "success");
+        setStatus("Content saved.", "success");
     } catch (error) {
-        setStatus(`Layout block could not be saved: ${error.message}`, "error");
+        setStatus(`Content could not be saved: ${error.message}`, "error");
     }
 }
 
@@ -1393,7 +1592,9 @@ async function createSavedContentBlock({
     fileUrl = null,
     fileType = null,
     fileRecord = null,
+    reload = true,
 }) {
+    const orderIndex = getNextContentOrderIndex();
     const { data: contentBlock, error } = await supabase.from("lesson_content_blocks").insert({
         lesson_id: lessonId,
         block_type: getStoredBlockType(blockType),
@@ -1402,10 +1603,10 @@ async function createSavedContentBlock({
         external_url: ["link", "slides", "youtube"].includes(blockType) ? externalUrl : null,
         file_url: blockType === "file" ? fileUrl : null,
         file_type: blockType === "file" ? fileType : null,
-        order_index: getNextContentOrderIndex(),
+        order_index: orderIndex,
         is_visible: lessonIsVisible,
     })
-        .select("id")
+        .select("id, block_type, title, body_text, external_url, file_url, file_type, order_index, is_visible")
         .single();
 
     if (error) {
@@ -1416,8 +1617,47 @@ async function createSavedContentBlock({
         await linkLessonResource(fileRecord, contentBlock.id);
     }
 
-    await loadContentBlocks();
+    if (reload) {
+        await loadContentBlocks();
+    } else {
+        loadedContentBlocks = [
+            ...loadedContentBlocks,
+            {
+                ...contentBlock,
+                display_url: "",
+                file_resource: null,
+                layout: decodeLessonLayout(bodyText || ""),
+            },
+        ];
+    }
     return contentBlock;
+}
+
+async function removeInlineDraftContentBlock(block) {
+    window.clearTimeout(inlineAutosaveTimers.get(block));
+    const savedContentBlockId = block.dataset.savedContentBlockId;
+
+    if (!savedContentBlockId) {
+        block.remove();
+        setAuthoringSaveState("saved");
+        return;
+    }
+
+    setAuthoringSaveState("saving");
+    const { error } = await supabase
+        .from("lesson_content_blocks")
+        .update({ archived_at: new Date().toISOString() })
+        .eq("id", savedContentBlockId)
+        .eq("lesson_id", lessonId);
+
+    if (error) {
+        setStatus(error.message || "The content block could not be removed.", "error");
+        return;
+    }
+
+    loadedContentBlocks = loadedContentBlocks.filter((contentBlock) => contentBlock.id !== savedContentBlockId);
+    block.remove();
+    setStatus("Content removed.", "success");
 }
 
 function createInlineDraftBlock(button, existingContentBlock = null) {
@@ -1435,8 +1675,7 @@ function createInlineDraftBlock(button, existingContentBlock = null) {
 
     const block = createElement("article", `lesson-inline-block lesson-inline-block--${template}`);
     const toolbar = createElement("div", "lesson-inline-toolbar");
-    const label = createElement("span", "", "Draft content block");
-    const saveLayoutButton = createElement("button", "lesson-inline-remove lesson-inline-save", "Save layout");
+    const label = createElement("span", "", "Content block");
     const removeButton = createElement("button", "lesson-inline-remove", "Remove");
     const body = createElement("div", "lesson-inline-block-body");
 
@@ -1444,19 +1683,15 @@ function createInlineDraftBlock(button, existingContentBlock = null) {
     if (existingContentBlock?.id) {
         block.dataset.savedContentBlockId = existingContentBlock.id;
     }
-    saveLayoutButton.type = "button";
-    saveLayoutButton.addEventListener("click", () => saveInlineLayoutBlock(block));
     removeButton.type = "button";
-    removeButton.addEventListener("click", () => block.remove());
+    removeButton.addEventListener("click", () => removeInlineDraftContentBlock(block));
     block.addEventListener("focusout", (event) => {
-        if (event.target.matches(".lesson-inline-title, .lesson-inline-body")) {
+        if (event.target.matches(".lesson-inline-title, .lesson-inline-body, textarea, input")) {
             syncInlineDraftText(block);
         }
     });
+    block.addEventListener("input", () => scheduleInlineAutosave(block));
     toolbar.append(label);
-    if (savedLayoutTemplates.has(template)) {
-        toolbar.append(saveLayoutButton);
-    }
     toolbar.append(removeButton);
 
     if (template === "divider") {
@@ -1514,6 +1749,15 @@ function createInlineDraftBlock(button, existingContentBlock = null) {
     block.append(toolbar, body);
     contentBlockList?.querySelector(".lesson-page-empty")?.remove();
     inlineDraftList.append(block);
+    if (existingContentBlock?.id) {
+        setAuthoringSaveState("saved");
+    } else if (template === "divider" || template === "spacer") {
+        autosaveInlineLayoutBlock(block).then(() => {
+            block.remove();
+            loadContentBlocks();
+            setStatus("Content added to the lesson.", "success");
+        });
+    }
     hideBuilderEditors({ scrollToCanvas: false });
     block.scrollIntoView({ behavior: "smooth", block: "center" });
     block.querySelector("[contenteditable='true']")?.focus();
@@ -2466,7 +2710,7 @@ function createSavedLayoutPreview(layout) {
         return createElement("div", "lesson-inline-spacer");
     }
 
-    return createElement("p", "", "Layout block");
+    return createElement("p", "", "Content block");
 }
 
 function createSavedEmbedPreview(contentBlock, contentUrl) {

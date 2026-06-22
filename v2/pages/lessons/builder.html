@@ -131,20 +131,24 @@
                         <p class="lesson-authoring-title" data-editor-lesson-title>Lesson workspace</p>
                     </div>
                 </div>
-                <div class="lesson-authoring-status" aria-label="Save status">
+                <div class="lesson-authoring-status" data-save-state="saved" aria-label="Save status: Saved">
                     <span class="lesson-authoring-status-dot" aria-hidden="true"></span>
-                    <p class="lesson-authoring-save-state">All changes saved locally</p>
+                    <p class="lesson-authoring-save-state">Saved</p>
                 </div>
                 <div class="lesson-authoring-actions">
-                    <a class="secondary-button" href="../courses/editor.html" data-course-editor-link>Back to course editor</a>
-                    <a class="secondary-button" href="view.html" data-editor-preview-link>Preview</a>
                     <span class="badge badge--quiet" data-lesson-visibility-state>Hidden from students</span>
                     <button type="button" class="secondary-button" data-lesson-visibility-toggle>Make visible</button>
+                    <a class="secondary-button" href="view.html" data-editor-preview-link>Preview</a>
                 </div>
             </div>
 
             <div class="lesson-builder-workspace">
                 <div class="lesson-builder-main">
+                    <div class="lesson-builder-exit-row">
+                        <a class="lesson-builder-back-link" href="../courses/editor.html" data-course-editor-link>
+                            Back to course editor
+                        </a>
+                    </div>
                     <section class="lesson-page-canvas" data-builder-canvas aria-labelledby="lesson-canvas-heading">
                         <div class="lesson-page-toolbar">
                             <div class="lesson-page-toolbar-title">
