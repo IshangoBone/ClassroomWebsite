@@ -233,10 +233,9 @@ body.lesson-authoring-shell .app-frame > main.lesson-builder-page {
 }
 
 .app-topnav-menu {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(150px, auto);
+    display: flex;
     align-items: center;
-    justify-content: stretch;
+    justify-content: flex-end;
     gap: 16px;
     min-width: 0;
 }
@@ -291,10 +290,10 @@ body.lesson-authoring-shell .app-frame > main.lesson-builder-page {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     gap: 8px;
     min-width: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .app-topnav-link {
@@ -1719,6 +1718,7 @@ h2 {
 .form-field {
     display: grid;
     gap: 8px;
+    min-width: 0;
 }
 
 .form-field span {
@@ -1730,6 +1730,8 @@ h2 {
 .correct-answer-field input,
 .correct-answer-field select,
 .question-options-field input {
+    width: 100%;
+    min-width: 0;
     min-height: 44px;
     padding: 0 14px;
     border: 1px solid #c9d6e8;
@@ -3188,8 +3190,9 @@ h2 {
 
 .submission-filter-form {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
     gap: 12px;
+    min-width: 0;
     padding: 16px;
     border: 1px solid #dbe4f1;
     border-radius: 16px;
@@ -3197,11 +3200,17 @@ h2 {
 }
 
 .submission-filter-form--review {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
 }
 
 .submission-filter-form .form-field {
     gap: 6px;
+    min-width: 0;
+}
+
+.submission-filter-form select {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .course-actions {
@@ -8648,6 +8657,79 @@ h2 {
 
     .auth-layout--single {
         min-height: calc(100vh - 96px);
+    }
+}
+
+@media (max-width: 1180px) {
+    .app-topnav {
+        position: sticky;
+        top: 0;
+        grid-template-columns: minmax(0, 1fr) auto;
+        justify-items: stretch;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 0;
+    }
+
+    .app-topnav-brand {
+        justify-self: start;
+        min-width: 0;
+    }
+
+    .app-topnav-toggle {
+        display: inline-flex;
+        position: relative;
+        justify-self: end;
+    }
+
+    .app-topnav-menu {
+        display: none;
+        grid-column: 1 / -1;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 10px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .app-topnav--open .app-topnav-menu {
+        display: flex;
+    }
+
+    .app-topnav-links {
+        display: grid;
+        grid-template-columns: 1fr;
+        justify-content: stretch;
+        gap: 6px;
+        overflow: visible;
+    }
+
+    .app-topnav-link {
+        justify-content: flex-start;
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        padding: 0 10px;
+        border-radius: 12px;
+    }
+
+    .app-topnav-account {
+        justify-self: stretch;
+        width: 100%;
+    }
+
+    .app-topnav-account-summary {
+        justify-content: space-between;
+        max-width: none;
+        width: 100%;
+    }
+
+    .app-topnav-account-menu {
+        position: static;
+        margin-top: 8px;
+        border-color: rgba(255, 255, 255, 0.18);
+        box-shadow: none;
     }
 }
 
