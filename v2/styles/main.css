@@ -160,7 +160,7 @@ body.lesson-authoring-shell .app-frame > main.lesson-builder-page {
     top: 0;
     z-index: 50;
     display: grid;
-    grid-template-columns: minmax(210px, auto) minmax(0, 1fr);
+    grid-template-columns: minmax(180px, auto) minmax(0, 1fr);
     align-items: center;
     gap: 16px;
     width: 100%;
@@ -233,9 +233,10 @@ body.lesson-authoring-shell .app-frame > main.lesson-builder-page {
 }
 
 .app-topnav-menu {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(150px, auto);
     align-items: center;
-    justify-content: flex-end;
+    justify-content: stretch;
     gap: 16px;
     min-width: 0;
 }
@@ -288,11 +289,12 @@ body.lesson-authoring-shell .app-frame > main.lesson-builder-page {
 
 .app-topnav-links {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 8px;
     min-width: 0;
+    overflow: hidden;
 }
 
 .app-topnav-link {
@@ -305,6 +307,7 @@ body.lesson-authoring-shell .app-frame > main.lesson-builder-page {
     border-radius: 999px;
     font-weight: 900;
     min-width: 0;
+    white-space: nowrap;
 }
 
 .app-topnav-link span:last-child,
@@ -343,7 +346,9 @@ body.lesson-authoring-shell .app-frame > main.lesson-builder-page {
 
 .app-topnav-account {
     position: relative;
+    justify-self: end;
     min-width: 0;
+    max-width: 100%;
 }
 
 .app-topnav-account-summary {
