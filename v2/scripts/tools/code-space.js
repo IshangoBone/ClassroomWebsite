@@ -25,7 +25,7 @@ const starterFiles = [
         content: [
             "public class Main {",
             "    public static void main(String[] args) {",
-            "        String student = \"CodeTheCurrent\";",
+            "        String student = \"BrainKernl\";",
             "        System.out.println(\"Welcome, \" + student + \"!\");",
             "",
             "        for (int step = 1; step <= 3; step++) {",

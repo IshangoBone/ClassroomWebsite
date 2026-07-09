@@ -19,7 +19,7 @@ function bootstrapApp() {
 
     modules.forEach((moduleInfo) => appendModuleStatus(statusList, moduleInfo));
 
-    console.log("CodeTheCurrent V2 loaded");
+    console.log("BrainKernl V2 loaded");
 }
 
 bootstrapApp();

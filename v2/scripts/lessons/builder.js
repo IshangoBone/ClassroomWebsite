@@ -36,6 +36,7 @@ const resourceLibraryStatus = qs("[data-resource-library-status]");
 const fileTypeField = qs("[data-file-type-field]");
 const contentBlockList = qs("[data-content-block-list]");
 const inlineDraftList = qs("[data-inline-draft-list]");
+const lessonPageSheet = qs(".lesson-page-sheet");
 const contentEditorCard = qs("#lesson-content-editor");
 const closeContentEditorButton = qs("[data-close-content-editor]");
 const contentToolButtons = [...document.querySelectorAll("[data-content-tool]")];
@@ -62,6 +63,12 @@ const canvasTitleElement = qs("[data-canvas-title]");
 const canvasObjectiveElement = qs("[data-canvas-objective]");
 const canvasOverviewElement = qs("[data-canvas-overview]");
 const canvasDurationElement = qs("[data-canvas-duration]");
+const activePageTitleElement = qs("[data-active-page-title]");
+const pageCounterElement = qs("[data-page-counter]");
+const previousPageButton = qs("[data-previous-page]");
+const nextPageButton = qs("[data-next-page]");
+const createPageButton = qs("[data-create-page]");
+const deletePageButton = qs("[data-delete-page]");
 const lessonVisibilityState = qs("[data-lesson-visibility-state]");
 const lessonVisibilityToggle = qs("[data-lesson-visibility-toggle]");
 const correctAnswerField = qs("[data-correct-answer-field]");
@@ -70,10 +77,13 @@ const questionOptionsField = qs("[data-question-options-field]");
 const textFormatButtons = [...document.querySelectorAll("[data-format-action]")];
 let loadedContentBlocks = [];
 let loadedQuestions = [];
+let loadedLessonPages = [];
 let loadedLessonResources = [];
 let currentProfile = null;
 let currentLessonContext = null;
 let lessonIsVisible = false;
+let activeLessonPageId = "";
+let lessonPagesEnabled = true;
 const lessonResourceBucket = "lesson-resources";
 const maxLessonResourceSize = 50 * 1024 * 1024;
 const lessonResourceMimeTypes = new Set([
@@ -209,6 +219,14 @@ function getQuestionSaveErrorMessage(error, fallback) {
     return message || fallback;
 }
 
+function isLessonPageSchemaError(error) {
+    const message = String(error?.message || "").toLowerCase();
+
+    return message.includes("lesson_page_id")
+        || message.includes("lesson_pages")
+        || message.includes("schema cache");
+}
+
 function showContent() {
     contentSections.forEach((section) => {
         section.hidden = false;
@@ -242,11 +260,11 @@ function formatContentBlockType(blockType) {
 }
 
 function getContentBlockFormType(contentBlock) {
-    if (contentBlock.block_type === "file" && contentBlock.file_type === "image") {
+    if (contentBlock.file_type === "image" || contentBlock.block_type === "image") {
         return "image";
     }
 
-    if (contentBlock.block_type === "file" && contentBlock.file_type === "audio") {
+    if (contentBlock.file_type === "audio" || contentBlock.block_type === "audio") {
         return "audio";
     }
 
@@ -297,6 +315,10 @@ function getDefaultContentBlockTitle(contentBlock) {
     }
 
     return "File resource";
+}
+
+function isImageContentBlock(contentBlock) {
+    return contentBlock.file_type === "image" || contentBlock.block_type === "image";
 }
 
 function formatFileSize(bytes) {
@@ -535,6 +557,10 @@ function openContentTool(blockType = "text") {
 
 function openQuestionTool(questionType = "short_response") {
     setQuestionFormMode(questionType);
+    if (!questionForm.elements["question-id"].value) {
+        questionForm.elements["is-required"].checked = true;
+        updateNewQuestionPointDefault();
+    }
     if (!questionForm.elements["question-id"].value && questionDefaultPrompts[questionType]) {
         questionForm.elements.prompt.value = questionDefaultPrompts[questionType];
         questionForm.elements["student-instructions"].value = questionDefaultInstructions[questionType] || "";
@@ -668,6 +694,7 @@ function chooseInlineFile(slot, type) {
                 const fileRecord = await uploadLessonResource(file, draftText.title || file.name);
                 if (shouldDeferInlineImageSave(slot)) {
                     slot.dataset.mediaUrl = fileRecord.storage_path;
+                    slot.dataset.mediaFileId = fileRecord.id;
                     slot.dataset.mediaTitle = file.name;
                     const saved = await autosaveInlineLayoutBlock(slot.closest(".lesson-inline-block"));
                     if (saved) {
@@ -892,10 +919,90 @@ function createInlineTextStack(titlePlaceholder = "Click to edit text", bodyPlac
 }
 
 function getNextContentOrderIndex() {
-    return loadedContentBlocks.reduce(
+    return getActiveContentBlocks().reduce(
         (highest, contentBlock) => Math.max(highest, Number(contentBlock.order_index || 0)),
         -1
     ) + 1;
+}
+
+function getSortedLessonPages() {
+    return [...loadedLessonPages].sort((first, second) => first.order_index - second.order_index);
+}
+
+function getActiveLessonPage() {
+    return getSortedLessonPages().find((page) => page.id === activeLessonPageId) || getSortedLessonPages()[0] || null;
+}
+
+function getActiveLessonPageIndex() {
+    const pages = getSortedLessonPages();
+    const index = pages.findIndex((page) => page.id === activeLessonPageId);
+
+    return index === -1 ? 0 : index;
+}
+
+function getLessonPageNumber(page = getActiveLessonPage()) {
+    const lessonNumber = Number(currentLessonContext?.lesson?.order_index ?? 0) + 1;
+    const pageNumber = Number(page?.order_index ?? 0) + 1;
+
+    return `${lessonNumber}.${pageNumber}`;
+}
+
+function getActiveContentBlocks() {
+    return loadedContentBlocks
+        .filter((contentBlock) => {
+            return activeLessonPageId
+                ? contentBlock.lesson_page_id === activeLessonPageId || (!contentBlock.lesson_page_id && getActiveLessonPageIndex() === 0)
+                : true;
+        })
+        .sort((first, second) => first.order_index - second.order_index);
+}
+
+function getActiveQuestions() {
+    return loadedQuestions
+        .filter((question) => {
+            return activeLessonPageId
+                ? question.lesson_page_id === activeLessonPageId || (!question.lesson_page_id && getActiveLessonPageIndex() === 0)
+                : true;
+        })
+        .sort((first, second) => first.order_index - second.order_index);
+}
+
+function renderActiveLessonPage() {
+    const pages = getSortedLessonPages();
+    const activePage = getActiveLessonPage();
+    const activeIndex = getActiveLessonPageIndex();
+    const hasPages = pages.length > 0;
+    const isCoverPage = activeIndex === 0;
+
+    lessonPageSheet?.classList.toggle("lesson-page-sheet--cover", isCoverPage);
+    lessonPageSheet?.classList.toggle("lesson-page-sheet--compact", !isCoverPage);
+
+    if (activePageTitleElement) {
+        activePageTitleElement.textContent = activePage
+            ? `${getLessonPageNumber(activePage)} ${activePage.title || "Lesson page"}`
+            : "What students will see when this lesson opens.";
+    }
+    if (pageCounterElement) {
+        pageCounterElement.textContent = hasPages ? `Page ${activeIndex + 1} of ${pages.length}` : "Page 1 of 1";
+    }
+    if (previousPageButton) {
+        previousPageButton.disabled = !hasPages || activeIndex === 0;
+    }
+    if (nextPageButton) {
+        nextPageButton.disabled = !hasPages || activeIndex >= pages.length - 1;
+    }
+    if (createPageButton) {
+        createPageButton.disabled = !lessonPagesEnabled;
+        createPageButton.title = lessonPagesEnabled ? "" : "Apply the lesson pages migration to create more pages.";
+    }
+    if (deletePageButton) {
+        deletePageButton.disabled = !lessonPagesEnabled || pages.length <= 1;
+        deletePageButton.title = lessonPagesEnabled ? "" : "Apply the lesson pages migration to delete pages.";
+    }
+
+    renderContentBlocks(getActiveContentBlocks());
+    renderQuestions(getActiveQuestions());
+    renderQuestionPreview(getActiveQuestions());
 }
 
 function getFileTypeForInlineUpload(file, requestedType) {
@@ -914,6 +1021,10 @@ function isLessonStoragePath(url = "") {
     return Boolean(url) && !isExternalUrl(url) && !url.startsWith("data:") && !url.startsWith("blob:");
 }
 
+function normalizeLessonStoragePath(url = "") {
+    return url.replace(new RegExp(`^${lessonResourceBucket}/`), "");
+}
+
 async function getDisplayResourceUrl(contentBlock) {
     const url = contentBlock.file_url || contentBlock.external_url || "";
 
@@ -923,7 +1034,7 @@ async function getDisplayResourceUrl(contentBlock) {
 
     const { data, error } = await supabase.storage
         .from(lessonResourceBucket)
-        .createSignedUrl(url, 60 * 60);
+        .createSignedUrl(normalizeLessonStoragePath(url), 60 * 60);
 
     if (error) {
         console.warn("Lesson resource signed URL failed", error);
@@ -1001,6 +1112,7 @@ function getInlineGalleryData(block) {
     return [...block.querySelectorAll(".lesson-inline-media-slot")]
         .map((slot) => ({
             url: slot.dataset.mediaUrl || "",
+            fileId: slot.dataset.mediaFileId || "",
             title: slot.dataset.mediaTitle || slot.querySelector("img")?.alt || "Image",
         }))
         .filter((image) => image.url);
@@ -1015,8 +1127,42 @@ function getInlineSingleImageData(block) {
 
     return {
         url: slot.dataset.mediaUrl,
+        fileId: slot.dataset.mediaFileId || "",
         title: slot.dataset.mediaTitle || slot.querySelector("img")?.alt || "Image",
     };
+}
+
+function getLessonResourceIdForUrl(url = "") {
+    return loadedLessonResources.find((resource) => resource.storage_path === url)?.id || "";
+}
+
+function getInlineLayoutFileIds(layout) {
+    const ids = new Set();
+    const addImage = (image) => {
+        if (!image?.url) {
+            return;
+        }
+
+        const fileId = image.fileId || getLessonResourceIdForUrl(image.url);
+
+        if (fileId) {
+            ids.add(fileId);
+        }
+    };
+
+    if (layout?.image) {
+        addImage(layout.image);
+    }
+    (layout?.images || []).forEach(addImage);
+    (layout?.cards || []).forEach((card) => addImage(card.image));
+    return [...ids];
+}
+
+async function syncInlineLayoutResourceLinks(contentBlockId, layout) {
+    const fileIds = getInlineLayoutFileIds(layout);
+
+    await clearLessonResourceLinks(contentBlockId);
+    await Promise.all(fileIds.map((fileId) => linkLessonResource({ id: fileId }, contentBlockId)));
 }
 
 function getInlineLayoutPayload(block, { allowIncomplete = false } = {}) {
@@ -1126,6 +1272,7 @@ async function autosaveInlineLayoutBlock(block) {
     try {
         const savedContentBlockId = block.dataset.savedContentBlockId;
         const bodyText = encodeLessonLayout(payload.layout);
+        let contentBlockId = savedContentBlockId;
 
         if (savedContentBlockId) {
             const { error } = await supabase
@@ -1161,6 +1308,11 @@ async function autosaveInlineLayoutBlock(block) {
                 reload: false,
             });
             block.dataset.savedContentBlockId = contentBlock.id;
+            contentBlockId = contentBlock.id;
+        }
+
+        if (contentBlockId) {
+            await syncInlineLayoutResourceLinks(contentBlockId, payload.layout);
         }
 
         setAuthoringSaveState("saved");
@@ -1215,6 +1367,7 @@ function createFlashcardEditorCard(card = {}) {
         image.src = card.image.displayUrl || card.image.url;
         image.alt = card.image.title || card.term || "Flashcard image";
         imageSlot.dataset.mediaUrl = card.image.url;
+        imageSlot.dataset.mediaFileId = card.image.fileId || getLessonResourceIdForUrl(card.image.url);
         imageSlot.dataset.mediaTitle = card.image.title || "Flashcard image";
         setInlineSlotContent(imageSlot, image);
     }
@@ -1272,6 +1425,7 @@ function getInlineFlashcardData(block) {
                 image: imageSlot?.dataset.mediaUrl
                     ? {
                         url: imageSlot.dataset.mediaUrl,
+                        fileId: imageSlot.dataset.mediaFileId || "",
                         title: imageSlot.dataset.mediaTitle || term || "Flashcard image",
                     }
                     : null,
@@ -1595,7 +1749,7 @@ async function createSavedContentBlock({
     reload = true,
 }) {
     const orderIndex = getNextContentOrderIndex();
-    const { data: contentBlock, error } = await supabase.from("lesson_content_blocks").insert({
+    const payload = {
         lesson_id: lessonId,
         block_type: getStoredBlockType(blockType),
         title: title || null,
@@ -1605,9 +1759,26 @@ async function createSavedContentBlock({
         file_type: blockType === "file" ? fileType : null,
         order_index: orderIndex,
         is_visible: lessonIsVisible,
-    })
-        .select("id, block_type, title, body_text, external_url, file_url, file_type, order_index, is_visible")
+    };
+
+    if (lessonPagesEnabled && activeLessonPageId) {
+        payload.lesson_page_id = activeLessonPageId;
+    }
+
+    let { data: contentBlock, error } = await supabase.from("lesson_content_blocks").insert(payload)
+        .select("id, lesson_page_id, block_type, title, body_text, external_url, file_url, file_type, order_index, is_visible")
         .single();
+
+    if (isLessonPageSchemaError(error)) {
+        lessonPagesEnabled = false;
+        delete payload.lesson_page_id;
+        const fallbackResult = await supabase.from("lesson_content_blocks").insert(payload)
+            .select("id, block_type, title, body_text, external_url, file_url, file_type, order_index, is_visible")
+            .single();
+
+        contentBlock = fallbackResult.data ? { ...fallbackResult.data, lesson_page_id: "" } : null;
+        error = fallbackResult.error;
+    }
 
     if (error) {
         throw new Error(error.message);
@@ -1658,6 +1829,17 @@ async function removeInlineDraftContentBlock(block) {
     loadedContentBlocks = loadedContentBlocks.filter((contentBlock) => contentBlock.id !== savedContentBlockId);
     block.remove();
     setStatus("Content removed.", "success");
+}
+
+function clearInlineDraftWorkspace() {
+    if (!inlineDraftList) {
+        return;
+    }
+
+    [...inlineDraftList.children].forEach((block) => {
+        window.clearTimeout(inlineAutosaveTimers.get(block));
+    });
+    inlineDraftList.replaceChildren();
 }
 
 function createInlineDraftBlock(button, existingContentBlock = null) {
@@ -2074,9 +2256,10 @@ async function removeFileFromContentBlock(contentBlock) {
 }
 
 async function moveContentBlock(contentBlock, direction) {
-    const currentIndex = loadedContentBlocks.findIndex((currentBlock) => currentBlock.id === contentBlock.id);
+    const activeContentBlocks = getActiveContentBlocks();
+    const currentIndex = activeContentBlocks.findIndex((currentBlock) => currentBlock.id === contentBlock.id);
     const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
-    const targetBlock = loadedContentBlocks[targetIndex];
+    const targetBlock = activeContentBlocks[targetIndex];
 
     if (currentIndex === -1 || !targetBlock) {
         return;
@@ -2143,7 +2326,7 @@ async function saveContentBlockOrder(list) {
         const orderIndex = orderedIds.indexOf(contentBlock.id);
         return orderIndex === -1 ? contentBlock : { ...contentBlock, order_index: orderIndex };
     });
-    renderContentBlocks(loadedContentBlocks);
+    renderActiveLessonPage();
     setStatus("Lesson content order saved.", "success");
 }
 
@@ -2163,11 +2346,16 @@ async function setLessonVisibility(nextVisibility) {
     setStatus(nextVisibility ? "Making lesson visible to students..." : "Hiding lesson from students...");
     lessonVisibilityToggle.disabled = true;
 
-    const [lessonResult, contentResult, questionResult] = await Promise.all([
+    const [lessonResult, pageResult, contentResult, questionResult] = await Promise.all([
         supabase
             .from("lessons")
             .update({ is_visible: nextVisibility })
             .eq("id", lessonId),
+        supabase
+            .from("lesson_pages")
+            .update({ is_visible: nextVisibility })
+            .eq("lesson_id", lessonId)
+            .is("archived_at", null),
         supabase
             .from("lesson_content_blocks")
             .update({ is_visible: nextVisibility })
@@ -2179,7 +2367,7 @@ async function setLessonVisibility(nextVisibility) {
             .eq("lesson_id", lessonId)
             .is("archived_at", null),
     ]);
-    const error = lessonResult.error || contentResult.error || questionResult.error;
+    const error = lessonResult.error || pageResult.error || contentResult.error || questionResult.error;
 
     if (error) {
         setStatus(error.message || "The lesson visibility could not be updated.", "error");
@@ -2191,7 +2379,8 @@ async function setLessonVisibility(nextVisibility) {
     if (currentLessonContext?.lesson) {
         currentLessonContext.lesson.is_visible = nextVisibility;
     }
-    await Promise.all([loadContentBlocks(), loadQuestions()]);
+    await Promise.all([loadLessonPages(), loadContentBlocks({ render: false }), loadQuestions({ render: false })]);
+    renderActiveLessonPage();
     updateLessonVisibilityControls();
     setStatus(nextVisibility ? "Lesson is visible to students." : "Lesson is hidden from students.", "success");
 }
@@ -2200,8 +2389,8 @@ function resetQuestionForm() {
     questionForm.reset();
     questionForm.elements["question-id"].value = "";
     setQuestionFormMode("short_response");
-    questionForm.elements["is-required"].checked = false;
-    questionForm.elements.points.value = "0";
+    questionForm.elements["is-required"].checked = true;
+    questionForm.elements.points.value = "1";
     questionFormHeading.textContent = "Add question block";
     questionSubmit.textContent = "Done";
     cancelQuestionEditButton.hidden = true;
@@ -2548,7 +2737,7 @@ async function deleteQuestion(question) {
 }
 
 async function moveQuestion(question, direction) {
-    const phaseQuestions = loadedQuestions.filter((currentQuestion) => currentQuestion.phase === question.phase);
+    const phaseQuestions = getActiveQuestions().filter((currentQuestion) => currentQuestion.phase === question.phase);
     const currentIndex = phaseQuestions.findIndex((currentQuestion) => currentQuestion.id === question.id);
     const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
     const targetQuestion = phaseQuestions[targetIndex];
@@ -2618,8 +2807,7 @@ async function saveQuestionOrder(list, phase) {
         const orderIndex = orderedIds.indexOf(question.id);
         return orderIndex === -1 ? question : { ...question, order_index: orderIndex };
     });
-    renderQuestions(loadedQuestions);
-    renderQuestionPreview(loadedQuestions);
+    renderActiveLessonPage();
     setStatus("Question block order saved.", "success");
 }
 
@@ -2770,12 +2958,12 @@ function renderContentBlocks(contentBlocks) {
         const title = createElement("h3", "content-block-title", getDefaultContentBlockTitle(contentBlock));
         const label = createElement("span", "badge badge--quiet", `${getContentBlockTypeLabel(contentBlock)} ${contentBlock.order_index + 1}`);
         const contentUrl = contentBlock.display_url || contentBlock.file_url || contentBlock.external_url || "";
-        const isImageResource = contentBlock.block_type === "file" && contentBlock.file_type === "image";
+        const isImageResource = isImageContentBlock(contentBlock);
         const isEmbedResource = ["youtube", "slides"].includes(contentBlock.block_type);
         const attachedResource = contentBlock.file_resource;
         const contentPreview = isEmbedResource
             ? createElement("div", "course-muted content-block-body")
-            : ["file", "link"].includes(contentBlock.block_type)
+            : ["file", "image", "link"].includes(contentBlock.block_type)
                 ? createElement("a", "course-muted content-block-body", contentUrl)
             : createElement("p", "course-muted content-block-body", contentBlock.body_text || "");
         const moveUpButton = createElement("button", "secondary-button lesson-action", "Move up");
@@ -2827,12 +3015,12 @@ function renderContentBlocks(contentBlocks) {
             contentPreview.href = contentUrl;
             contentPreview.target = "_blank";
             contentPreview.rel = "noopener noreferrer";
-        } else if (["file", "link"].includes(contentBlock.block_type)) {
+        } else if (["file", "image", "link"].includes(contentBlock.block_type)) {
             contentPreview.href = contentUrl || "#";
             contentPreview.target = "_blank";
             contentPreview.rel = "noopener noreferrer";
 
-            if (contentBlock.block_type === "file") {
+            if (["file", "image"].includes(contentBlock.block_type)) {
                 contentPreview.textContent = attachedResource
                     ? `${getResourceDisplayName(attachedResource)} (${formatFileSize(attachedResource.file_size)})`
                     : contentUrl
@@ -2873,13 +3061,194 @@ function renderContentBlocks(contentBlocks) {
     updateLessonVisibilityControls();
 }
 
-async function loadContentBlocks() {
+async function loadLessonPages() {
     const { data, error } = await supabase
-        .from("lesson_content_blocks")
-        .select("id, block_type, title, body_text, external_url, file_url, file_type, order_index, is_visible")
+        .from("lesson_pages")
+        .select("id, lesson_id, title, page_type, order_index, is_visible")
         .eq("lesson_id", lessonId)
         .is("archived_at", null)
         .order("order_index", { ascending: true });
+
+    if (error) {
+        lessonPagesEnabled = false;
+        loadedLessonPages = [{
+            id: "",
+            lesson_id: lessonId,
+            title: "Page 1",
+            page_type: "lesson",
+            order_index: 0,
+            is_visible: lessonIsVisible,
+        }];
+        activeLessonPageId = "";
+        return false;
+    }
+
+    lessonPagesEnabled = true;
+    if (!data.length) {
+        const { data: createdPage, error: createError } = await supabase
+            .from("lesson_pages")
+            .insert({
+                lesson_id: lessonId,
+                title: "Page 1",
+                page_type: "lesson",
+                order_index: 0,
+                is_visible: lessonIsVisible,
+            })
+            .select("id, lesson_id, title, page_type, order_index, is_visible")
+            .single();
+
+        if (createError) {
+            loadedLessonPages = [{
+                id: "",
+                lesson_id: lessonId,
+                title: "Page 1",
+                page_type: "lesson",
+                order_index: 0,
+                is_visible: lessonIsVisible,
+            }];
+            activeLessonPageId = "";
+            return false;
+        }
+
+        loadedLessonPages = [createdPage];
+        activeLessonPageId = createdPage.id;
+        return true;
+    }
+
+    loadedLessonPages = data;
+    if (!loadedLessonPages.some((page) => page.id === activeLessonPageId)) {
+        activeLessonPageId = loadedLessonPages[0].id;
+    }
+    return true;
+}
+
+async function createLessonPage() {
+    const pages = getSortedLessonPages();
+    const nextOrderIndex = pages.reduce((highest, page) => Math.max(highest, Number(page.order_index || 0)), -1) + 1;
+    const pageTitle = window.prompt("Page title", `Page ${nextOrderIndex + 1}`);
+
+    if (pageTitle === null) {
+        return;
+    }
+
+    const title = pageTitle.trim() || `Page ${nextOrderIndex + 1}`;
+
+    setStatus("Creating lesson page...");
+    const { data, error } = await supabase
+        .from("lesson_pages")
+        .insert({
+            lesson_id: lessonId,
+            title,
+            page_type: "lesson",
+            order_index: nextOrderIndex,
+            is_visible: lessonIsVisible,
+        })
+        .select("id, lesson_id, title, page_type, order_index, is_visible")
+        .single();
+
+    if (error) {
+        setStatus(error.message || "The lesson page could not be created.", "error");
+        return;
+    }
+
+    loadedLessonPages = [...loadedLessonPages, data];
+    activeLessonPageId = data.id;
+    clearInlineDraftWorkspace();
+    hideBuilderEditors({ scrollToCanvas: false });
+    renderActiveLessonPage();
+    setStatus("Lesson page created.", "success");
+}
+
+async function deleteActiveLessonPage() {
+    const pages = getSortedLessonPages();
+    const activePage = getActiveLessonPage();
+
+    if (!activePage || pages.length <= 1) {
+        setStatus("Keep at least one page in the lesson.", "error");
+        return;
+    }
+
+    const confirmed = window.confirm(
+        `Delete ${getLessonPageNumber(activePage)} "${activePage.title}"? Content and data collection blocks on this page will be hidden.`
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus("Deleting lesson page...");
+    const archivedAt = new Date().toISOString();
+    const [pageResult, contentResult, questionResult] = await Promise.all([
+        supabase
+            .from("lesson_pages")
+            .update({ archived_at: archivedAt })
+            .eq("id", activePage.id)
+            .eq("lesson_id", lessonId),
+        supabase
+            .from("lesson_content_blocks")
+            .update({ archived_at: archivedAt })
+            .eq("lesson_page_id", activePage.id)
+            .eq("lesson_id", lessonId)
+            .is("archived_at", null),
+        supabase
+            .from("questions")
+            .update({ archived_at: archivedAt })
+            .eq("lesson_page_id", activePage.id)
+            .eq("lesson_id", lessonId)
+            .is("archived_at", null),
+    ]);
+    const error = pageResult.error || contentResult.error || questionResult.error;
+
+    if (error) {
+        setStatus(error.message || "The lesson page could not be deleted.", "error");
+        return;
+    }
+
+    const deletedIndex = getActiveLessonPageIndex();
+    loadedLessonPages = pages.filter((page) => page.id !== activePage.id);
+    activeLessonPageId = loadedLessonPages[Math.max(0, deletedIndex - 1)]?.id || loadedLessonPages[0]?.id || "";
+    await Promise.all([loadContentBlocks({ render: false }), loadQuestions({ render: false })]);
+    clearInlineDraftWorkspace();
+    hideBuilderEditors({ scrollToCanvas: false });
+    renderActiveLessonPage();
+    setStatus("Lesson page deleted.", "success");
+}
+
+function setActiveLessonPageByOffset(offset) {
+    const pages = getSortedLessonPages();
+    const nextIndex = getActiveLessonPageIndex() + offset;
+    const nextPage = pages[nextIndex];
+
+    if (!nextPage) {
+        return;
+    }
+
+    activeLessonPageId = nextPage.id;
+    clearInlineDraftWorkspace();
+    hideBuilderEditors({ scrollToCanvas: false });
+    renderActiveLessonPage();
+}
+
+async function loadContentBlocks({ render = true } = {}) {
+    let { data, error } = await supabase
+        .from("lesson_content_blocks")
+        .select("id, lesson_page_id, block_type, title, body_text, external_url, file_url, file_type, order_index, is_visible")
+        .eq("lesson_id", lessonId)
+        .is("archived_at", null)
+        .order("order_index", { ascending: true });
+
+    if (isLessonPageSchemaError(error)) {
+        lessonPagesEnabled = false;
+        const fallbackResult = await supabase
+            .from("lesson_content_blocks")
+            .select("id, block_type, title, body_text, external_url, file_url, file_type, order_index, is_visible")
+            .eq("lesson_id", lessonId)
+            .is("archived_at", null)
+            .order("order_index", { ascending: true });
+
+        data = (fallbackResult.data || []).map((contentBlock) => ({ ...contentBlock, lesson_page_id: "" }));
+        error = fallbackResult.error;
+    }
 
     if (error) {
         contentBlockList.replaceChildren(
@@ -2907,7 +3276,9 @@ async function loadContentBlocks() {
         file_resource: (links || []).find((link) => link.lesson_content_block_id === contentBlock.id)?.files || null,
         layout: await hydrateLessonLayout(contentBlock.body_text || ""),
     })));
-    renderContentBlocks(loadedContentBlocks);
+    if (render) {
+        renderActiveLessonPage();
+    }
     return true;
 }
 
@@ -3222,13 +3593,26 @@ function renderQuestionPreview(questions) {
     questionPreview.replaceChildren(...previewCards);
 }
 
-async function loadQuestions() {
-    const { data, error } = await supabase
+async function loadQuestions({ render = true } = {}) {
+    let { data, error } = await supabase
         .from("questions")
-        .select("id, phase, question_type, prompt, student_instructions, hint, correct_answer, points, is_required, order_index, is_visible")
+        .select("id, lesson_page_id, phase, question_type, prompt, student_instructions, hint, correct_answer, points, is_required, order_index, is_visible")
         .eq("lesson_id", lessonId)
         .is("archived_at", null)
         .order("order_index", { ascending: true });
+
+    if (isLessonPageSchemaError(error)) {
+        lessonPagesEnabled = false;
+        const fallbackResult = await supabase
+            .from("questions")
+            .select("id, phase, question_type, prompt, student_instructions, hint, correct_answer, points, is_required, order_index, is_visible")
+            .eq("lesson_id", lessonId)
+            .is("archived_at", null)
+            .order("order_index", { ascending: true });
+
+        data = (fallbackResult.data || []).map((question) => ({ ...question, lesson_page_id: "" }));
+        error = fallbackResult.error;
+    }
 
     if (error) {
         questionList?.replaceChildren(createElement("p", "empty-state", "Question blocks could not be loaded."));
@@ -3253,8 +3637,9 @@ async function loadQuestions() {
         ...question,
         options: (options || []).filter((option) => option.question_id === question.id),
     }));
-    renderQuestions(loadedQuestions);
-    renderQuestionPreview(loadedQuestions);
+    if (render) {
+        renderActiveLessonPage();
+    }
     return true;
 }
 
@@ -3375,7 +3760,12 @@ async function initializePage() {
     hideBuilderEditors({ scrollToCanvas: false });
     showContent();
     await loadLessonResources();
-    const [contentLoaded, questionsLoaded] = await Promise.all([loadContentBlocks(), loadQuestions()]);
+    await loadLessonPages();
+    const [contentLoaded, questionsLoaded] = await Promise.all([
+        loadContentBlocks({ render: false }),
+        loadQuestions({ render: false }),
+    ]);
+    renderActiveLessonPage();
 
     if (contentLoaded && questionsLoaded) {
         setStatus("");
@@ -3511,7 +3901,7 @@ contentBlockForm.addEventListener("submit", async (event) => {
         return;
     }
 
-    const nextOrder = loadedContentBlocks.reduce(
+    const nextOrder = getActiveContentBlocks().reduce(
         (highest, contentBlock) => Math.max(highest, contentBlock.order_index),
         -1
     ) + 1;
@@ -3536,7 +3926,7 @@ contentBlockForm.addEventListener("submit", async (event) => {
         }
     }
 
-    const { data: contentBlock, error } = await supabase.from("lesson_content_blocks").insert({
+    const contentPayload = {
         lesson_id: lessonId,
         block_type: storedBlockType,
         title: title || null,
@@ -3546,9 +3936,26 @@ contentBlockForm.addEventListener("submit", async (event) => {
         file_type: blockType === "image" ? "image" : ["file", "audio"].includes(blockType) ? fileType : null,
         order_index: nextOrder,
         is_visible: lessonIsVisible,
-    })
+    };
+
+    if (lessonPagesEnabled && activeLessonPageId) {
+        contentPayload.lesson_page_id = activeLessonPageId;
+    }
+
+    let { data: contentBlock, error } = await supabase.from("lesson_content_blocks").insert(contentPayload)
         .select("id")
         .single();
+
+    if (isLessonPageSchemaError(error)) {
+        lessonPagesEnabled = false;
+        delete contentPayload.lesson_page_id;
+        const fallbackResult = await supabase.from("lesson_content_blocks").insert(contentPayload)
+            .select("id")
+            .single();
+
+        contentBlock = fallbackResult.data;
+        error = fallbackResult.error;
+    }
 
     submitButton.disabled = false;
 
@@ -3745,14 +4152,14 @@ questionForm.addEventListener("submit", async (event) => {
         return;
     }
 
-    const nextOrder = loadedQuestions.reduce(
+    const nextOrder = getActiveQuestions().reduce(
         (highest, question) => Math.max(highest, question.order_index),
         -1
     ) + 1;
     setStatus("Creating question block...");
     submitButton.disabled = true;
 
-    const { data: createdQuestion, error } = await supabase.from("questions").insert({
+    const questionPayload = {
         lesson_id: lessonId,
         phase,
         question_type: questionType,
@@ -3764,7 +4171,22 @@ questionForm.addEventListener("submit", async (event) => {
         is_required: isRequired,
         is_visible: lessonIsVisible,
         order_index: nextOrder,
-    }).select("id").single();
+    };
+
+    if (lessonPagesEnabled && activeLessonPageId) {
+        questionPayload.lesson_page_id = activeLessonPageId;
+    }
+
+    let { data: createdQuestion, error } = await supabase.from("questions").insert(questionPayload).select("id").single();
+
+    if (isLessonPageSchemaError(error)) {
+        lessonPagesEnabled = false;
+        delete questionPayload.lesson_page_id;
+        const fallbackResult = await supabase.from("questions").insert(questionPayload).select("id").single();
+
+        createdQuestion = fallbackResult.data;
+        error = fallbackResult.error;
+    }
 
     if (error) {
         submitButton.disabled = false;
@@ -3837,6 +4259,22 @@ closeQuestionEditorButton?.addEventListener("click", () => {
 
 lessonVisibilityToggle?.addEventListener("click", () => {
     setLessonVisibility(!lessonIsVisible);
+});
+
+previousPageButton?.addEventListener("click", () => {
+    setActiveLessonPageByOffset(-1);
+});
+
+nextPageButton?.addEventListener("click", () => {
+    setActiveLessonPageByOffset(1);
+});
+
+createPageButton?.addEventListener("click", () => {
+    createLessonPage();
+});
+
+deletePageButton?.addEventListener("click", () => {
+    deleteActiveLessonPage();
 });
 
 await initializePage();

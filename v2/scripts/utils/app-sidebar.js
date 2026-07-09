@@ -56,7 +56,7 @@ function getInitials(profile) {
     const words = source.split(/\s+/).filter(Boolean);
 
     if (!words.length) {
-        return "CTC";
+        return "BK";
     }
 
     if (words.length === 1) {
@@ -85,6 +85,7 @@ function getNavItems(hasTeachingAccess) {
         return [
             { label: "Home", path: "dashboard/index.html", icon: "H" },
             { label: "My Courses", path: "courses/index.html", icon: "C" },
+            { label: "SAGE AI", path: "sage/index.html", icon: "S" },
             { label: "Profile", path: "profile/index.html", icon: "P" },
         ];
     }
@@ -172,9 +173,9 @@ export async function renderAppSidebar(profile) {
     const hasTeachingAccess = await hasTeachingTools(profile);
     const nav = createElement("header", "app-topnav");
     const brand = createElement("a", "app-topnav-brand");
-    const mark = createElement("span", "app-topnav-mark", "CTC");
+    const mark = createElement("span", "app-topnav-mark", "BK");
     const titleGroup = createElement("span", "app-topnav-title-group");
-    const title = createElement("strong", "app-topnav-title", "CodeTheCurrent");
+    const title = createElement("strong", "app-topnav-title", "BrainKernl");
     const role = createElement("span", "app-topnav-role", getRoleLabel(profile, hasTeachingAccess));
     const menuToggle = createElement("button", "app-topnav-toggle");
     const navMenu = createElement("div", "app-topnav-menu");
@@ -194,7 +195,7 @@ export async function renderAppSidebar(profile) {
 
     nav.dataset.appNav = "true";
     brand.href = `${pagesRoot}/dashboard/index.html`;
-    brand.setAttribute("aria-label", "CodeTheCurrent home");
+    brand.setAttribute("aria-label", "BrainKernl home");
     titleGroup.append(title, role);
     brand.append(mark, titleGroup);
 
@@ -247,4 +248,5 @@ export async function renderAppSidebar(profile) {
 
     navMenu.append(links, account);
     nav.append(brand, menuToggle, navMenu);
+
 }

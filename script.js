@@ -27,7 +27,7 @@ contactForms.forEach((form) => {
         const email = String(formData.get("email") || "").trim();
         const message = String(formData.get("message") || "").trim();
         const recipient = form.dataset.email || "";
-        const subject = form.dataset.subject || "CodeTheCurrent Message";
+        const subject = form.dataset.subject || "BrainKernl Message";
 
         const body = [
             `Form Type: ${subject}`,
@@ -157,7 +157,7 @@ if (currentCourse && courseLessonPage) {
         const previousLesson = flatLessons[lessonIndex - 1];
         const nextLesson = flatLessons[lessonIndex + 1];
 
-        document.title = `${lesson.title} | CodeTheCurrent`;
+        document.title = `${lesson.title} | BrainKernl`;
 
         if (titleTarget) {
             titleTarget.textContent = lesson.title;

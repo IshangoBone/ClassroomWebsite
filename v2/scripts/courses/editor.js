@@ -65,6 +65,34 @@ let selectedCourseThumbnailUrl = "";
 const collapsedModuleIds = new Set();
 let hasAppliedInitialModuleCollapse = false;
 
+const moduleActionIcons = {
+    chevron: '<path d="m6 9 6 6 6-6"></path>',
+    edit: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>',
+    plus: '<path d="M12 5v14"></path><path d="M5 12h14"></path>',
+    trash: '<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path>',
+};
+
+function createModuleIcon(name) {
+    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    icon.setAttribute("viewBox", "0 0 24 24");
+    icon.setAttribute("aria-hidden", "true");
+    icon.setAttribute("focusable", "false");
+    icon.innerHTML = moduleActionIcons[name] || "";
+    return icon;
+}
+
+function createModuleIconButton(iconName, label, modifiers = []) {
+    const modifierClasses = modifiers.map((modifier) => ` module-icon-button--${modifier}`).join("");
+    const button = createElement("button", `module-icon-button${modifierClasses}`);
+
+    button.type = "button";
+    button.title = label;
+    button.setAttribute("aria-label", label);
+    button.append(createModuleIcon(iconName));
+
+    return button;
+}
+
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
@@ -886,17 +914,22 @@ function renderModules(modules, lessons, contentBlocks, questions) {
             module.description || "No module description added yet."
         );
         const label = createElement("span", "badge badge--quiet", `Module ${module.order_index + 1}`);
+        const headerControls = createElement("div", "module-header-controls");
         const lessonSection = createElement("section", "module-lessons");
         const lessonHeader = createElement("div", "module-lessons-header");
         const lessonHeading = createElement("h4", "", "Lessons");
-        const actions = createElement("div", "module-actions");
+        const actions = createElement("div", "module-actions module-actions--icons");
         const dragHint = createElement("span", "module-drag-hint", "Drag to reorder");
-        const toggleModuleButton = createElement("button", "secondary-button lesson-action");
-        const editModuleButton = createElement("button", "secondary-button lesson-action", "Edit module");
-        const addLessonButton = createElement("button", "secondary-button lesson-action", "Add lesson");
-        const deleteModuleButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete module");
         const moduleLessons = lessons.filter((lesson) => lesson.module_id === module.id);
         const isCollapsed = collapsedModuleIds.has(module.id);
+        const toggleModuleButton = createModuleIconButton(
+            "chevron",
+            isCollapsed ? "Expand module" : "Collapse module",
+            ["collapse"]
+        );
+        const editModuleButton = createModuleIconButton("edit", "Edit module");
+        const addLessonButton = createModuleIconButton("plus", "Add lesson", ["primary"]);
+        const deleteModuleButton = createModuleIconButton("trash", "Delete module", ["danger"]);
         const lessonCountLabel = moduleLessons.length === 1 ? "1 lesson hidden." : `${moduleLessons.length} lessons hidden.`;
 
         item.draggable = true;
@@ -915,8 +948,7 @@ function renderModules(modules, lessons, contentBlocks, questions) {
             item.classList.remove("module-card--dragging");
             await saveModuleOrder(list);
         });
-        toggleModuleButton.type = "button";
-        toggleModuleButton.textContent = isCollapsed ? "Expand module" : "Collapse module";
+        toggleModuleButton.setAttribute("aria-expanded", String(!isCollapsed));
         toggleModuleButton.addEventListener("click", () => {
             if (isCollapsed) {
                 collapsedModuleIds.delete(module.id);
@@ -933,8 +965,9 @@ function renderModules(modules, lessons, contentBlocks, questions) {
         deleteModuleButton.type = "button";
         deleteModuleButton.addEventListener("click", () => deleteModule(module));
         content.append(title, description);
-        header.append(content, label);
-        actions.append(dragHint, toggleModuleButton, editModuleButton, addLessonButton, deleteModuleButton);
+        headerControls.append(label, toggleModuleButton);
+        header.append(content, headerControls);
+        actions.append(dragHint, addLessonButton, editModuleButton, deleteModuleButton);
         lessonHeader.append(lessonHeading, actions);
         lessonSection.append(lessonHeader);
         item.append(header, lessonSection);

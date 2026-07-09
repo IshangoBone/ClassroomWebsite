@@ -300,7 +300,7 @@ function createClassCard(enrollment, courses, classrooms, lessons, submissions) 
     const teacher = createElement("p", "course-muted", `Teacher: ${getTeacherName(enrollment)}`);
     const description = createElement(
         "p",
-        "course-muted",
+        "course-muted course-description-preview",
         course?.description || "Your teacher has not added a course description yet."
     );
     const progressText = createElement(
@@ -312,11 +312,10 @@ function createClassCard(enrollment, courses, classrooms, lessons, submissions) 
     );
     const progressBar = createElement("div", "dashboard-progress");
     const progressValue = createElement("span", "dashboard-progress-value");
-    const actions = createElement("div", "course-actions course-actions--split");
-    const mainActions = createElement("div", "course-actions-group course-actions-group--main");
+    const actions = createElement("div", "course-actions course-actions--split student-class-card-actions");
     const enrollmentActions = createElement("div", "course-actions-group course-actions-group--danger");
     const courseParams = new URLSearchParams({ course: enrollment.course_id });
-    const openCourseAction = createElement("a", "secondary-button", "Open class");
+    const openCourseAction = createElement("a", "primary-button", "Go to course");
     const leaveAction = createElement(
         "button",
         "secondary-button destructive-button",
@@ -335,19 +334,13 @@ function createClassCard(enrollment, courses, classrooms, lessons, submissions) 
         courseParams.set("classroom", enrollment.classroom_id);
     }
 
+    description.title = course?.description || "";
     openCourseAction.href = `../courses/student.html?${courseParams.toString()}`;
     leaveAction.type = "button";
     leaveAction.addEventListener("click", () => leaveEnrollment(enrollment));
-
-    if (continueLesson) {
-        const continueAction = createElement("a", "primary-button", continueLesson.label);
-        continueAction.href = continueLesson.href;
-        mainActions.append(continueAction);
-    }
-
-    mainActions.append(openCourseAction);
+    actions.append(openCourseAction);
     enrollmentActions.append(leaveAction);
-    actions.append(mainActions, enrollmentActions);
+    actions.append(enrollmentActions);
 
     card.append(heading, teacher, description, progressText, progressBar);
 

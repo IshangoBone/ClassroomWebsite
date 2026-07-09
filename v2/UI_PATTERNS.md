@@ -1,4 +1,4 @@
-# CodeTheCurrent V2 UI Patterns
+# BrainKernl V2 UI Patterns
 
 This file captures the shared UI direction for Version 2. New teacher, student, and admin screens should reuse these patterns before creating page-specific styles.
 

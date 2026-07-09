@@ -156,7 +156,7 @@ function createCourseCard(course) {
         avatar_key: course.teacher_avatar_key,
         username: course.teacher_name,
     };
-    const description = createElement("p", "course-muted", course.description || "No course description has been added yet.");
+    const description = createElement("p", "course-muted course-description-preview", course.description || "No course description has been added yet.");
     const actions = createElement("div", "course-actions");
     const joinPanel = createElement("div", "catalog-join-panel");
     const joinPanelHeading = createElement("h4", "", "How are you joining?");
@@ -194,6 +194,7 @@ function createCourseCard(course) {
         createProfileAvatar(teacherProfile, "profile-avatar profile-avatar--small", "T"),
         createElement("span", "course-muted", `Teacher: ${course.teacher_name || "Teacher"}`)
     );
+    description.title = course.description || "";
     heading.append(title, badges);
 
     if (course.already_enrolled) {

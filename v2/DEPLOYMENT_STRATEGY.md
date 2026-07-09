@@ -3,7 +3,7 @@
 ## Purpose
 
 Version 2 should be deployed separately from the current Version 1 public site
-until it is stable enough to become the main CodeTheCurrent experience.
+until it is stable enough to become the main BrainKernl experience.
 See `V1_PROTECTION_PLAN.md` for the development guardrails that keep the root
 V1 site stable while V2 evolves under `v2/`.
 
@@ -71,7 +71,7 @@ Until V2 is ready, the existing public domain should keep serving V1.
 Before V2 launch:
 
 1. Decide whether staging needs its own subdomain, such as
-   `v2.codethecurrent.com` or `staging.codethecurrent.com`.
+   `v2.brainkernl.com` or `staging.brainkernl.com`.
 2. Add staging and production URLs to Supabase auth redirect settings.
 3. Confirm GitHub Pages custom-domain settings.
 4. Verify HTTPS and redirects.

@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CodeTheCurrent V2 | Dashboard</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260610-home-mobile-fix" />
+    <title>BrainKernl V2 | Dashboard</title>
+    <link rel="stylesheet" href="../../styles/main.css?v=20260708-compact-course-descriptions" />
 </head>
 
 <body>
@@ -17,7 +17,7 @@
                     <p class="eyebrow">Dashboard</p>
                     <h1>Home</h1>
                     <p class="intro" data-dashboard-greeting>
-                        Loading your courses, classrooms, and lesson work...
+                        Loading your courses, classrooms, and recent activity...
                     </p>
                 </div>
             </div>
@@ -45,7 +45,7 @@
                 <strong class="summary-value" data-summary-submissions>-</strong>
             </article>
             <article class="summary-card">
-                <span class="summary-label" data-summary-my-submissions-label>My lesson work</span>
+                <span class="summary-label" data-summary-my-submissions-label>Upcoming lessons</span>
                 <strong class="summary-value" data-summary-my-submissions>-</strong>
             </article>
         </section>
@@ -100,11 +100,11 @@
             </article>
 
             <article class="dashboard-home-card">
-                <p class="eyebrow">My Classes</p>
+                <p class="eyebrow">My Courses</p>
                 <h2 data-student-home-classes-count>-</h2>
-                <p class="section-copy">joined classes and independent courses.</p>
+                <p class="section-copy">joined courses, classrooms, and independent course access.</p>
                 <div class="dashboard-home-actions dashboard-home-actions--start">
-                    <a class="secondary-button" href="../classrooms/index.html">Open My Classes</a>
+                    <a class="secondary-button" href="#enrolled-courses-heading">Open My Courses</a>
                 </div>
             </article>
         </section>
@@ -161,10 +161,21 @@
         <section class="dashboard-section dashboard-section--panel dashboard-section--courses" aria-labelledby="enrolled-courses-heading" data-enrolled-courses-section hidden>
             <div class="section-header">
                 <div>
-                    <h2 id="enrolled-courses-heading">My enrolled courses</h2>
+                    <h2 id="enrolled-courses-heading">My courses</h2>
                     <p class="section-copy">Courses and classrooms where you are learning appear here.</p>
                 </div>
             </div>
+
+            <section class="student-upcoming-feature" aria-labelledby="student-upcoming-heading" data-student-upcoming-section hidden>
+                <div>
+                    <p class="eyebrow">Upcoming lessons</p>
+                    <h3 id="student-upcoming-heading">Continue from where each course needs you next.</h3>
+                    <p class="section-copy">Your next unfinished lesson from each course or classroom.</p>
+                </div>
+                <div data-student-upcoming-list>
+                    <p class="empty-state">Loading upcoming lessons...</p>
+                </div>
+            </section>
 
             <div class="course-grid" data-enrolled-course-list>
                 <p class="empty-state">Loading enrolled courses...</p>
@@ -223,21 +234,9 @@
             </div>
         </section>
 
-        <section class="dashboard-section dashboard-section--panel dashboard-section--lesson-work" aria-labelledby="student-submissions-heading" data-student-submissions-section>
-            <div class="section-header">
-                <div>
-                    <h2 id="student-submissions-heading">My lesson work</h2>
-                    <p class="section-copy">Return to saved drafts or reopen submitted lessons and feedback.</p>
-                </div>
-            </div>
-
-            <div data-student-submission-list>
-                <p class="empty-state">Loading your lesson work...</p>
-            </div>
-        </section>
     </main>
 
-    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260610-course-grid-toggle"></script>
+    <script type="module" src="../../scripts/dashboard/teacher-dashboard.js?v=20260708-compact-course-descriptions"></script>
 </body>
 
 </html>

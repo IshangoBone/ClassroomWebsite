@@ -20,6 +20,11 @@ const canvasTitleElement = qs("[data-canvas-title]");
 const canvasObjectiveElement = qs("[data-canvas-objective]");
 const canvasOverviewElement = qs("[data-canvas-overview]");
 const canvasDurationElement = qs("[data-canvas-duration]");
+const studentPageControls = qs("[data-student-page-controls]");
+const pageCounterElement = qs("[data-page-counter]");
+const previousPageButton = qs("[data-previous-page]");
+const nextPageButton = qs("[data-next-page]");
+const lessonPageSheet = qs(".lesson-page-sheet");
 const contentRenderer = qs("[data-content-renderer]");
 const questionFlow = qs("[data-question-flow]");
 const submitPanel = qs("[data-submit-panel]");
@@ -40,7 +45,7 @@ const responseQuestionTypes = ["short_response", "long_response", "fill_in_the_b
 const defaultCodeSpaceCode = [
     "public class Main {",
     "    public static void main(String[] args) {",
-    "        System.out.println(\"Hello, CodeTheCurrent!\");",
+    "        System.out.println(\"Hello, BrainKernl!\");",
     "    }",
     "}",
 ].join("\n");
@@ -114,6 +119,8 @@ const lessonLayoutMarker = "__ctc_lesson_layout_v1__";
 let currentProfileId = "";
 let currentLessonContext = null;
 let currentSubmission = null;
+let loadedLessonPages = [];
+let loadedContentBlocks = [];
 let loadedQuestions = [];
 let questionOptionsByQuestion = new Map();
 let answerState = {};
@@ -122,7 +129,16 @@ let isSubmitted = false;
 let lastSavedAt = null;
 let submittedAt = null;
 let currentAvailabilityContext = null;
+let activeLessonPageId = "";
 const lessonResourceBucket = "lesson-resources";
+
+function isLessonPageSchemaError(error) {
+    const message = String(error?.message || "").toLowerCase();
+
+    return message.includes("lesson_page_id")
+        || message.includes("lesson_pages")
+        || message.includes("schema cache");
+}
 
 function decodeLessonLayout(bodyText = "") {
     if (!bodyText.startsWith(lessonLayoutMarker)) {
@@ -199,6 +215,11 @@ function setSubmitStatus(message, tone = "info") {
     notifyStatus(message, tone);
 }
 
+function setInlineSubmitStatus(message, tone = "info") {
+    submitStatusElement.textContent = message;
+    submitStatusElement.dataset.tone = tone;
+}
+
 function getSubmissionErrorMessage(error, fallback) {
     const message = error?.message || "";
     const normalized = message.toLowerCase();
@@ -240,6 +261,10 @@ function isLessonStoragePath(url = "") {
     return Boolean(url) && !isExternalUrl(url) && !url.startsWith("data:") && !url.startsWith("blob:");
 }
 
+function normalizeLessonStoragePath(url = "") {
+    return url.replace(new RegExp(`^${lessonResourceBucket}/`), "");
+}
+
 async function getDisplayResourceUrl(contentBlock) {
     const url = getBlockUrl(contentBlock);
 
@@ -249,7 +274,7 @@ async function getDisplayResourceUrl(contentBlock) {
 
     const { data, error } = await supabase.storage
         .from(lessonResourceBucket)
-        .createSignedUrl(url, 60 * 60);
+        .createSignedUrl(normalizeLessonStoragePath(url), 60 * 60);
 
     if (error) {
         console.warn("Lesson resource signed URL failed", error);
@@ -257,6 +282,37 @@ async function getDisplayResourceUrl(contentBlock) {
     }
 
     return data?.signedUrl || "";
+}
+
+function isImageContentBlock(contentBlock) {
+    return contentBlock.file_type === "image" || contentBlock.block_type === "image";
+}
+
+function createUnavailableResourceMessage(contentBlock, resourceType = "resource") {
+    const message = createElement(
+        "p",
+        "empty-state empty-state--compact lesson-resource-warning",
+        `${contentBlock.title || "This resource"} could not be loaded.`
+    );
+
+    message.dataset.resourceType = resourceType;
+    return message;
+}
+
+function createLessonImageElement(contentBlock, url) {
+    if (!url) {
+        return createUnavailableResourceMessage(contentBlock, "image");
+    }
+
+    const image = createElement("img", "lesson-render-image");
+
+    image.src = url;
+    image.alt = contentBlock.title || "Lesson image";
+    image.loading = "lazy";
+    image.addEventListener("error", () => {
+        image.replaceWith(createUnavailableResourceMessage(contentBlock, "image"));
+    }, { once: true });
+    return image;
 }
 
 function getQuestionOptions(question) {
@@ -281,6 +337,7 @@ function setAnswer(questionId, value) {
         [questionId]: value,
     };
     clearQuestionHighlights();
+    updateSubmitPanelState();
     scheduleDraftSave();
 }
 
@@ -343,6 +400,90 @@ function getLessonViewHref(nextLesson) {
     }
 
     return `view.html?${nextParams.toString()}`;
+}
+
+function getSortedLessonPages() {
+    return [...loadedLessonPages].sort((first, second) => first.order_index - second.order_index);
+}
+
+function getActiveLessonPage() {
+    return getSortedLessonPages().find((page) => page.id === activeLessonPageId) || getSortedLessonPages()[0] || null;
+}
+
+function getActiveLessonPageIndex() {
+    const pages = getSortedLessonPages();
+    const index = pages.findIndex((page) => page.id === activeLessonPageId);
+
+    return index === -1 ? 0 : index;
+}
+
+function isOnLastLessonPage() {
+    const pages = getSortedLessonPages();
+
+    return !pages.length || getActiveLessonPageIndex() >= pages.length - 1;
+}
+
+function getActiveContentBlocks() {
+    return loadedContentBlocks
+        .filter((contentBlock) => {
+            return activeLessonPageId
+                ? contentBlock.lesson_page_id === activeLessonPageId || (!contentBlock.lesson_page_id && getActiveLessonPageIndex() === 0)
+                : true;
+        })
+        .sort((first, second) => first.order_index - second.order_index);
+}
+
+function getActiveQuestions() {
+    return loadedQuestions
+        .filter((question) => {
+            return activeLessonPageId
+                ? question.lesson_page_id === activeLessonPageId || (!question.lesson_page_id && getActiveLessonPageIndex() === 0)
+                : true;
+        })
+        .sort((first, second) => first.order_index - second.order_index);
+}
+
+async function renderActiveLessonPage() {
+    const pages = getSortedLessonPages();
+    const activePage = getActiveLessonPage();
+    const activeIndex = getActiveLessonPageIndex();
+    const hasMultiplePages = pages.length > 1;
+    const isCoverPage = activeIndex === 0;
+
+    lessonPageSheet?.classList.toggle("lesson-page-sheet--cover", isCoverPage);
+    lessonPageSheet?.classList.toggle("lesson-page-sheet--compact", !isCoverPage);
+
+    if (studentPageControls) {
+        studentPageControls.hidden = !hasMultiplePages;
+    }
+    if (pageCounterElement) {
+        pageCounterElement.textContent = pages.length ? `Page ${activeIndex + 1} of ${pages.length}` : "Page 1 of 1";
+    }
+    if (previousPageButton) {
+        previousPageButton.disabled = !hasMultiplePages || activeIndex === 0;
+    }
+    if (nextPageButton) {
+        nextPageButton.disabled = !hasMultiplePages || activeIndex >= pages.length - 1;
+    }
+    if (canvasTitleElement && activePage) {
+        canvasTitleElement.textContent = currentLessonContext?.lesson?.title || "Untitled lesson";
+    }
+
+    await renderContentBlocks(getActiveContentBlocks());
+    renderQuestionFlow(getActiveQuestions());
+    updateSubmitPanelState();
+}
+
+function setActiveLessonPageByOffset(offset) {
+    const pages = getSortedLessonPages();
+    const nextPage = pages[getActiveLessonPageIndex() + offset];
+
+    if (!nextPage) {
+        return;
+    }
+
+    activeLessonPageId = nextPage.id;
+    renderActiveLessonPage();
 }
 
 async function loadCurrentProfile() {
@@ -445,6 +586,41 @@ function showTeacherPreviewState() {
     turnInButton.hidden = true;
     nextLessonLink.hidden = true;
     setQuestionInputsDisabled(true);
+}
+
+function updateSubmitPanelState() {
+    if (!submitPanel || isTeacherPreview || isSubmitted) {
+        return;
+    }
+
+    const pages = getSortedLessonPages();
+    const activeIndex = getActiveLessonPageIndex();
+    const finalPageNumber = pages.length || 1;
+    const onLastPage = isOnLastLessonPage();
+    const missingRequiredQuestions = getMissingRequiredQuestions();
+
+    submitPanelHeading.textContent = onLastPage ? "Turn in lesson" : "Keep going";
+    turnInButton.hidden = !onLastPage;
+    turnInButton.disabled = false;
+    nextLessonLink.hidden = true;
+
+    if (!onLastPage) {
+        const nextPageNumber = Math.min(activeIndex + 2, finalPageNumber);
+
+        setInlineSubmitStatus(`Turn-in opens on page ${finalPageNumber}. Continue to page ${nextPageNumber} when you are ready.`, "info");
+        return;
+    }
+
+    if (missingRequiredQuestions.length) {
+        const questionText = missingRequiredQuestions.length === 1
+            ? "1 required question"
+            : `${missingRequiredQuestions.length} required questions`;
+
+        setInlineSubmitStatus(`Complete ${questionText} before turning in this lesson.`, "info");
+        return;
+    }
+
+    setInlineSubmitStatus("Everything required is complete. You can turn in this lesson when you are ready.", "success");
 }
 
 function updateTeacherPreviewBackLink() {
@@ -614,10 +790,12 @@ function createFlashcardSet(layout) {
 
         cardButton.classList.toggle("lesson-flashcard-card--revealed", isRevealed);
         if (current.image?.displayUrl || current.image?.url) {
-            const image = createElement("img", "lesson-flashcard-image");
+            const image = createLessonImageElement(
+                { title: current.image.title || current.term || "Flashcard image" },
+                current.image.displayUrl || current.image.url || ""
+            );
 
-            image.src = current.image.displayUrl || current.image.url;
-            image.alt = current.image.title || current.term || "Flashcard image";
+            image.classList.add("lesson-flashcard-image");
             face.append(image);
         }
         face.append(createElement("span", "lesson-flashcard-kicker", isRevealed ? "Definition" : "Term"));
@@ -756,11 +934,12 @@ async function createLessonLayoutContent(layout) {
         const wrapper = createElement("div", "lesson-render-media-text");
         const media = createElement("div", "lesson-render-media-frame");
         const copy = createElement("div", "lesson-render-media-copy");
-        const image = createElement("img", "lesson-render-image");
         const imageUrl = await getDisplayResourceUrl({ file_url: layout.image?.url || "" });
+        const image = createLessonImageElement(
+            { title: layout.image?.title || layout.title || "Lesson image" },
+            imageUrl || layout.image?.url || ""
+        );
 
-        image.src = imageUrl || layout.image?.url || "";
-        image.alt = layout.image?.title || layout.title || "Lesson image";
         media.append(image);
         if (layout.title) {
             copy.append(createElement("h3", "", layout.title));
@@ -774,11 +953,12 @@ async function createLessonLayoutContent(layout) {
 
     if (layout?.type === "featureImage") {
         const wrapper = createElement("div", "lesson-layout-feature-preview");
-        const image = createElement("img", "", "");
         const imageUrl = await getDisplayResourceUrl({ file_url: layout.image?.url || "" });
+        const image = createLessonImageElement(
+            { title: layout.image?.title || "Feature image" },
+            imageUrl || layout.image?.url || ""
+        );
 
-        image.src = imageUrl || layout.image?.url || "";
-        image.alt = layout.image?.title || "Feature image";
         wrapper.append(image);
         return wrapper;
     }
@@ -809,11 +989,10 @@ async function createLessonLayoutContent(layout) {
         })));
 
         images.forEach((image) => {
-            const img = createElement("img", "", "");
-
-            img.src = image.displayUrl || image.url || "";
-            img.alt = image.title || "Gallery image";
-            wrapper.append(img);
+            wrapper.append(createLessonImageElement(
+                { title: image.title || "Gallery image" },
+                image.displayUrl || image.url || ""
+            ));
         });
 
         return wrapper;
@@ -857,20 +1036,20 @@ async function createContentBlock(contentBlock) {
         return article;
     }
 
-    if (contentBlock.block_type === "file" && contentBlock.file_type === "image" && hasImageCopy(contentBlock)) {
+    if (isImageContentBlock(contentBlock) && hasImageCopy(contentBlock)) {
         const shell = createElement("div", "lesson-render-media-text");
         const media = createElement("div", "lesson-render-media-frame");
         const copy = createElement("div", "lesson-render-media-copy");
-        const image = createElement("img", "lesson-render-image");
+        const image = createLessonImageElement(contentBlock, url);
 
-        image.src = url || "";
-        image.alt = contentBlock.title || "Lesson image";
         media.append(image);
         copy.append(title);
         if (contentBlock.body_text) {
             copy.append(createFormattedTextContent(contentBlock.body_text || ""));
         }
-        copy.append(createExternalLink(url, "Open image"));
+        if (url) {
+            copy.append(createExternalLink(url, "Open image"));
+        }
         shell.append(media, copy);
         article.classList.add("lesson-render-block--media-text");
         article.append(label, shell);
@@ -897,12 +1076,13 @@ async function createContentBlock(contentBlock) {
         return article;
     }
 
-    if (contentBlock.block_type === "file" && contentBlock.file_type === "image") {
-        const image = createElement("img", "lesson-render-image");
+    if (isImageContentBlock(contentBlock)) {
+        const image = createLessonImageElement(contentBlock, url);
 
-        image.src = url || "";
-        image.alt = contentBlock.title || "Lesson image";
-        article.append(image, createExternalLink(url, "Open image"));
+        article.append(image);
+        if (url) {
+            article.append(createExternalLink(url, "Open image"));
+        }
         return article;
     }
 
@@ -911,7 +1091,7 @@ async function createContentBlock(contentBlock) {
         return article;
     }
 
-    if (contentBlock.file_type === "audio" || isAudioUrl(url)) {
+    if (contentBlock.file_type === "audio" || contentBlock.block_type === "audio" || isAudioUrl(url)) {
         const audio = document.createElement("audio");
 
         audio.controls = true;
@@ -927,7 +1107,7 @@ async function createContentBlock(contentBlock) {
 
     article.append(
         createElement("p", "lesson-render-text", `${contentBlock.file_type?.toUpperCase() || "File"} resource`),
-        createExternalLink(url, "Download resource")
+        url ? createExternalLink(url, "Download resource") : createUnavailableResourceMessage(contentBlock)
     );
     return article;
 }
@@ -1810,16 +1990,22 @@ function renderQuestionFlow(questions) {
     const sortedQuestions = [...questions].sort((first, second) => first.order_index - second.order_index);
     const cards = sortedQuestions.map((question) => {
         const section = createElement("section", "lesson-flow-card");
-        const item = createElement("li", "");
+        const statusClass = question.is_required ? "required" : "optional";
+        const item = createElement("li", `question-card question-card--${statusClass}`);
         const prompt = createElement("strong", "", question.prompt);
         const instructions = createElement(
             "p",
             "",
             question.student_instructions || (question.is_required ? "Required checkpoint" : "Optional checkpoint")
         );
-        const badge = createElement("span", "badge badge--quiet", question.is_required ? "Required" : "Optional");
+        const badge = createElement(
+            "span",
+            `question-status-badge question-status-badge--${statusClass}`,
+            question.is_required ? "Required" : "Optional"
+        );
         const list = createElement("ol", "lesson-flow-question-list");
 
+        badge.setAttribute("aria-label", question.is_required ? "Required question" : "Optional question");
         item.dataset.questionId = question.id;
         item.append(prompt, badge, instructions, createQuestionAnswerControl(question));
         list.append(item);
@@ -2004,13 +2190,26 @@ async function loadStudentLessonAvailability(context) {
 }
 
 async function loadContentBlocks() {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from("lesson_content_blocks")
-        .select("id, block_type, title, body_text, external_url, file_url, file_type, order_index")
+        .select("id, lesson_page_id, block_type, title, body_text, external_url, file_url, file_type, order_index")
         .eq("lesson_id", lessonId)
         .eq("is_visible", true)
         .is("archived_at", null)
         .order("order_index", { ascending: true });
+
+    if (isLessonPageSchemaError(error)) {
+        const fallbackResult = await supabase
+            .from("lesson_content_blocks")
+            .select("id, block_type, title, body_text, external_url, file_url, file_type, order_index")
+            .eq("lesson_id", lessonId)
+            .eq("is_visible", true)
+            .is("archived_at", null)
+            .order("order_index", { ascending: true });
+
+        data = (fallbackResult.data || []).map((contentBlock) => ({ ...contentBlock, lesson_page_id: "" }));
+        error = fallbackResult.error;
+    }
 
     if (error) {
         contentRenderer.replaceChildren(createElement("p", "empty-state", "Lesson content could not be loaded."));
@@ -2018,7 +2217,37 @@ async function loadContentBlocks() {
         return false;
     }
 
-    await renderContentBlocks(data);
+    loadedContentBlocks = data || [];
+    await renderActiveLessonPage();
+    return true;
+}
+
+async function loadLessonPages() {
+    const { data, error } = await supabase
+        .from("lesson_pages")
+        .select("id, lesson_id, title, page_type, order_index, is_visible")
+        .eq("lesson_id", lessonId)
+        .eq("is_visible", true)
+        .is("archived_at", null)
+        .order("order_index", { ascending: true });
+
+    if (error || !data.length) {
+        loadedLessonPages = [{
+            id: "",
+            lesson_id: lessonId,
+            title: "Page 1",
+            page_type: "lesson",
+            order_index: 0,
+            is_visible: true,
+        }];
+        activeLessonPageId = "";
+        return !error;
+    }
+
+    loadedLessonPages = data;
+    if (!loadedLessonPages.some((page) => page.id === activeLessonPageId)) {
+        activeLessonPageId = loadedLessonPages[0].id;
+    }
     return true;
 }
 
@@ -2065,19 +2294,31 @@ async function loadQuestionOptions(questions) {
 async function loadQuestionFlow() {
     let { data, error } = await supabase
         .from("student_visible_questions")
-        .select("id, phase, question_type, prompt, student_instructions, hint, points, is_required, order_index")
+        .select("id, lesson_page_id, phase, question_type, prompt, student_instructions, hint, points, is_required, order_index")
         .eq("lesson_id", lessonId)
         .order("order_index", { ascending: true });
 
     if (error) {
         console.warn("Student questions view unavailable, falling back to manager-readable questions", error);
-        const fallbackResult = await supabase
+        let fallbackResult = await supabase
             .from("questions")
-            .select("id, phase, question_type, prompt, student_instructions, hint, points, is_required, order_index")
+            .select("id, lesson_page_id, phase, question_type, prompt, student_instructions, hint, points, is_required, order_index")
             .eq("lesson_id", lessonId)
             .eq("is_visible", true)
             .is("archived_at", null)
             .order("order_index", { ascending: true });
+
+        if (isLessonPageSchemaError(fallbackResult.error)) {
+            fallbackResult = await supabase
+                .from("questions")
+                .select("id, phase, question_type, prompt, student_instructions, hint, points, is_required, order_index")
+                .eq("lesson_id", lessonId)
+                .eq("is_visible", true)
+                .is("archived_at", null)
+                .order("order_index", { ascending: true });
+
+            fallbackResult.data = (fallbackResult.data || []).map((question) => ({ ...question, lesson_page_id: "" }));
+        }
 
         data = fallbackResult.data;
         error = fallbackResult.error;
@@ -2097,7 +2338,7 @@ async function loadQuestionFlow() {
         return false;
     }
 
-    renderQuestionFlow(loadedQuestions);
+    await renderActiveLessonPage();
     return true;
 }
 
@@ -2237,7 +2478,7 @@ async function resetDraft() {
         currentSubmission = data;
     }
 
-    renderQuestionFlow(loadedQuestions);
+    await renderActiveLessonPage();
     setSavedStatus("Draft reset.");
     setSubmitStatus("");
 }
@@ -2291,10 +2532,29 @@ async function turnInLesson() {
         return;
     }
 
+    if (!isOnLastLessonPage()) {
+        const pages = getSortedLessonPages();
+        const lastPage = pages[pages.length - 1];
+
+        if (lastPage) {
+            activeLessonPageId = lastPage.id;
+            await renderActiveLessonPage();
+        }
+
+        setSubmitStatus("Finish the final page before turning in this lesson.", "error");
+        return;
+    }
+
     const missingRequiredQuestions = getMissingRequiredQuestions();
 
     if (missingRequiredQuestions.length) {
         const questionText = missingRequiredQuestions.length === 1 ? "1 required question" : `${missingRequiredQuestions.length} required questions`;
+        const firstMissingQuestion = missingRequiredQuestions[0];
+
+        if (firstMissingQuestion.lesson_page_id && firstMissingQuestion.lesson_page_id !== activeLessonPageId) {
+            activeLessonPageId = firstMissingQuestion.lesson_page_id;
+            await renderActiveLessonPage();
+        }
 
         highlightMissingQuestions(missingRequiredQuestions);
         setSubmitStatus(`Answer ${questionText} before turning in this lesson.`, "error");
@@ -2392,6 +2652,7 @@ async function initializePage() {
     }
     shellElement.hidden = false;
     submitPanel.hidden = false;
+    await loadLessonPages();
 
     if (isTeacherPreview) {
         await loadQuestionFlow();
@@ -2418,5 +2679,11 @@ async function initializePage() {
 turnInButton.addEventListener("click", turnInLesson);
 saveDraftButton.addEventListener("click", manuallySaveDraft);
 resetDraftButton.addEventListener("click", resetDraft);
+previousPageButton?.addEventListener("click", () => {
+    setActiveLessonPageByOffset(-1);
+});
+nextPageButton?.addEventListener("click", () => {
+    setActiveLessonPageByOffset(1);
+});
 
 await initializePage();

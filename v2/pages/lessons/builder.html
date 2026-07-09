@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CodeTheCurrent V2 | Lesson Builder</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260619-authoring-topbar-simple" />
+    <title>BrainKernl V2 | Lesson Builder</title>
+    <link rel="stylesheet" href="../../styles/main.css?v=20260706-full-image-fit" />
 </head>
 
 <body class="lesson-authoring-shell">
@@ -126,7 +126,7 @@
         <section class="management-section management-section--pending lesson-builder-authoring" data-lesson-content hidden>
             <div class="lesson-authoring-topbar">
                 <div class="lesson-authoring-brand">
-                    <span class="lesson-authoring-mark" aria-hidden="true">CTC</span>
+                    <span class="lesson-authoring-mark" aria-hidden="true">BK</span>
                     <div>
                         <p class="lesson-authoring-title" data-editor-lesson-title>Lesson workspace</p>
                     </div>
@@ -154,7 +154,35 @@
                             <div class="lesson-page-toolbar-title">
                                 <p class="eyebrow">Student Page</p>
                                 <h3 id="lesson-canvas-heading">Live draft</h3>
-                                <p>What students will see when this lesson opens.</p>
+                                <p data-active-page-title>What students will see when this lesson opens.</p>
+                            </div>
+                            <div class="lesson-page-toolbar-actions lesson-page-toolbar-actions--pages">
+                                <button type="button" class="lesson-page-icon-button" data-previous-page title="Previous page" aria-label="Previous page">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path d="m15 18-6-6 6-6"></path>
+                                    </svg>
+                                </button>
+                                <span class="lesson-page-counter" data-page-counter>Page 1 of 1</span>
+                                <button type="button" class="lesson-page-icon-button" data-next-page title="Next page" aria-label="Next page">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path d="m9 18 6-6-6-6"></path>
+                                    </svg>
+                                </button>
+                                <button type="button" class="lesson-page-icon-button lesson-page-icon-button--primary" data-create-page title="Create page" aria-label="Create page">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path d="M12 5v14"></path>
+                                        <path d="M5 12h14"></path>
+                                    </svg>
+                                </button>
+                                <button type="button" class="lesson-page-icon-button lesson-page-icon-button--danger" data-delete-page title="Delete page" aria-label="Delete page">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path d="M3 6h18"></path>
+                                        <path d="M8 6V4h8v2"></path>
+                                        <path d="M19 6l-1 14H6L5 6"></path>
+                                        <path d="M10 11v6"></path>
+                                        <path d="M14 11v6"></path>
+                                    </svg>
+                                </button>
                             </div>
                         </div>
 
@@ -507,7 +535,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/lessons/builder.js?v=20260619-authoring-topbar-simple"></script>
+    <script type="module" src="../../scripts/lessons/builder.js?v=20260623-bottom-page-nav"></script>
 </body>
 
 </html>

@@ -6,7 +6,7 @@ import { notifyStatus } from "../utils/ui-components.js";
 const authModes = {
     login: {
         title: "Welcome back",
-        copy: "Use your email and password, or switch to sign up if this is your first time in CodeTheCurrent.",
+        copy: "Use your email and password, or switch to sign up if this is your first time in BrainKernl.",
     },
     signup: {
         title: "Create your account",
@@ -30,14 +30,27 @@ const googleOAuthDisabledMessage = [
     "Enable Google OAuth in Supabase, then set googleOAuthEnabled to true in config.js.",
 ].join(" ");
 
+function isLocalAuthHost() {
+    return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+}
+
+function getAuthRedirectUrl(pathname) {
+    if (isLocalAuthHost()) {
+        return new URL(pathname, window.location.href).href;
+    }
+
+    const baseUrl = supabaseConfig.publicSiteUrl || window.location.origin;
+    return new URL(pathname.replace(/^\.\//, "pages/auth/"), `${baseUrl.replace(/\/$/, "")}/`).href;
+}
+
 function getLoginRedirectUrl() {
-    const redirectUrl = new URL("./login.html", window.location.href);
+    const redirectUrl = new URL(getAuthRedirectUrl("./login.html"));
     redirectUrl.searchParams.set("confirmed", "1");
     return redirectUrl.href;
 }
 
 function getPasswordResetRedirectUrl() {
-    return new URL("./reset-password.html", window.location.href).href;
+    return getAuthRedirectUrl("./reset-password.html");
 }
 
 function isDuplicateSignupResponse(data) {
@@ -301,7 +314,7 @@ if (googleButton) {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: "google",
             options: {
-                redirectTo: new URL("./onboarding.html", window.location.href).href,
+                redirectTo: getAuthRedirectUrl("./onboarding.html"),
             },
         });
 

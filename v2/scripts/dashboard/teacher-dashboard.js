@@ -9,7 +9,7 @@ const greetingElement = qs("[data-dashboard-greeting]");
 const profileAvatarElement = qs("[data-dashboard-profile-avatar]");
 const courseList = qs("[data-course-list]");
 const submissionList = qs("[data-submission-list]");
-const studentSubmissionList = qs("[data-student-submission-list]");
+const studentUpcomingList = qs("[data-student-upcoming-list]");
 const enrolledCoursesSection = qs("[data-enrolled-courses-section]");
 const enrolledCourseList = qs("[data-enrolled-course-list]");
 const courseFormPanel = qs("[data-course-form-panel]");
@@ -44,7 +44,7 @@ const studentContinueCopy = qs("[data-student-continue-copy]");
 const studentContinueActions = qs("[data-student-continue-actions]");
 const studentHomeClassesCount = qs("[data-student-home-classes-count]");
 const homeSubmissionsCount = qs("[data-home-submissions-count]");
-const studentSubmissionsSection = qs("[data-student-submissions-section]");
+const studentUpcomingSection = qs("[data-student-upcoming-section]");
 const dashboardParams = new URLSearchParams(window.location.search);
 const MANAGED_COURSE_PREVIEW_LIMIT = 6;
 
@@ -116,6 +116,17 @@ function getSubmissionFilters() {
         lessonId: String(formData.get("lesson") || ""),
         studentId: String(formData.get("student") || ""),
     };
+}
+
+function formatActivityDate(dateLike) {
+    return dateLike
+        ? new Date(dateLike).toLocaleString([], {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+        })
+        : "";
 }
 
 function renderEmpty(container, message) {
@@ -713,7 +724,7 @@ function renderStudentEnrollments(enrollments, courses, classrooms, lessons, sub
         const classroom = getEnrollmentClassroom(enrollment, classrooms);
         const { incompleteCount, lessonCount, progressPercent, submittedCount } = getStudentCourseProgress(enrollment, lessons, submissions);
         const continueLesson = getContinueLesson(enrollment, lessons, submissions);
-        const card = createElement("article", "course-card");
+        const card = createElement("article", "course-card student-course-dashboard-card");
         const heading = createElement("div", "course-card-header");
         const title = createElement("h3", "course-title", course?.title || "Untitled course");
         const badges = createElement("div", "badge-row");
@@ -728,6 +739,11 @@ function renderStudentEnrollments(enrollments, courses, classrooms, lessons, sub
             : "Independent course";
         const details = createElement("p", "course-details", classroomLabel);
         const teacher = createElement("p", "course-muted", `Teacher: ${getStudentTeacherName(enrollment)}`);
+        const description = createElement(
+            "p",
+            "course-muted course-description-preview",
+            course?.description || "No course description has been added yet."
+        );
         const progress = createElement(
             "p",
             "course-muted",
@@ -760,34 +776,19 @@ function renderStudentEnrollments(enrollments, courses, classrooms, lessons, sub
                     : `${incompleteCount} lessons still need your attention.`
             )
             : null;
-        const actions = createElement("div", "course-actions course-actions--split");
-        const mainActions = createElement("div", "course-actions-group course-actions-group--main");
-        const enrollmentActions = createElement("div", "course-actions-group course-actions-group--danger");
+        const actions = createElement("div", "course-actions student-course-dashboard-actions");
         const courseParams = new URLSearchParams({ course: enrollment.course_id });
-        const openCourseAction = createElement("a", "secondary-button", "Open course");
-        const leaveAction = createElement(
-            "button",
-            "secondary-button destructive-button",
-            enrollment.enrollment_type === "classroom" ? "Leave classroom" : "Unenroll"
-        );
+        const courseAction = createElement("a", "primary-button", "Go to course");
 
         if (enrollment.classroom_id) {
             courseParams.set("classroom", enrollment.classroom_id);
         }
 
-        openCourseAction.href = `../courses/student.html?${courseParams.toString()}`;
-        leaveAction.type = "button";
-        leaveAction.addEventListener("click", () => leaveEnrollment(enrollment));
-        if (continueLesson) {
-            const continueAction = createElement("a", "primary-button", continueLesson.label);
-            continueAction.href = continueLesson.href;
-            mainActions.append(continueAction);
-        }
-        mainActions.append(openCourseAction);
-        enrollmentActions.append(leaveAction);
-        actions.append(mainActions, enrollmentActions);
+        description.title = course?.description || "";
+        courseAction.href = `../courses/student.html?${courseParams.toString()}`;
+        actions.append(courseAction);
 
-        card.append(heading, details, teacher, progress, progressBar);
+        card.append(heading, details, teacher, description, progress, progressBar);
 
         if (nextStep) {
             card.append(nextStep);
@@ -911,9 +912,17 @@ function getStudentWorkLink(submission) {
     return `../lessons/view.html?${params.toString()}`;
 }
 
+function getCourseNameMap(courses) {
+    return new Map(courses.map((course) => [course.id, course.title || "Untitled course"]));
+}
+
+function getLessonNameMap(lessons) {
+    return new Map(lessons.map((lesson) => [lesson.id, lesson.title || "Untitled lesson"]));
+}
+
 function buildStudentSubmissionList(submissions, courses, lessons) {
-    const courseNames = new Map(courses.map((course) => [course.id, course.title || "Untitled course"]));
-    const lessonNames = new Map(lessons.map((lesson) => [lesson.id, lesson.title || "Untitled lesson"]));
+    const courseNames = getCourseNameMap(courses);
+    const lessonNames = getLessonNameMap(lessons);
     const list = createElement("ul", "submission-list");
 
     submissions.forEach((submission) => {
@@ -926,12 +935,7 @@ function buildStudentSubmissionList(submissions, courses, lessons) {
         const context = createElement("span", "course-muted", courseNames.get(submission.course_id) || "Course");
         const activityDate = submission.status === "submitted" ? submission.submitted_at : submission.updated_at;
         const activityLabel = activityDate
-            ? createElement("span", "course-muted", new Date(activityDate).toLocaleString([], {
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-            }))
+            ? createElement("span", "course-muted", formatActivityDate(activityDate))
             : createElement("span", "course-muted", "In progress");
         const status = submission.status === "submitted"
             ? createElement("span", "badge", "Submitted")
@@ -945,22 +949,122 @@ function buildStudentSubmissionList(submissions, courses, lessons) {
     return list;
 }
 
-function renderStudentSubmissions(submissions, courses, lessons) {
-    if (!submissions.length) {
-        renderEmpty(studentSubmissionList, "You do not have any saved lesson work yet.");
-        return;
-    }
+function buildUpcomingLessonList(enrollments, courses, classrooms, lessons, submissions) {
+    const list = createElement("ul", "student-upcoming-list");
+    const items = enrollments
+        .map((enrollment) => {
+            const course = getEnrollmentCourse(enrollment, courses);
+            const classroom = getEnrollmentClassroom(enrollment, classrooms);
+            const nextLearning = getContinueLesson(enrollment, lessons, submissions);
 
-    studentSubmissionList.replaceChildren(buildStudentSubmissionList(submissions, courses, lessons));
+            if (!nextLearning || nextLearning.isComplete) {
+                return null;
+            }
+
+            return {
+                classroom,
+                course,
+                enrollment,
+                nextLearning,
+            };
+        })
+        .filter(Boolean);
+
+    items.forEach(({ classroom, course, enrollment, nextLearning }) => {
+        const item = createElement("li", "student-upcoming-item");
+        const content = createElement("div", "student-upcoming-content");
+        const title = createElement("a", "submission-name", nextLearning.detail.replace(/^(Next|Completed):\s*/, ""));
+        const contextParts = [
+            course?.title || "Untitled course",
+            classroom ? (classroom.period_block ? `${classroom.name} - ${classroom.period_block}` : classroom.name) : "Independent course",
+        ];
+        const context = createElement("span", "course-muted", contextParts.join(" / "));
+        const teacher = createElement("span", "course-muted", `Teacher: ${getStudentTeacherName(enrollment)}`);
+        const badge = createElement("span", "badge badge--quiet", nextLearning.label);
+        const action = createElement("a", "primary-button", "Continue learning");
+
+        title.href = nextLearning.href;
+        action.href = nextLearning.href;
+        content.append(title, context, teacher);
+        item.append(content, badge, action);
+        list.append(item);
+    });
+
+    return { list, itemCount: items.length };
 }
 
-function renderStudentActivity(submissions, courses, lessons) {
-    if (!submissions.length) {
-        renderEmpty(studentActivityList, "No recent lesson activity yet.");
+function renderStudentUpcoming(enrollments, courses, classrooms, lessons, submissions) {
+    const { list, itemCount } = buildUpcomingLessonList(enrollments, courses, classrooms, lessons, submissions);
+
+    if (!itemCount) {
+        renderEmpty(studentUpcomingList, "No upcoming lessons are ready yet.");
         return;
     }
 
-    studentActivityList.replaceChildren(buildStudentSubmissionList(submissions.slice(0, 3), courses, lessons));
+    studentUpcomingList.replaceChildren(list);
+}
+
+function buildStudentActivityList(submissions, enrollments, courses, classrooms, lessons) {
+    const courseNames = getCourseNameMap(courses);
+    const lessonNames = getLessonNameMap(lessons);
+    const classroomNames = new Map(classrooms.map((classroom) => [
+        classroom.id,
+        classroom.period_block ? `${classroom.name} - ${classroom.period_block}` : classroom.name,
+    ]));
+    const events = [
+        ...submissions.map((submission) => ({
+            href: getStudentWorkLink(submission),
+            label: submission.status === "submitted"
+                ? `Submitted ${lessonNames.get(submission.lesson_id) || "lesson"}`
+                : `Saved draft for ${lessonNames.get(submission.lesson_id) || "lesson"}`,
+            meta: courseNames.get(submission.course_id) || "Course",
+            status: submission.status === "submitted" ? "Submitted" : "Draft",
+            statusClass: submission.status === "submitted" ? "badge" : "badge badge--quiet",
+            timestamp: submission.status === "submitted" ? submission.submitted_at : submission.updated_at,
+        })),
+        ...enrollments.map((enrollment) => ({
+            href: `../courses/student.html?${new URLSearchParams({
+                course: enrollment.course_id,
+                ...(enrollment.classroom_id ? { classroom: enrollment.classroom_id } : {}),
+            }).toString()}`,
+            label: enrollment.classroom_id
+                ? `Joined ${classroomNames.get(enrollment.classroom_id) || "classroom"}`
+                : `Joined ${courseNames.get(enrollment.course_id) || "course"}`,
+            meta: courseNames.get(enrollment.course_id) || "Course",
+            status: "Joined",
+            statusClass: "badge badge--quiet",
+            timestamp: enrollment.joined_at,
+        })),
+    ]
+        .filter((event) => event.timestamp)
+        .sort((first, second) => new Date(second.timestamp) - new Date(first.timestamp))
+        .slice(0, 6);
+    const list = createElement("ul", "submission-list");
+
+    events.forEach((event) => {
+        const item = createElement("li", "submission-item");
+        const link = createElement("a", "submission-name", event.label);
+        const meta = createElement("span", "course-muted", event.meta);
+        const date = createElement("span", "course-muted", formatActivityDate(event.timestamp));
+        const status = createElement("span", event.statusClass, event.status);
+
+        link.href = event.href;
+        item.append(link, meta, date, status);
+        list.append(item);
+    });
+
+    return { list, itemCount: events.length };
+}
+
+function renderStudentActivity(submissions, enrollments, courses, classrooms, lessons) {
+    const { list, itemCount } = buildStudentActivityList(submissions, enrollments, courses, classrooms, lessons);
+
+    if (!itemCount) {
+        renderEmpty(studentActivityList, "No recent account activity yet.");
+        return;
+    }
+
+    studentActivityList.replaceChildren(list);
 }
 
 function renderStudentHome(enrollments, lessons, submissions) {
@@ -985,8 +1089,8 @@ function renderStudentHome(enrollments, lessons, submissions) {
         studentContinueHeading.textContent = "No lessons are ready yet";
         studentContinueCopy.textContent = "Your joined classes are ready, and lessons will appear when your teacher adds them.";
 
-        const classesAction = createElement("a", "primary-button", "Open My Classes");
-        classesAction.href = "../classrooms/index.html";
+        const classesAction = createElement("a", "primary-button", "Open My Courses");
+        classesAction.href = "#enrolled-courses-heading";
         studentContinueActions.append(classesAction);
         return;
     }
@@ -995,9 +1099,9 @@ function renderStudentHome(enrollments, lessons, submissions) {
     studentContinueCopy.textContent = nextLearning.detail;
 
     const continueAction = createElement("a", "primary-button", nextLearning.label);
-    const classesAction = createElement("a", "secondary-button", "View all classes");
+    const classesAction = createElement("a", "secondary-button", "View all courses");
     continueAction.href = nextLearning.href;
-    classesAction.href = "../classrooms/index.html";
+    classesAction.href = "#enrolled-courses-heading";
     studentContinueActions.append(continueAction, classesAction);
 }
 
@@ -1053,8 +1157,6 @@ async function refreshDashboard() {
         const hasTeachingAccess = isTeachingRole(currentProfile.platform_role) || Boolean(courses.length);
         const isStudentOnly = !hasTeachingAccess;
         const hasStudentEnrollments = Boolean(displayStudentEnrollments.length);
-        const submittedStudentWork = studentSubmissions.filter((submission) => submission.status === "submitted");
-        const studentPoints = submittedStudentWork.reduce((total, submission) => total + Number(submission.points_earned || 0), 0);
         const progressTotals = displayStudentEnrollments.reduce((totals, enrollment) => {
             const progress = getStudentCourseProgress(enrollment, lessons, studentSubmissions);
 
@@ -1077,30 +1179,37 @@ async function refreshDashboard() {
         courseFormPanel.hidden = true;
         teacherSubmissionsSection.hidden = isStudentOnly;
         teacherHomeSection.hidden = isStudentOnly;
-        studentHomeSection.hidden = !isStudentOnly;
+        studentHomeSection.hidden = true;
         managedCoursesSection.hidden = isStudentOnly;
         studentActivitySection.hidden = !isStudentOnly;
         studentJoinSection.hidden = !isStudentOnly;
-        studentSubmissionsSection.hidden = !isStudentOnly;
+        studentUpcomingSection.hidden = !isStudentOnly;
         if (enrolledCoursesSection) {
-            enrolledCoursesSection.hidden = isStudentOnly || !hasStudentEnrollments;
+            enrolledCoursesSection.hidden = !hasStudentEnrollments;
         }
 
         if (isStudentOnly) {
-            greetingElement.textContent = `Welcome, ${currentProfile.username || "there"}. Continue your courses and review lesson work.`;
+            greetingElement.textContent = `Welcome, ${currentProfile.username || "there"}. Check recent activity, upcoming lessons, and your courses.`;
             coursesSummaryLabel.textContent = "My courses";
             classroomsSummaryLabel.textContent = "Active classrooms";
             submissionsSummaryLabel.textContent = "Course progress";
-            studentSubmissionsSummaryLabel.textContent = "Engagement points";
+            studentSubmissionsSummaryLabel.textContent = "Upcoming lessons";
             managedCoursesHeading.textContent = "My courses";
             managedCoursesCopy.textContent = displayStudentEnrollments.length
-                ? "Open enrolled courses, continue drafts, and turn in lesson work."
+                ? "Open enrolled courses, continue lessons, and track class progress."
                 : "Joined courses and classrooms will appear here.";
             coursesSummary.textContent = String(displayStudentEnrollments.length);
             classroomsSummary.textContent = String(displayStudentEnrollments.filter((enrollment) => enrollment.enrollment_type === "classroom").length);
             submissionsSummary.textContent = `${overallProgress}%`;
-            studentSubmissionsSummary.textContent = String(studentPoints);
-            renderStudentHome(displayStudentEnrollments, lessons, studentSubmissions);
+            studentSubmissionsSummary.textContent = String(displayStudentEnrollments
+                .map((enrollment) => getContinueLesson(enrollment, lessons, studentSubmissions))
+                .filter((nextLearning) => nextLearning && !nextLearning.isComplete)
+                .length);
+            if (hasStudentEnrollments && enrolledCourseList) {
+                renderStudentEnrollments(displayStudentEnrollments, visibleCourses, studentClassrooms, lessons, studentSubmissions, enrolledCourseList);
+            } else if (enrolledCourseList) {
+                renderEmpty(enrolledCourseList, "Join a course or classroom to see your courses here.");
+            }
         } else {
             greetingElement.textContent = `Welcome, ${currentProfile.username || "there"}. Start with the courses and classes you teach.`;
             coursesSummaryLabel.textContent = "My courses";
@@ -1124,14 +1233,14 @@ async function refreshDashboard() {
 
         renderSubmissionFilters(courses, classrooms, lessons.filter((lesson) => courseIds.includes(lesson.course_id)), submissions);
         refreshSubmissionList();
-        renderStudentActivity(studentSubmissions, visibleCourses, lessons);
-        renderStudentSubmissions(studentSubmissions, visibleCourses, lessons);
+        renderStudentActivity(studentSubmissions, displayStudentEnrollments, visibleCourses, studentClassrooms, lessons);
+        renderStudentUpcoming(displayStudentEnrollments, visibleCourses, studentClassrooms, lessons, studentSubmissions);
         setStatus("");
     } catch (error) {
         setStatus(error.message || "Your workspace could not be loaded.", "error");
         renderEmpty(courseList, "Courses could not be loaded right now.");
         renderEmpty(submissionList, "Submissions could not be loaded right now.");
-        renderEmpty(studentSubmissionList, "Your submissions could not be loaded right now.");
+        renderEmpty(studentUpcomingList, "Upcoming lessons could not be loaded right now.");
     }
 }
 

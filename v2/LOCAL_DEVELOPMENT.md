@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Use this guide to run CodeTheCurrent Version 2 locally without touching the
+Use this guide to run BrainKernl Version 2 locally without touching the
 Version 1 root site or future production users.
 
 Version 2 is currently a static frontend in `v2/` that talks to Supabase from
