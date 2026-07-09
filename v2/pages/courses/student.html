@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BrainKernl V2 | Student Course</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260708-right-nav-menu" />
+    <title>BrainKernl | Student Course</title>
+    <link rel="stylesheet" href="../../styles/main.css?v=20260708-course-details-status" />
 </head>
 
 <body>
@@ -13,71 +13,120 @@
         <header class="management-header student-course-header">
             <div>
                 <a class="back-link" href="../dashboard/index.html">Back to dashboard</a>
-                <p class="eyebrow">Student Course</p>
-                <h1 data-student-course-heading>Loading course...</h1>
-                <p class="intro" data-student-course-context>Preparing your course outline.</p>
+                <div class="student-course-marker">
+                    <p class="eyebrow">Student Course</p>
+                    <p data-student-course-heading>Loading course...</p>
+                    <span data-student-course-context>Preparing your course outline.</span>
+                </div>
             </div>
             <button class="secondary-button destructive-button management-action" type="button" data-student-course-unenroll hidden>Unenroll</button>
         </header>
 
         <p class="auth-status management-status" data-student-course-status aria-live="polite"></p>
 
-        <section class="dashboard-summary" data-student-course-summary hidden aria-label="Course progress summary">
-            <article class="summary-card">
-                <span class="summary-label">Progress</span>
-                <strong class="summary-value" data-student-course-progress>-</strong>
-            </article>
-            <article class="summary-card">
-                <span class="summary-label">Lessons submitted</span>
-                <strong class="summary-value" data-student-course-submitted>-</strong>
-            </article>
-            <article class="summary-card">
-                <span class="summary-label">Next lesson</span>
-                <strong class="summary-value student-course-next" data-student-course-next>-</strong>
-            </article>
-            <article class="summary-card">
-                <span class="summary-label">Engagement points</span>
-                <strong class="summary-value" data-student-course-points>-</strong>
-            </article>
-        </section>
+        <section class="student-course-workspace" data-student-course-workspace hidden>
+            <nav class="student-course-tabs" aria-label="Course sections" data-student-course-tabs>
+                <button class="student-course-tab is-active" type="button" data-course-tab-button="details" aria-selected="true">Course Details</button>
+                <button class="student-course-tab" type="button" data-course-tab-button="content" aria-selected="false">Content</button>
+                <button class="student-course-tab" type="button" data-course-tab-button="announcements" aria-selected="false">Announcements</button>
+                <button class="student-course-tab" type="button" data-course-tab-button="gradebook" aria-selected="false">Gradebook</button>
+            </nav>
 
-        <section class="dashboard-section student-course-progress-section" data-student-course-progress-section hidden>
-            <div class="section-header">
-                <div>
-                    <h2>Course progress</h2>
-                    <p class="section-copy" data-student-course-progress-copy>Your completion progress will appear here.</p>
-                </div>
-            </div>
-            <div class="dashboard-progress student-course-progress-bar" role="progressbar" aria-label="Course completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-student-course-progress-bar>
-                <span class="dashboard-progress-value" data-student-course-progress-value></span>
-            </div>
-        </section>
+            <section class="student-course-tab-panel" data-course-tab-panel="details">
+                <section class="dashboard-section student-course-details-section">
+                    <div data-student-course-details>
+                        <p class="empty-state">Loading course details...</p>
+                    </div>
+                </section>
+            </section>
 
-        <section class="dashboard-section dashboard-section--muted" data-student-course-next-section hidden>
-            <div class="section-header section-header--actions">
-                <div>
-                    <h2>Continue learning</h2>
-                    <p class="section-copy" data-student-course-next-copy>Your next lesson will appear here.</p>
-                </div>
-                <a class="primary-button" href="../dashboard/index.html" data-student-course-next-link>Open lesson</a>
-            </div>
-        </section>
+            <section class="student-course-tab-panel" data-course-tab-panel="content" hidden>
+                <section class="dashboard-summary" data-student-course-summary hidden aria-label="Course progress summary">
+                    <article class="summary-card">
+                        <span class="summary-label">Progress</span>
+                        <strong class="summary-value" data-student-course-progress>-</strong>
+                    </article>
+                    <article class="summary-card">
+                        <span class="summary-label">Lessons submitted</span>
+                        <strong class="summary-value" data-student-course-submitted>-</strong>
+                    </article>
+                    <article class="summary-card">
+                        <span class="summary-label">Next lesson</span>
+                        <strong class="summary-value student-course-next" data-student-course-next>-</strong>
+                    </article>
+                    <article class="summary-card">
+                        <span class="summary-label">Engagement points</span>
+                        <strong class="summary-value" data-student-course-points>-</strong>
+                    </article>
+                </section>
 
-        <section class="dashboard-section" data-student-course-shell hidden aria-labelledby="student-course-modules-heading">
-            <div class="section-header">
-                <div>
-                    <h2 id="student-course-modules-heading">Course modules</h2>
-                    <p class="section-copy">Open a module to review lesson status and continue your work.</p>
-                </div>
-            </div>
+                <section class="dashboard-section student-course-progress-section" data-student-course-progress-section hidden>
+                    <div class="section-header">
+                        <div>
+                            <h2>Course progress</h2>
+                            <p class="section-copy" data-student-course-progress-copy>Your completion progress will appear here.</p>
+                        </div>
+                    </div>
+                    <div class="dashboard-progress student-course-progress-bar" role="progressbar" aria-label="Course completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-student-course-progress-bar>
+                        <span class="dashboard-progress-value" data-student-course-progress-value></span>
+                    </div>
+                </section>
 
-            <div data-student-course-module-list>
-                <p class="empty-state">Loading modules...</p>
-            </div>
+                <section class="student-course-next-card" data-student-course-next-section hidden>
+                    <div class="student-course-next-copy">
+                        <p class="eyebrow">Next Up</p>
+                        <h2>Continue learning</h2>
+                        <p data-student-course-next-copy>Your next lesson will appear here.</p>
+                    </div>
+                    <a class="primary-button" href="../dashboard/index.html" data-student-course-next-link>Open lesson</a>
+                </section>
+
+                <section class="dashboard-section" data-student-course-shell hidden aria-labelledby="student-course-modules-heading">
+                    <div class="section-header">
+                        <div>
+                            <h2 id="student-course-modules-heading">Course modules</h2>
+                            <p class="section-copy">Open a module to review lesson status and continue your work.</p>
+                        </div>
+                    </div>
+
+                    <div data-student-course-module-list>
+                        <p class="empty-state">Loading modules...</p>
+                    </div>
+                </section>
+            </section>
+
+            <section class="student-course-tab-panel" data-course-tab-panel="announcements" hidden>
+                <section class="dashboard-section">
+                    <div class="section-header">
+                        <div>
+                            <h2>Announcements</h2>
+                            <p class="section-copy">Course updates from your teacher will appear here.</p>
+                        </div>
+                    </div>
+                    <div data-student-course-announcements>
+                        <p class="empty-state">No announcements have been posted for this course yet.</p>
+                    </div>
+                </section>
+            </section>
+
+            <section class="student-course-tab-panel" data-course-tab-panel="gradebook" hidden>
+                <section class="dashboard-section">
+                    <div class="section-header">
+                        <div>
+                            <h2>Gradebook</h2>
+                            <p class="section-copy">Review submitted lessons, draft work, and engagement points for this course.</p>
+                        </div>
+                    </div>
+                    <div data-student-course-gradebook>
+                        <p class="empty-state">Gradebook details will appear once lessons are available.</p>
+                    </div>
+                </section>
+            </section>
+
         </section>
     </main>
 
-    <script type="module" src="../../scripts/courses/student.js?v=20260604-lesson-locking"></script>
+    <script type="module" src="../../scripts/courses/student.js?v=20260708-course-details-status"></script>
 </body>
 
 </html>

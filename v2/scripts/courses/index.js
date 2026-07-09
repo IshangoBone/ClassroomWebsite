@@ -14,6 +14,7 @@ const courseFormPanel = qs("[data-course-form-panel]");
 const courseFormToggle = qs("[data-course-form-toggle]");
 const courseFormCancel = qs("[data-course-form-cancel]");
 const courseForm = qs("[data-course-form]");
+const courseEditorVersion = "20260709-tabs";
 
 let currentProfile = null;
 let loadedCourses = [];
@@ -68,6 +69,37 @@ function createCourseMetric(label, value) {
     return item;
 }
 
+const courseActionIcons = {
+    classes: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>',
+    hammer: '<path d="m15 12-8.5 8.5a2.12 2.12 0 0 1-3-3L12 9"></path><path d="M17.64 15 22 10.64"></path><path d="m20.91 11.7-1.25-1.25a2.12 2.12 0 0 1 0-3l.39-.39-3.11-3.11-.39.39a2.12 2.12 0 0 1-3 0L12.3 3.09 8 7.39l1.25 1.25a2.12 2.12 0 0 1 0 3l-.39.39 3.11 3.11.39-.39a2.12 2.12 0 0 1 3 0l1.25 1.25"></path>',
+    open: '<path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>',
+};
+
+function createCourseActionIcon(name) {
+    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    icon.setAttribute("viewBox", "0 0 24 24");
+    icon.setAttribute("aria-hidden", "true");
+    icon.setAttribute("focusable", "false");
+    icon.innerHTML = courseActionIcons[name] || "";
+    return icon;
+}
+
+function createCourseActionLink(iconName, label, href, modifiers = []) {
+    const modifierClasses = modifiers.map((modifier) => ` teacher-course-action-link--${modifier}`).join("");
+    const link = createElement("a", `teacher-course-action-link${modifierClasses}`);
+
+    link.href = href;
+    link.title = label;
+    link.setAttribute("aria-label", label);
+    link.append(createCourseActionIcon(iconName));
+
+    return link;
+}
+
+function getCourseEditorHref(courseId) {
+    return `editor.html?course=${encodeURIComponent(courseId)}&editor=${courseEditorVersion}`;
+}
+
 function createCourseCard(course) {
     const classrooms = getCourseClassrooms(course.id);
     const modules = getCourseModules(course.id);
@@ -93,9 +125,17 @@ function createCourseCard(course) {
     const badges = createElement("div", "badge-row");
     const metrics = createElement("div", "teacher-course-metrics");
     const actions = createElement("div", "teacher-course-actions");
-    const openCourseLink = createElement("a", "primary-button", "Open course");
-    const lessonHubLink = createElement("a", "secondary-button", "Lesson builder");
-    const classesLink = createElement("a", "secondary-button", "Classes");
+    const openCourseLink = createCourseActionLink("open", `Open ${course.title || "course"}`, getCourseEditorHref(course.id), ["primary"]);
+    const lessonHubLink = createCourseActionLink(
+        "hammer",
+        `Open lesson builder for ${course.title || "course"}`,
+        `../lessons/index.html?course=${course.id}`
+    );
+    const classesLink = createCourseActionLink(
+        "classes",
+        `Open classes for ${course.title || "course"}`,
+        `../classrooms/manage.html?course=${course.id}`
+    );
 
     badges.append(
         createBadge(course.relationship || "Teacher", { quiet: true }),
@@ -109,10 +149,6 @@ function createCourseCard(course) {
         createCourseMetric("visible", String(visibleLessons.length)),
         createCourseMetric("locked", String(lockedLessons.length))
     );
-
-    openCourseLink.href = `editor.html?course=${course.id}`;
-    lessonHubLink.href = `../lessons/index.html?course=${course.id}`;
-    classesLink.href = `../classrooms/manage.html?course=${course.id}`;
 
     titleGroup.append(title, detail);
     titleRow.append(titleGroup, badges);
@@ -345,7 +381,7 @@ async function handleCreateCourse(event) {
     await refreshCourses({ quiet: true });
     setStatus("Draft course created. Opening course editor...", "success");
 
-    window.location.href = `editor.html?course=${data.id}`;
+    window.location.href = getCourseEditorHref(data.id);
 }
 
 async function init() {

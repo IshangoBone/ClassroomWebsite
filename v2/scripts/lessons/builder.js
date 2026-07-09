@@ -3739,7 +3739,7 @@ async function initializePage() {
     if (canvasDurationElement) {
         canvasDurationElement.textContent = lesson.estimated_time || "Not set";
     }
-    const courseEditorHref = `../courses/editor.html?course=${encodeURIComponent(course.id)}`;
+    const courseEditorHref = `../courses/editor.html?course=${encodeURIComponent(course.id)}&editor=20260709-tabs`;
     const studentViewHref = `view.html?lesson=${encodeURIComponent(lesson.id)}&preview=teacher&course=${encodeURIComponent(course.id)}`;
     courseEditorLinks.forEach((link) => {
         link.href = courseEditorHref;

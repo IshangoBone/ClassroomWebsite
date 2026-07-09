@@ -1,7 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { isTeachingRole, loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
-import { createProfileAvatar, getProfileDisplayName } from "../utils/profile-images.js";
+import { createProfileAvatar, getProfileDisplayName, getProfilePhotoUrl } from "../utils/profile-images.js";
 import { notifyStatus } from "../utils/ui-components.js";
 
 const statusElement = qs("[data-profile-status]");
@@ -10,7 +10,6 @@ const nameElement = qs("[data-profile-name]");
 const usernameElement = qs("[data-profile-username]");
 const introElement = qs("[data-profile-intro]");
 const badgesElement = qs("[data-profile-badges]");
-const detailsElement = qs("[data-profile-details]");
 const enrolledCountElement = qs("[data-profile-enrolled-count]");
 const submittedCountElement = qs("[data-profile-submitted-count]");
 const pointsCountElement = qs("[data-profile-points-count]");
@@ -19,6 +18,7 @@ const activityListElement = qs("[data-profile-activity-list]");
 const learningListElement = qs("[data-profile-learning-list]");
 const teachingSection = qs("[data-profile-teaching-section]");
 const teachingListElement = qs("[data-profile-teaching-list]");
+const courseEditorVersion = "20260709-tabs";
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -30,18 +30,6 @@ function formatStatus(status) {
     return String(status || "active")
         .replace(/_/g, " ")
         .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function formatDate(value) {
-    if (!value) {
-        return "Not available";
-    }
-
-    return new Date(value).toLocaleDateString([], {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-    });
 }
 
 function formatDateTime(value) {
@@ -77,11 +65,68 @@ function renderEmpty(target, message) {
     target.replaceChildren(createElement("p", "empty-state", message));
 }
 
+function closeProfilePhotoViewer(viewer) {
+    viewer.remove();
+    document.removeEventListener("keydown", viewer.handleEscape);
+}
+
+function openProfilePhotoViewer(photoUrl, displayName) {
+    const viewer = createElement("div", "profile-photo-viewer");
+    const panel = createElement("section", "profile-photo-viewer__panel");
+    const header = createElement("div", "profile-photo-viewer__header");
+    const title = createElement("h2", "", `${displayName} profile photo`);
+    const closeButton = createElement("button", "profile-photo-viewer__close", "Close");
+    const image = document.createElement("img");
+
+    viewer.setAttribute("role", "presentation");
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    panel.setAttribute("aria-label", `${displayName} profile photo`);
+    closeButton.type = "button";
+    image.src = photoUrl;
+    image.alt = `${displayName} profile photo`;
+
+    viewer.handleEscape = (event) => {
+        if (event.key === "Escape") {
+            closeProfilePhotoViewer(viewer);
+        }
+    };
+
+    closeButton.addEventListener("click", () => closeProfilePhotoViewer(viewer));
+    viewer.addEventListener("click", (event) => {
+        if (event.target === viewer) {
+            closeProfilePhotoViewer(viewer);
+        }
+    });
+
+    header.append(title, closeButton);
+    panel.append(header, image);
+    viewer.append(panel);
+    document.body.append(viewer);
+    document.addEventListener("keydown", viewer.handleEscape);
+    closeButton.focus();
+}
+
 function renderProfileHeader(profile, teachingCount) {
     const displayName = getProfileDisplayName(profile, "User");
     const roleLabel = getRoleLabel(profile, teachingCount);
+    const avatarButton = createElement("button", "profile-avatar-button");
+    const avatar = createProfileAvatar(profile, "profile-avatar profile-avatar--hero", "U");
 
-    avatarElement.replaceChildren(createProfileAvatar(profile, "profile-avatar profile-avatar--hero", "U"));
+    avatarButton.type = "button";
+    avatarButton.disabled = true;
+    avatarButton.setAttribute("aria-label", "Profile photo not available");
+    avatarButton.append(avatar);
+    avatarElement.replaceChildren(avatarButton);
+    getProfilePhotoUrl(profile).then((photoUrl) => {
+        if (!photoUrl || !avatarButton.isConnected) {
+            return;
+        }
+
+        avatarButton.disabled = false;
+        avatarButton.setAttribute("aria-label", `Open ${displayName} profile photo`);
+        avatarButton.addEventListener("click", () => openProfilePhotoViewer(photoUrl, displayName), { once: false });
+    });
     nameElement.textContent = displayName;
     usernameElement.textContent = profile.username ? `@${profile.username}` : profile.email || "No username yet";
     introElement.textContent = isTeachingRole(profile.platform_role) || teachingCount
@@ -91,26 +136,6 @@ function renderProfileHeader(profile, teachingCount) {
         createElement("span", "badge", roleLabel),
         createElement("span", "badge badge--quiet", formatStatus(profile.account_status))
     );
-}
-
-function renderDetails(profile, teachingCount) {
-    const rows = [
-        ["Display name", getProfileDisplayName(profile, "User")],
-        ["Username", profile.username ? `@${profile.username}` : "Not set"],
-        ["Email", profile.email || "Not available"],
-        ["Role", getRoleLabel(profile, teachingCount)],
-        ["Joined", formatDate(profile.created_at)],
-        ["Last updated", formatDate(profile.updated_at)],
-    ];
-
-    detailsElement.replaceChildren(...rows.map(([label, value]) => {
-        const row = createElement("div", "profile-detail-row");
-        row.append(
-            createElement("dt", "profile-detail-label", label),
-            createElement("dd", "profile-detail-value", value)
-        );
-        return row;
-    }));
 }
 
 async function loadTeachingCourses(profileId) {
@@ -423,7 +448,7 @@ function renderTeaching(courses, classrooms) {
         const manageClassrooms = createElement("a", "secondary-button", "Manage classrooms");
         const courseParam = encodeURIComponent(course.id);
 
-        manageCourse.href = `../courses/editor.html?course=${courseParam}`;
+        manageCourse.href = `../courses/editor.html?course=${courseParam}&editor=${courseEditorVersion}`;
         manageClassrooms.href = `../classrooms/manage.html?course=${courseParam}`;
         actions.append(manageCourse, manageClassrooms);
         header.append(title, badge);
@@ -514,7 +539,6 @@ async function initializeProfile() {
         });
 
         renderProfileHeader(profile, teachingCourses.length);
-        renderDetails(profile, teachingCourses.length);
         renderStats(enrollments, submissions, teachingCourses);
         renderLearning(enrollments, visibleCourses, classrooms, lessons, submissions);
         renderTeaching(teachingCourses, managedClassrooms);

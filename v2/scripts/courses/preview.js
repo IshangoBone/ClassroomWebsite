@@ -234,7 +234,7 @@ async function initializePage() {
     }
 
     try {
-        editorLink.href = `editor.html?course=${encodeURIComponent(course.id)}`;
+        editorLink.href = `editor.html?course=${encodeURIComponent(course.id)}&editor=20260709-tabs`;
         editorLink.textContent = "Back to course editor";
         headingElement.textContent = course.title || "Untitled course";
         contextElement.textContent = course.description || "No course description has been added yet.";

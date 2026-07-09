@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BrainKernl V2 | Profile</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260708-right-nav-menu" />
+    <title>BrainKernl | Profile</title>
+    <link rel="stylesheet" href="../../styles/main.css?v=20260708-profile-hero-spacing" />
 </head>
 
 <body>
@@ -51,41 +51,29 @@
             </article>
         </section>
 
-        <section class="profile-grid">
-            <article class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="about-heading">
-                <div class="section-header">
-                    <div>
-                        <h2 id="about-heading">About</h2>
-                        <p class="section-copy">Personal account details for your BrainKernl workspace.</p>
-                    </div>
-                </div>
-                <dl class="profile-detail-list" data-profile-details></dl>
-            </article>
-
-            <article class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="activity-heading">
-                <div class="section-header">
-                    <div>
-                        <h2 id="activity-heading">Recent lesson work</h2>
-                        <p class="section-copy">Your latest drafts, submissions, and feedback-ready lessons.</p>
-                    </div>
-                    <a class="secondary-button" href="../submissions/index.html">Open submissions</a>
-                </div>
-                <div data-profile-activity-list>
-                    <p class="empty-state">Loading recent lesson work...</p>
-                </div>
-            </article>
-        </section>
-
         <section class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="learning-heading">
             <div class="section-header section-header--actions">
                 <div>
-                    <h2 id="learning-heading">Learning</h2>
+                    <h2 id="learning-heading">My Learning</h2>
                     <p class="section-copy">Courses and classrooms where you are enrolled as a student.</p>
                 </div>
                 <a class="secondary-button" href="../progress/index.html">Open progress</a>
             </div>
             <div class="profile-card-list" data-profile-learning-list>
                 <p class="empty-state">Loading enrolled courses...</p>
+            </div>
+        </section>
+
+        <section class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="activity-heading">
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2 id="activity-heading">Recent submissions</h2>
+                    <p class="section-copy">Your latest drafts, submissions, and feedback-ready lessons.</p>
+                </div>
+                <a class="secondary-button" href="../submissions/index.html">Open submissions</a>
+            </div>
+            <div data-profile-activity-list>
+                <p class="empty-state">Loading recent submissions...</p>
             </div>
         </section>
 
@@ -103,7 +91,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/profile/index.js?v=20260605-teacher-role"></script>
+    <script type="module" src="../../scripts/profile/index.js?v=20260709-editor-link-version"></script>
 </body>
 
 </html>

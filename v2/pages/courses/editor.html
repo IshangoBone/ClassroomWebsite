@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BrainKernl V2 | Manage Course</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260708-right-nav-menu" />
+    <title>BrainKernl | Manage Course</title>
+    <link rel="stylesheet" href="../../styles/main.css?v=20260709-remove-builder-placeholder" />
 </head>
 
 <body>
@@ -23,140 +23,149 @@
 
         <p class="auth-status management-status" data-course-status aria-live="polite"></p>
 
-        <section class="management-section course-setup-section" data-course-content hidden aria-labelledby="course-setup-heading">
-            <div class="section-header">
-                <h2 id="course-setup-heading">Course setup</h2>
-                <p class="section-copy">Manage the information students see, how they find the course, and the image used for discovery.</p>
+        <section class="management-section teacher-course-workspace" data-course-content hidden aria-label="Course management workspace">
+            <div class="teacher-course-tabs" role="tablist" aria-label="Course management sections">
+                <button class="teacher-course-tab is-active" type="button" role="tab" data-teacher-course-tab-button="setup" aria-selected="true">Course setup</button>
+                <button class="teacher-course-tab" type="button" role="tab" data-teacher-course-tab-button="content" aria-selected="false">Content</button>
+                <button class="teacher-course-tab" type="button" role="tab" data-teacher-course-tab-button="announcements" aria-selected="false">Announcements</button>
+                <button class="teacher-course-tab" type="button" role="tab" data-teacher-course-tab-button="gradebook" aria-selected="false">Gradebook</button>
             </div>
 
-            <div class="course-setup-grid">
-                <article class="course-setup-card course-setup-card--access" aria-labelledby="course-access-heading">
-                    <div class="section-header section-header--actions">
-                        <div>
-                            <h3 id="course-access-heading">Access and preview</h3>
-                            <p class="section-copy">Publish the course when students can join it without a classroom code.</p>
-                        </div>
-                        <span class="badge badge--quiet" data-course-visibility>Loading...</span>
-                    </div>
+            <section class="teacher-course-tab-panel course-setup-section" data-teacher-course-tab-panel="setup" aria-labelledby="course-setup-heading">
+                <div class="section-header">
+                    <h2 id="course-setup-heading">Course setup</h2>
+                    <p class="section-copy">Manage the information students see, how they find the course, the discovery image, and lesson pacing.</p>
+                </div>
 
-                    <p class="course-muted" data-public-course-copy>Public course joining is unavailable until this course is published.</p>
-                    <div class="course-access-grid">
-                        <label class="form-field course-discovery-toggle">
-                            <span>Discovery listing</span>
-                            <select name="discovery-listing" data-course-discovery-select disabled>
-                                <option value="hidden">Hidden from public discovery</option>
-                                <option value="listed">Listed in public discovery</option>
-                            </select>
-                        </label>
-                        <div class="course-access-actions">
-                            <button type="button" class="primary-button" data-toggle-course-visibility>Publish course</button>
-                            <button type="button" class="secondary-button" data-copy-public-course-link>Copy public link</button>
-                            <a class="secondary-button" href="preview.html" data-course-preview-link>Preview as student</a>
-                        </div>
-                    </div>
-                    <details class="course-danger-zone">
-                        <summary>Advanced course options</summary>
-                        <div class="course-danger-actions">
-                            <button type="button" class="secondary-button" data-archive-course>Archive course</button>
-                            <button type="button" class="secondary-button destructive-button" data-delete-course>Delete course</button>
-                        </div>
-                    </details>
-                </article>
-
-                <form class="course-form course-form--setup" data-course-editor-form>
-                    <div class="course-setup-card course-setup-card--details">
-                        <div class="section-header">
-                            <h3>Course details</h3>
-                            <p class="section-copy">Keep the title, subject, length, and description clear for students.</p>
+                <div class="course-setup-grid">
+                    <article class="course-setup-card course-setup-card--access" aria-labelledby="course-access-heading">
+                        <div class="section-header section-header--actions">
+                            <div>
+                                <h3 id="course-access-heading">Access and preview</h3>
+                                <p class="section-copy">Publish the course when students can join it without a classroom code.</p>
+                            </div>
+                            <span class="badge badge--quiet" data-course-visibility>Loading...</span>
                         </div>
 
-                        <div class="course-details-grid">
-                            <label class="form-field">
-                                <span>Course title</span>
-                                <input type="text" name="title" maxlength="120" required />
+                        <p class="course-muted" data-public-course-copy>Public course joining is unavailable until this course is published.</p>
+                        <div class="course-access-grid">
+                            <label class="form-field course-discovery-toggle">
+                                <span>Discovery listing</span>
+                                <select name="discovery-listing" data-course-discovery-select disabled>
+                                    <option value="hidden">Hidden from public discovery</option>
+                                    <option value="listed">Listed in public discovery</option>
+                                </select>
                             </label>
-
-                            <label class="form-field">
-                                <span>Subject area</span>
-                                <input type="text" name="subject-area" maxlength="80" required />
-                            </label>
-
-                            <label class="form-field">
-                                <span>Estimated length</span>
-                                <input type="text" name="estimated-length" maxlength="80" required />
-                            </label>
-
-                            <label class="form-field form-field--wide">
-                                <span>Description</span>
-                                <textarea name="description" rows="4" maxlength="600" required></textarea>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="course-setup-card course-thumbnail-card">
-                        <div class="section-header">
-                            <h3>Course image</h3>
-                            <p class="section-copy">Optional thumbnail for course discovery and student course cards.</p>
-                        </div>
-
-                        <div class="course-thumbnail-grid">
-                            <label class="form-field course-thumbnail-upload">
-                                <span>Upload thumbnail</span>
-                                <input type="file" name="course-thumbnail" accept="image/png,image/jpeg,image/webp,image/gif" />
-                                <small class="form-hint">PNG, JPEG, WebP, or GIF up to 10 MB.</small>
-                            </label>
-
-                            <div class="file-preview course-thumbnail-preview" data-course-thumbnail-preview hidden>
-                                <img alt="Course thumbnail preview" data-course-thumbnail-preview-image />
-                                <span data-course-thumbnail-preview-name></span>
+                            <div class="course-access-actions">
+                                <button type="button" class="primary-button" data-toggle-course-visibility>Publish course</button>
+                                <button type="button" class="secondary-button" data-copy-public-course-link>Copy public link</button>
+                                <a class="secondary-button" href="preview.html" data-course-preview-link>Preview as student</a>
                             </div>
                         </div>
-                    </div>
+                        <details class="course-danger-zone">
+                            <summary>Advanced course options</summary>
+                            <div class="course-danger-actions">
+                                <button type="button" class="secondary-button" data-archive-course>Archive course</button>
+                                <button type="button" class="secondary-button destructive-button" data-delete-course>Delete course</button>
+                            </div>
+                        </details>
+                    </article>
 
-                    <div class="course-form-actions course-form-actions--setup">
-                        <button type="submit" class="primary-button">Save course setup</button>
-                    </div>
-                </form>
-        </section>
+                    <form class="course-form course-form--setup" data-course-editor-form>
+                        <div class="course-setup-card course-setup-card--details">
+                            <div class="section-header">
+                                <h3>Course details</h3>
+                                <p class="section-copy">Keep the title, subject, length, and description clear for students.</p>
+                            </div>
 
-        <section class="management-section" data-course-content hidden aria-labelledby="course-pacing-heading">
-            <div class="section-header">
-                <h2 id="course-pacing-heading">Lesson pacing</h2>
-                <p class="section-copy">Control whether students can open every lesson immediately or unlock lessons over time.</p>
-            </div>
+                            <div class="course-details-grid">
+                                <label class="form-field">
+                                    <span>Course title</span>
+                                    <input type="text" name="title" maxlength="120" required />
+                                </label>
 
-            <form class="course-form course-form--pacing" data-course-pacing-form>
-                <label class="form-field form-field--checkbox form-field--wide">
-                    <input type="checkbox" name="pacing-enabled" />
-                    <span>Unlock lessons on a schedule</span>
-                </label>
+                                <label class="form-field">
+                                    <span>Subject area</span>
+                                    <input type="text" name="subject-area" maxlength="80" required />
+                                </label>
 
-                <label class="form-field">
-                    <span>Schedule start date</span>
-                    <input type="date" name="release-start-date" />
-                    <small class="form-hint">If blank, classroom start date or student join date is used.</small>
-                </label>
+                                <label class="form-field">
+                                    <span>Estimated length</span>
+                                    <input type="text" name="estimated-length" maxlength="80" required />
+                                </label>
 
-                <label class="form-field">
-                    <span>Unlock every</span>
-                    <input type="number" name="release-interval-days" min="1" max="30" step="1" value="1" />
-                    <small class="form-hint">Use 1 for one new lesson per day.</small>
-                </label>
+                                <label class="form-field form-field--wide">
+                                    <span>Description</span>
+                                    <textarea name="description" rows="4" maxlength="600" required></textarea>
+                                </label>
+                            </div>
+                        </div>
 
-                <div class="course-form-actions form-field--wide">
-                    <button type="submit" class="primary-button">Save pacing settings</button>
+                        <div class="course-setup-card course-thumbnail-card">
+                            <div class="section-header">
+                                <h3>Course image</h3>
+                                <p class="section-copy">Optional thumbnail for course discovery and student course cards.</p>
+                            </div>
+
+                            <div class="course-thumbnail-grid">
+                                <label class="form-field course-thumbnail-upload">
+                                    <span>Upload thumbnail</span>
+                                    <input type="file" name="course-thumbnail" accept="image/png,image/jpeg,image/webp,image/gif" />
+                                    <small class="form-hint">PNG, JPEG, WebP, or GIF up to 10 MB.</small>
+                                </label>
+
+                                <div class="file-preview course-thumbnail-preview" data-course-thumbnail-preview hidden>
+                                    <img alt="Course thumbnail preview" data-course-thumbnail-preview-image />
+                                    <span data-course-thumbnail-preview-name></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="course-form-actions course-form-actions--setup">
+                            <button type="submit" class="primary-button">Save course setup</button>
+                        </div>
+                    </form>
+
+                    <article class="course-setup-card course-setup-card--pacing" aria-labelledby="course-pacing-heading">
+                        <div class="section-header">
+                            <h3 id="course-pacing-heading">Lesson pacing</h3>
+                            <p class="section-copy">Control whether students can open every lesson immediately or unlock lessons over time.</p>
+                        </div>
+
+                        <form class="course-form course-form--pacing" data-course-pacing-form>
+                            <label class="form-field form-field--checkbox form-field--wide">
+                                <input type="checkbox" name="pacing-enabled" />
+                                <span>Unlock lessons on a schedule</span>
+                            </label>
+
+                            <label class="form-field">
+                                <span>Schedule start date</span>
+                                <input type="date" name="release-start-date" />
+                                <small class="form-hint">If blank, classroom start date or student join date is used.</small>
+                            </label>
+
+                            <label class="form-field">
+                                <span>Unlock every</span>
+                                <input type="number" name="release-interval-days" min="1" max="30" step="1" value="1" />
+                                <small class="form-hint">Use 1 for one new lesson per day.</small>
+                            </label>
+
+                            <div class="course-form-actions form-field--wide">
+                                <button type="submit" class="primary-button">Save pacing settings</button>
+                            </div>
+                        </form>
+                    </article>
                 </div>
-            </form>
-        </section>
+            </section>
 
-        <section class="management-section" data-course-content hidden aria-labelledby="course-modules-heading">
-            <div class="section-header section-header--actions">
-                <div>
-                    <h2 id="course-modules-heading">Course modules</h2>
-                    <p class="section-copy">Modules organize the lessons that make up this draft course.</p>
+            <section class="teacher-course-tab-panel" data-teacher-course-tab-panel="content" hidden aria-labelledby="course-modules-heading">
+                <div class="section-header section-header--actions">
+                    <div>
+                        <h2 id="course-modules-heading">Content</h2>
+                        <p class="section-copy">Organize modules, create lessons, and open the builder to edit student-facing lesson pages.</p>
+                    </div>
+                    <button type="button" class="primary-button management-action" data-toggle-module-form>Add module</button>
                 </div>
-                <button type="button" class="primary-button management-action" data-toggle-module-form>Add module</button>
-            </div>
 
             <div class="dashboard-summary dashboard-summary--compact">
                 <article class="summary-card">
@@ -229,16 +238,56 @@
                 </div>
             </form>
 
-            <h3 class="section-subheading">Coming in the course builder</h3>
-            <ul class="feature-list">
-                <li>Edit lesson details after creation</li>
-                <li>Add media resources and answer options</li>
-                <li>Preview as a student before publishing</li>
-            </ul>
+            </section>
+
+            <section class="teacher-course-tab-panel" data-teacher-course-tab-panel="announcements" hidden aria-labelledby="course-announcements-heading">
+                <div class="section-header">
+                    <h2 id="course-announcements-heading">Announcements</h2>
+                    <p class="section-copy">Draft class updates for this course. Publishing announcements will be connected next.</p>
+                </div>
+
+                <form class="teacher-course-planning-form" data-teacher-announcement-form>
+                    <label class="form-field">
+                        <span>Announcement title</span>
+                        <input type="text" name="announcement-title" placeholder="Week 1 materials are ready" />
+                    </label>
+                    <label class="form-field form-field--wide">
+                        <span>Announcement message</span>
+                        <textarea name="announcement-message" rows="5" placeholder="Write an update for students in this course."></textarea>
+                    </label>
+                    <div class="course-form-actions form-field--wide">
+                        <button type="button" class="secondary-button" data-save-announcement-draft>Save draft</button>
+                        <button type="button" class="primary-button" disabled>Publish announcement</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="teacher-course-tab-panel" data-teacher-course-tab-panel="gradebook" hidden aria-labelledby="course-gradebook-heading">
+                <div class="section-header">
+                    <h2 id="course-gradebook-heading">Gradebook</h2>
+                    <p class="section-copy">Review lesson completion and scoring for this course. Editable gradebook tools will connect to submissions next.</p>
+                </div>
+
+                <div class="teacher-course-gradebook-preview">
+                    <article>
+                        <span class="summary-label">Submitted work</span>
+                        <strong class="summary-value">-</strong>
+                    </article>
+                    <article>
+                        <span class="summary-label">Needs review</span>
+                        <strong class="summary-value">-</strong>
+                    </article>
+                    <article>
+                        <span class="summary-label">Average score</span>
+                        <strong class="summary-value">-</strong>
+                    </article>
+                </div>
+                <p class="empty-state">Gradebook rows will appear here once student submissions are connected to this teacher view.</p>
+            </section>
         </section>
     </main>
 
-    <script type="module" src="../../scripts/courses/editor.js?v=20260605-publish-page-model"></script>
+    <script type="module" src="../../scripts/courses/editor.js?v=20260709-remove-builder-placeholder"></script>
 </body>
 
 </html>

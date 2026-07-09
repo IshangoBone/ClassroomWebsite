@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BrainKernl V2 | Settings</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260708-right-nav-menu" />
+    <title>BrainKernl | Settings</title>
+    <link rel="stylesheet" href="../../styles/main.css?v=20260708-profile-editor" />
 </head>
 
 <body>
@@ -26,9 +26,43 @@
                     <h2 id="account-heading">Account</h2>
                     <p class="section-copy">Basic account details and profile access.</p>
                 </div>
-                <a class="secondary-button" href="../profile/index.html">Edit profile</a>
+                <button class="secondary-button" type="button" data-edit-profile-button>Edit profile</button>
             </div>
             <dl class="profile-detail-list" data-settings-details></dl>
+            <form class="settings-profile-form" data-settings-profile-form hidden>
+                <div class="settings-profile-editor">
+                    <div class="settings-profile-photo-card">
+                        <div class="settings-profile-avatar-preview" data-settings-avatar-preview></div>
+                        <label class="secondary-button settings-profile-upload-button">
+                            Change photo
+                            <input type="file" name="profile-photo" accept="image/png,image/jpeg,image/webp,image/gif" />
+                        </label>
+                        <p class="form-hint">PNG, JPEG, WebP, or GIF. Max 10 MB.</p>
+                    </div>
+                    <div class="settings-profile-fields">
+                        <label class="form-field">
+                            <span>First name</span>
+                            <input type="text" name="legal-first-name" autocomplete="given-name" required />
+                        </label>
+                        <label class="form-field">
+                            <span>Last name</span>
+                            <input type="text" name="legal-last-name" autocomplete="family-name" required />
+                        </label>
+                        <label class="form-field form-field--wide">
+                            <span>Username</span>
+                            <input type="text" name="username" autocomplete="username" minlength="3" maxlength="40" required />
+                        </label>
+                    </div>
+                </div>
+                <div class="profile-photo-preview" data-settings-photo-preview hidden>
+                    <img alt="" data-settings-photo-preview-image />
+                    <span data-settings-photo-preview-name></span>
+                </div>
+                <div class="settings-actions">
+                    <button type="submit" class="primary-button">Save profile</button>
+                    <button type="button" class="secondary-button" data-cancel-profile-edit-button>Cancel</button>
+                </div>
+            </form>
         </section>
 
         <section class="dashboard-section dashboard-section--panel settings-panel" aria-labelledby="security-heading">
@@ -45,7 +79,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/settings/index.js?v=20260610-minimal-settings"></script>
+    <script type="module" src="../../scripts/settings/index.js?v=20260708-profile-editor"></script>
 </body>
 
 </html>

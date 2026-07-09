@@ -9,6 +9,9 @@ const classroomId = params.get("classroom");
 const headingElement = qs("[data-student-course-heading]");
 const contextElement = qs("[data-student-course-context]");
 const statusElement = qs("[data-student-course-status]");
+const workspaceElement = qs("[data-student-course-workspace]");
+const tabButtons = [...document.querySelectorAll("[data-course-tab-button]")];
+const tabPanels = [...document.querySelectorAll("[data-course-tab-panel]")];
 const summaryElement = qs("[data-student-course-summary]");
 const shellElement = qs("[data-student-course-shell]");
 const progressSection = qs("[data-student-course-progress-section]");
@@ -23,6 +26,8 @@ const pointsElement = qs("[data-student-course-points]");
 const nextCopyElement = qs("[data-student-course-next-copy]");
 const nextLinkElement = qs("[data-student-course-next-link]");
 const moduleListElement = qs("[data-student-course-module-list]");
+const gradebookElement = qs("[data-student-course-gradebook]");
+const detailsElement = qs("[data-student-course-details]");
 const unenrollButton = qs("[data-student-course-unenroll]");
 
 let currentProfileId = "";
@@ -49,6 +54,31 @@ function formatStatus(status) {
         .split("_")
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ");
+}
+
+function formatDate(dateLike) {
+    if (!dateLike) {
+        return "Not submitted";
+    }
+
+    return new Date(dateLike).toLocaleString([], {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    });
+}
+
+function setActiveTab(tabName) {
+    tabButtons.forEach((button) => {
+        const isActive = button.dataset.courseTabButton === tabName;
+
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-selected", String(isActive));
+    });
+    tabPanels.forEach((panel) => {
+        panel.hidden = panel.dataset.courseTabPanel !== tabName;
+    });
 }
 
 function formatTeacherName(profile) {
@@ -498,6 +528,97 @@ function renderModules(modules, lessons, submissions, enrollment, course, classr
     moduleListElement.replaceChildren(list);
 }
 
+function renderGradebook(modules, lessons, submissions) {
+    const orderedLessons = getOrderedCourseLessons(modules, lessons);
+
+    if (!orderedLessons.length) {
+        gradebookElement.replaceChildren(createElement("p", "empty-state", "Gradebook details will appear once lessons are available."));
+        return;
+    }
+
+    const list = createElement("ul", "student-course-gradebook-list");
+
+    orderedLessons.forEach((lesson, index) => {
+        const submission = getSubmissionForLesson(lesson, submissions);
+        const status = getLessonStatus(lesson, submissions);
+        const item = createElement("li", "student-course-gradebook-item");
+        const content = createElement("div", "student-course-gradebook-content");
+        const title = createElement("strong", "submission-name", `${index + 1}. ${lesson.title || "Untitled lesson"}`);
+        const meta = createElement(
+            "span",
+            "course-muted",
+            status === "submitted"
+                ? `Submitted ${formatDate(submission.submitted_at || submission.updated_at)}`
+                : status === "in_progress"
+                    ? `Draft saved ${formatDate(submission.updated_at)}`
+                    : "Not started"
+        );
+        const score = createElement(
+            "span",
+            status === "submitted" ? "badge" : "badge badge--quiet",
+            status === "submitted"
+                ? `${Number(submission.points_earned || 0)} / ${Number(submission.points_possible || 0)} pts`
+                : formatStatus(status)
+        );
+
+        content.append(title, meta);
+        item.append(content, score);
+        list.append(item);
+    });
+
+    gradebookElement.replaceChildren(list);
+}
+
+function renderCourseDetails(course, classroom, teacherName, enrollment, modules, lessons) {
+    const layout = createElement("div", "student-course-detail-layout");
+    const overview = createElement("article", "student-course-detail-overview");
+    const stats = createElement("div", "student-course-detail-stats");
+    const detailsGrid = createElement("div", "student-course-details-grid");
+    const classroomLabel = classroom
+        ? `${classroom.name}${classroom.period_block ? ` - ${classroom.period_block}` : ""}`
+        : "Independent course";
+    const statItems = [
+        ["Modules", String(modules.length)],
+        ["Lessons", String(lessons.length)],
+        ["Estimated length", course.estimated_length || "Not listed"],
+    ];
+    const details = [
+        ["Teacher", teacherName],
+        ["Course access", classroom ? "Classroom course" : "Independent course"],
+        ["Classroom", classroomLabel],
+        ["Subject", course.subject_area || "Not listed"],
+        ["Status", formatStatus(enrollment.enrollment_status)],
+    ];
+
+    overview.append(
+        createElement("p", "eyebrow", "Course Details"),
+        createElement("h2", "", course.title || "Untitled course"),
+        createElement("p", "student-course-detail-description", course.description || "No course description has been added yet.")
+    );
+    statItems.forEach(([label, value]) => {
+        const item = createElement("article", "student-course-detail-stat");
+
+        item.append(
+            createElement("span", "summary-label", label),
+            createElement("strong", "", value)
+        );
+        stats.append(item);
+    });
+
+    details.forEach(([label, value]) => {
+        const card = createElement("article", "student-course-detail-card");
+
+        card.append(
+            createElement("span", "summary-label", label),
+            createElement("strong", "", value)
+        );
+        detailsGrid.append(card);
+    });
+
+    layout.append(overview, stats);
+    detailsElement.replaceChildren(layout, detailsGrid);
+}
+
 async function initializePage() {
     setStatus("Loading student course view...");
     const profile = await loadCurrentProfile();
@@ -535,11 +656,14 @@ async function initializePage() {
             : "Independent course";
 
         headingElement.textContent = course.title || "Untitled course";
-        contextElement.textContent = `${classroomLabel} / ${teacherName} / ${course.description || "No course description added yet."}`;
+        contextElement.textContent = `${classroomLabel} / ${teacherName}`;
         unenrollButton.textContent = enrollment.enrollment_type === "classroom" ? "Leave classroom" : "Unenroll";
         unenrollButton.hidden = false;
         renderSummary(enrollment, course, classroom, modules, lessons, submissions);
         renderModules(modules, lessons, submissions, enrollment, course, classroom);
+        renderGradebook(modules, lessons, submissions);
+        renderCourseDetails(course, classroom, teacherName, enrollment, modules, lessons);
+        workspaceElement.hidden = false;
         shellElement.hidden = false;
         setStatus("");
     } catch (error) {
@@ -548,5 +672,10 @@ async function initializePage() {
 }
 
 unenrollButton.addEventListener("click", unenrollFromCourse);
+tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+        setActiveTab(button.dataset.courseTabButton);
+    });
+});
 
 await initializePage();

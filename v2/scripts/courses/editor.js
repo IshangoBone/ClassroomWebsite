@@ -1,13 +1,17 @@
 import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
-import { notifyStatus } from "../utils/ui-components.js";
+import { createModalShell, notifyStatus } from "../utils/ui-components.js";
 
 const params = new URLSearchParams(window.location.search);
 const courseId = params.get("course");
 const headingElement = qs("[data-course-heading]");
 const statusElement = qs("[data-course-status]");
 const contentSections = [...document.querySelectorAll("[data-course-content]")];
+const tabButtons = [...document.querySelectorAll("[data-teacher-course-tab-button]")];
+const tabPanels = [...document.querySelectorAll("[data-teacher-course-tab-panel]")];
+const announcementForm = qs("[data-teacher-announcement-form]");
+const saveAnnouncementDraftButton = qs("[data-save-announcement-draft]");
 const editorForm = qs("[data-course-editor-form]");
 const pacingForm = qs("[data-course-pacing-form]");
 const moduleCount = qs("[data-module-count]");
@@ -55,6 +59,8 @@ const courseSelectColumns = [
 const courseThumbnailBucket = "course-public-assets";
 const maxCourseThumbnailSize = 10 * 1024 * 1024;
 const allowedCourseThumbnailTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const dragAutoScrollEdge = 82;
+const dragAutoScrollMaxSpeed = 18;
 let loadedModules = [];
 let loadedLessons = [];
 let loadedContentBlocks = [];
@@ -64,10 +70,33 @@ let currentProfile = null;
 let selectedCourseThumbnailUrl = "";
 const collapsedModuleIds = new Set();
 let hasAppliedInitialModuleCollapse = false;
+let dragAutoScrollFrame = null;
+let dragAutoScrollSpeed = 0;
+let isReorderDragActive = false;
+let activeReorderDrag = null;
+const validCourseTabs = new Set(["setup", "content", "announcements", "gradebook"]);
+
+function getCourseTabStorageKey() {
+    return `brainkernl:teacher-course-tab:${courseId || "new"}`;
+}
+
+function getInitialTabName() {
+    const hashTab = window.location.hash.replace(/^#/, "");
+
+    if (validCourseTabs.has(hashTab)) {
+        return hashTab;
+    }
+
+    const storedTab = window.localStorage.getItem(getCourseTabStorageKey());
+    return validCourseTabs.has(storedTab) ? storedTab : "setup";
+}
 
 const moduleActionIcons = {
     chevron: '<path d="m6 9 6 6 6-6"></path>',
     edit: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>',
+    hammer: '<path d="m15 12-8.5 8.5a2.12 2.12 0 0 1-3-3L12 9"></path><path d="M17.64 15 22 10.64"></path><path d="m20.91 11.7-1.25-1.25a2.12 2.12 0 0 1 0-3l.39-.39-3.11-3.11-.39.39a2.12 2.12 0 0 1-3 0L12.3 3.09 8 7.39l1.25 1.25a2.12 2.12 0 0 1 0 3l-.39.39 3.11 3.11.39-.39a2.12 2.12 0 0 1 3 0l1.25 1.25"></path>',
+    lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>',
+    unlock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path>',
     plus: '<path d="M12 5v14"></path><path d="M5 12h14"></path>',
     trash: '<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path>',
 };
@@ -93,16 +122,100 @@ function createModuleIconButton(iconName, label, modifiers = []) {
     return button;
 }
 
+function createModuleIconLink(iconName, label, href, modifiers = []) {
+    const modifierClasses = modifiers.map((modifier) => ` module-icon-button--${modifier}`).join("");
+    const link = createElement("a", `module-icon-button${modifierClasses}`);
+
+    link.href = href;
+    link.title = label;
+    link.setAttribute("aria-label", label);
+    link.append(createModuleIcon(iconName));
+
+    return link;
+}
+
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
     statusElement.dataset.tone = tone;
     notifyStatus(message, tone);
 }
 
+function confirmInApp({ title, message, confirmLabel = "Confirm", destructive = false } = {}) {
+    return new Promise((resolve) => {
+        const previousFocus = document.activeElement;
+        const body = createElement("p", "", message || "Are you sure you want to continue?");
+        const cancelButton = createElement("button", "secondary-button", "Cancel");
+        const confirmButton = createElement(
+            "button",
+            destructive ? "secondary-button destructive-button" : "primary-button",
+            confirmLabel
+        );
+        let overlay = null;
+        let settled = false;
+
+        function close(value) {
+            if (settled) {
+                return;
+            }
+
+            settled = true;
+            document.removeEventListener("keydown", handleKeydown);
+            overlay?.remove();
+            previousFocus?.focus?.();
+            resolve(value);
+        }
+
+        function handleKeydown(event) {
+            if (event.key === "Escape") {
+                close(false);
+            }
+        }
+
+        cancelButton.type = "button";
+        confirmButton.type = "button";
+        cancelButton.addEventListener("click", () => close(false));
+        confirmButton.addEventListener("click", () => close(true));
+
+        overlay = createModalShell({
+            title,
+            body,
+            actions: [cancelButton, confirmButton],
+        });
+        overlay.addEventListener("click", (event) => {
+            if (event.target === overlay) {
+                close(false);
+            }
+        });
+
+        document.body.append(overlay);
+        document.addEventListener("keydown", handleKeydown);
+        cancelButton.focus();
+    });
+}
+
 function showContent() {
     contentSections.forEach((section) => {
         section.hidden = false;
     });
+}
+
+function setActiveTab(tabName) {
+    const nextTabName = validCourseTabs.has(tabName) ? tabName : "setup";
+
+    tabButtons.forEach((button) => {
+        const isActive = button.dataset.teacherCourseTabButton === nextTabName;
+        button.classList.toggle("is-active", isActive);
+        button.setAttribute("aria-selected", String(isActive));
+    });
+
+    tabPanels.forEach((panel) => {
+        panel.hidden = panel.dataset.teacherCourseTabPanel !== nextTabName;
+    });
+
+    window.localStorage.setItem(getCourseTabStorageKey(), nextTabName);
+    if (window.location.hash !== `#${nextTabName}`) {
+        window.history.replaceState(null, "", `#${nextTabName}`);
+    }
 }
 
 function fillCourseForm(course) {
@@ -379,11 +492,13 @@ async function toggleCourseVisibility() {
         }
     }
 
-    const confirmed = window.confirm(
-        nextStatus === "published"
-            ? "Publish this course? Students with the public link will be able to join without a classroom code. You can choose whether it appears in public discovery."
-            : "Unpublish this course? Enrolled students and classrooms keep access, but new public course joins will stop."
-    );
+    const confirmed = await confirmInApp({
+        title: nextStatus === "published" ? "Publish course?" : "Make course private?",
+        message: nextStatus === "published"
+            ? "Students with the public link will be able to join without a classroom code. You can choose whether it appears in public discovery."
+            : "Enrolled students and classrooms keep access, but new public course joins will stop.",
+        confirmLabel: nextStatus === "published" ? "Publish course" : "Make private",
+    });
 
     if (!confirmed) {
         return;
@@ -454,9 +569,11 @@ async function archiveCourse() {
         return;
     }
 
-    const confirmed = window.confirm(
-        `Archive "${loadedCourse.title || "this course"}"? It will be hidden from discovery, new students cannot enroll, and existing records will be preserved.`
-    );
+    const confirmed = await confirmInApp({
+        title: "Archive course?",
+        message: `"${loadedCourse.title || "This course"}" will be hidden from discovery, new students cannot enroll, and existing records will be preserved.`,
+        confirmLabel: "Archive course",
+    });
 
     if (!confirmed) {
         return;
@@ -489,9 +606,12 @@ async function deleteCourse() {
         return;
     }
 
-    const confirmed = window.confirm(
-        `Delete "${loadedCourse.title || "this course"}"? This is a soft delete: normal app views will hide it, but database records are preserved.`
-    );
+    const confirmed = await confirmInApp({
+        title: "Delete course?",
+        message: `This will delete "${loadedCourse.title || "this course"}" from normal course views.`,
+        confirmLabel: "Delete",
+        destructive: true,
+    });
 
     if (!confirmed) {
         return;
@@ -520,6 +640,7 @@ function toggleModuleForm(isOpen, module = null) {
 
     if (isOpen && module) {
         moduleForm.elements["module-id"].value = module.id;
+        moduleForm.elements["module-id"].defaultValue = module.id;
         moduleForm.elements.title.value = module.title || "";
         moduleForm.elements.description.value = module.description || "";
         moduleFormHeading.textContent = `Edit ${module.title}`;
@@ -527,11 +648,16 @@ function toggleModuleForm(isOpen, module = null) {
         moduleForm.elements.title.focus();
     } else if (isOpen) {
         moduleForm.reset();
+        moduleForm.elements["module-id"].value = "";
+        moduleForm.elements["module-id"].defaultValue = "";
         moduleFormHeading.textContent = "Add module";
         moduleSubmitButton.textContent = "Create module";
+        toggleLessonForm(false);
         moduleForm.elements.title.focus();
     } else {
         moduleForm.reset();
+        moduleForm.elements["module-id"].value = "";
+        moduleForm.elements["module-id"].defaultValue = "";
         moduleFormHeading.textContent = "Add module";
         moduleSubmitButton.textContent = "Create module";
     }
@@ -596,6 +722,116 @@ function getDragAfterElement(container, y, itemClass, draggingClass) {
     ).element;
 }
 
+function placeDraggingItemFromPointer(list, clientY, itemClass, draggingClass) {
+    const draggingItem = list.querySelector(`.${draggingClass}`);
+
+    if (!draggingItem) {
+        return;
+    }
+
+    const firstItem = [...list.children].find((child) => {
+        return child.classList.contains(itemClass) && !child.classList.contains(draggingClass);
+    });
+    const listBox = list.getBoundingClientRect();
+
+    if (clientY < listBox.top) {
+        if (firstItem) {
+            list.insertBefore(draggingItem, firstItem);
+        }
+        return;
+    }
+
+    if (clientY > listBox.bottom) {
+        list.append(draggingItem);
+        return;
+    }
+
+    const afterElement = getDragAfterElement(list, clientY, itemClass, draggingClass);
+
+    if (afterElement) {
+        list.insertBefore(draggingItem, afterElement);
+    } else {
+        list.append(draggingItem);
+    }
+}
+
+function stopDragAutoScroll() {
+    if (dragAutoScrollFrame) {
+        window.cancelAnimationFrame(dragAutoScrollFrame);
+    }
+
+    dragAutoScrollFrame = null;
+    dragAutoScrollSpeed = 0;
+}
+
+function runDragAutoScroll() {
+    if (!dragAutoScrollSpeed) {
+        dragAutoScrollFrame = null;
+        return;
+    }
+
+    window.scrollBy({ top: dragAutoScrollSpeed, behavior: "auto" });
+    dragAutoScrollFrame = window.requestAnimationFrame(runDragAutoScroll);
+}
+
+function updateDragAutoScroll(clientY) {
+    const viewportHeight = window.innerHeight;
+    let nextSpeed = 0;
+
+    if (clientY < dragAutoScrollEdge) {
+        const strength = (dragAutoScrollEdge - clientY) / dragAutoScrollEdge;
+        nextSpeed = -Math.max(6, Math.round(strength * dragAutoScrollMaxSpeed));
+    } else if (clientY > viewportHeight - dragAutoScrollEdge) {
+        const strength = (clientY - (viewportHeight - dragAutoScrollEdge)) / dragAutoScrollEdge;
+        nextSpeed = Math.max(6, Math.round(strength * dragAutoScrollMaxSpeed));
+    }
+
+    dragAutoScrollSpeed = nextSpeed;
+
+    if (nextSpeed && !dragAutoScrollFrame) {
+        dragAutoScrollFrame = window.requestAnimationFrame(runDragAutoScroll);
+    } else if (!nextSpeed) {
+        stopDragAutoScroll();
+    }
+}
+
+function handleReorderDragOver(event) {
+    if (isReorderDragActive) {
+        updateDragAutoScroll(event.clientY);
+
+        if (activeReorderDrag) {
+            placeDraggingItemFromPointer(
+                activeReorderDrag.list,
+                event.clientY,
+                activeReorderDrag.itemClass,
+                activeReorderDrag.draggingClass
+            );
+        }
+    }
+}
+
+function startReorderDrag(options = null) {
+    if (isReorderDragActive) {
+        return;
+    }
+
+    activeReorderDrag = options;
+    isReorderDragActive = true;
+    document.addEventListener("dragover", handleReorderDragOver);
+    document.addEventListener("drop", stopReorderDrag, { once: true });
+}
+
+function stopReorderDrag() {
+    if (!isReorderDragActive) {
+        return;
+    }
+
+    isReorderDragActive = false;
+    activeReorderDrag = null;
+    document.removeEventListener("dragover", handleReorderDragOver);
+    stopDragAutoScroll();
+}
+
 async function persistLessonOrder(moduleId, orderedIds) {
     const updates = orderedIds
         .map((id, orderIndex) => ({ id, order_index: orderIndex }))
@@ -640,24 +876,6 @@ async function saveLessonOrder(list, moduleId) {
     await persistLessonOrder(moduleId, orderedIds);
 }
 
-async function moveLessonToPosition(moduleId, lessonId, targetIndex) {
-    const moduleLessons = loadedLessons
-        .filter((lesson) => lesson.module_id === moduleId)
-        .sort((firstLesson, secondLesson) => firstLesson.order_index - secondLesson.order_index);
-    const currentIndex = moduleLessons.findIndex((lesson) => lesson.id === lessonId);
-
-    if (currentIndex === -1 || currentIndex === targetIndex) {
-        return;
-    }
-
-    const [lessonToMove] = moduleLessons.splice(currentIndex, 1);
-    moduleLessons.splice(targetIndex, 0, lessonToMove);
-    await persistLessonOrder(
-        moduleId,
-        moduleLessons.map((lesson) => lesson.id)
-    );
-}
-
 async function saveModuleOrder(list) {
     const orderedIds = [...list.children].map((child) => child.dataset.moduleId).filter(Boolean);
     const updates = orderedIds
@@ -697,9 +915,12 @@ async function saveModuleOrder(list) {
 }
 
 async function deleteLesson(lesson) {
-    const confirmed = window.confirm(
-        `Delete lesson "${lesson.title}"? This hides it from the course while preserving its existing content.`
-    );
+    const confirmed = await confirmInApp({
+        title: "Delete lesson?",
+        message: `This will delete "${lesson.title}" from this module.`,
+        confirmLabel: "Delete",
+        destructive: true,
+    });
 
     if (!confirmed) {
         return;
@@ -741,9 +962,12 @@ async function toggleLessonLock(lesson) {
 }
 
 async function deleteModule(module) {
-    const confirmed = window.confirm(
-        `Delete module "${module.title}"? This hides the module and its lessons while preserving their existing content.`
-    );
+    const confirmed = await confirmInApp({
+        title: "Delete module?",
+        message: `This will delete "${module.title}" and its lessons from this course.`,
+        confirmLabel: "Delete",
+        destructive: true,
+    });
 
     if (!confirmed) {
         return;
@@ -771,24 +995,19 @@ function renderLessons(module, lessons, contentBlocks, questions) {
     }
 
     const list = createElement("ol", "lesson-list lesson-list--reorderable");
+    let savedDropOrder = false;
 
     list.addEventListener("dragover", (event) => {
         event.preventDefault();
-        event.stopPropagation();
+        placeDraggingItemFromPointer(list, event.clientY, "lesson-card", "lesson-card--dragging");
+    });
 
-        const draggingItem = list.querySelector(".lesson-card--dragging");
-
-        if (!draggingItem) {
-            return;
-        }
-
-        const afterElement = getDragAfterElement(list, event.clientY, "lesson-card", "lesson-card--dragging");
-
-        if (afterElement) {
-            list.insertBefore(draggingItem, afterElement);
-        } else {
-            list.append(draggingItem);
-        }
+    list.addEventListener("drop", async (event) => {
+        event.preventDefault();
+        placeDraggingItemFromPointer(list, event.clientY, "lesson-card", "lesson-card--dragging");
+        stopReorderDrag();
+        savedDropOrder = true;
+        await saveLessonOrder(list, module.id);
     });
 
     lessons.forEach((lesson, index) => {
@@ -807,18 +1026,19 @@ function renderLessons(module, lessons, contentBlocks, questions) {
         const label = createElement("span", "badge badge--quiet", labelText);
         const headerActions = createElement("div", "lesson-header-actions");
         const dragHint = createElement("span", "lesson-drag-hint", "Drag to reorder");
-        const reorderControls = createElement("div", "lesson-reorder-controls");
-        const moveLabel = createElement("span", "course-muted lesson-move-label", "Move to");
-        const positionSelect = document.createElement("select");
-        const moveButton = createElement("button", "secondary-button lesson-move-button", "Move");
         const lessonActionGroup = createElement("div", "lesson-action-group");
-        const openLessonBuilderLink = createElement("a", "secondary-button lesson-action", "Open builder");
-        const toggleLessonLockButton = createElement(
-            "button",
-            lesson.is_locked ? "secondary-button lesson-action" : "secondary-button lesson-action",
-            lesson.is_locked ? "Unlock" : "Lock"
+        const openLessonBuilderLink = createModuleIconLink(
+            "hammer",
+            `Open builder for ${lesson.title}`,
+            `../lessons/builder.html?lesson=${encodeURIComponent(lesson.id)}`,
+            ["primary", "lesson"]
         );
-        const deleteLessonButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete");
+        const toggleLessonLockButton = createModuleIconButton(
+            lesson.is_locked ? "unlock" : "lock",
+            lesson.is_locked ? `Unlock ${lesson.title}` : `Lock ${lesson.title}`,
+            ["lesson"]
+        );
+        const deleteLessonButton = createModuleIconButton("trash", `Delete ${lesson.title}`, ["danger", "lesson"]);
         const lessonContentBlocks = contentBlocks.filter((contentBlock) => contentBlock.lesson_id === lesson.id);
         const lessonQuestions = questions.filter((question) => question.lesson_id === lesson.id);
         const metaRow = createElement("div", "badge-row lesson-meta-row");
@@ -838,37 +1058,31 @@ function renderLessons(module, lessons, contentBlocks, questions) {
             event.stopPropagation();
             event.dataTransfer.effectAllowed = "move";
             event.dataTransfer.setData("text/plain", lesson.id);
+            savedDropOrder = false;
+            startReorderDrag({
+                list,
+                itemClass: "lesson-card",
+                draggingClass: "lesson-card--dragging",
+            });
             item.classList.add("lesson-card--dragging");
         });
         item.addEventListener("dragend", async (event) => {
             event.stopPropagation();
+            stopReorderDrag();
             item.classList.remove("lesson-card--dragging");
-            await saveLessonOrder(list, module.id);
-        });
-        openLessonBuilderLink.href = `../lessons/builder.html?lesson=${encodeURIComponent(lesson.id)}`;
-        positionSelect.className = "lesson-position-select";
-        positionSelect.setAttribute("aria-label", `Move ${lesson.title} to lesson position`);
-        lessons.forEach((_, optionIndex) => {
-            const option = document.createElement("option");
-            option.value = String(optionIndex);
-            option.textContent = String(optionIndex + 1);
-            positionSelect.append(option);
-        });
-        positionSelect.value = String(index);
-        moveButton.type = "button";
-        moveButton.disabled = lessons.length < 2;
-        moveButton.addEventListener("click", () => {
-            moveLessonToPosition(module.id, lesson.id, Number(positionSelect.value));
+
+            if (!savedDropOrder) {
+                await saveLessonOrder(list, module.id);
+            }
         });
         toggleLessonLockButton.type = "button";
         toggleLessonLockButton.addEventListener("click", () => toggleLessonLock(lesson));
         deleteLessonButton.type = "button";
         deleteLessonButton.addEventListener("click", () => deleteLesson(lesson));
-        reorderControls.append(moveLabel, positionSelect, moveButton);
         metaRow.append(contentCount, questionCount, lockStatus);
         content.append(title, objective, metaRow);
         lessonActionGroup.append(openLessonBuilderLink, toggleLessonLockButton, deleteLessonButton);
-        headerActions.append(dragHint, reorderControls, label, lessonActionGroup);
+        headerActions.append(dragHint, label, lessonActionGroup);
         header.append(content, headerActions);
         item.append(header);
         list.append(item);
@@ -887,20 +1101,7 @@ function renderModules(modules, lessons, contentBlocks, questions) {
 
     list.addEventListener("dragover", (event) => {
         event.preventDefault();
-
-        const draggingItem = list.querySelector(".module-card--dragging");
-
-        if (!draggingItem) {
-            return;
-        }
-
-        const afterElement = getDragAfterElement(list, event.clientY, "module-card", "module-card--dragging");
-
-        if (afterElement) {
-            list.insertBefore(draggingItem, afterElement);
-        } else {
-            list.append(draggingItem);
-        }
+        placeDraggingItemFromPointer(list, event.clientY, "module-card", "module-card--dragging");
     });
 
     modules.forEach((module) => {
@@ -920,7 +1121,9 @@ function renderModules(modules, lessons, contentBlocks, questions) {
         const lessonHeading = createElement("h4", "", "Lessons");
         const actions = createElement("div", "module-actions module-actions--icons");
         const dragHint = createElement("span", "module-drag-hint", "Drag to reorder");
-        const moduleLessons = lessons.filter((lesson) => lesson.module_id === module.id);
+        const moduleLessons = lessons
+            .filter((lesson) => lesson.module_id === module.id)
+            .sort((firstLesson, secondLesson) => firstLesson.order_index - secondLesson.order_index);
         const isCollapsed = collapsedModuleIds.has(module.id);
         const toggleModuleButton = createModuleIconButton(
             "chevron",
@@ -942,9 +1145,15 @@ function renderModules(modules, lessons, contentBlocks, questions) {
 
             event.dataTransfer.effectAllowed = "move";
             event.dataTransfer.setData("text/plain", module.id);
+            startReorderDrag({
+                list,
+                itemClass: "module-card",
+                draggingClass: "module-card--dragging",
+            });
             item.classList.add("module-card--dragging");
         });
         item.addEventListener("dragend", async () => {
+            stopReorderDrag();
             item.classList.remove("module-card--dragging");
             await saveModuleOrder(list);
         });
@@ -1119,6 +1328,7 @@ async function initializePage() {
     fillPacingForm(course);
     renderCourseAccess(course);
     showContent();
+    setActiveTab(getInitialTabName());
     const modules = await loadModules();
 
     if (modules) {
@@ -1241,6 +1451,15 @@ courseDiscoverySelect.addEventListener("change", updateDiscoveryListing);
 copyPublicCourseLinkButton.addEventListener("click", copyPublicCourseLink);
 archiveCourseButton.addEventListener("click", archiveCourse);
 deleteCourseButton.addEventListener("click", deleteCourse);
+tabButtons.forEach((button) => {
+    button.addEventListener("click", () => setActiveTab(button.dataset.teacherCourseTabButton));
+});
+announcementForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+});
+saveAnnouncementDraftButton.addEventListener("click", () => {
+    setStatus("Announcement drafts are ready in the editor. Publishing storage will be connected next.", "info");
+});
 
 moduleForm.addEventListener("submit", async (event) => {
     event.preventDefault();

@@ -47,6 +47,7 @@ const homeSubmissionsCount = qs("[data-home-submissions-count]");
 const studentUpcomingSection = qs("[data-student-upcoming-section]");
 const dashboardParams = new URLSearchParams(window.location.search);
 const MANAGED_COURSE_PREVIEW_LIMIT = 6;
+const COURSE_EDITOR_VERSION = "20260709-tabs";
 
 let currentProfile = null;
 let dashboardCourses = [];
@@ -600,7 +601,7 @@ function renderCourses(courses, classrooms) {
             activeClassrooms === 1 ? "1 active class" : `${activeClassrooms} active classes`
         );
 
-        card.href = `../courses/editor.html?course=${courseParam}`;
+        card.href = `../courses/editor.html?course=${courseParam}&editor=${COURSE_EDITOR_VERSION}`;
         card.setAttribute("aria-label", `Open ${course.title || "course"}`);
         badges.append(
             createElement("span", "badge", course.relationship),

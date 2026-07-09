@@ -8,7 +8,7 @@ const settingsCache = new Map();
 function getPageContext() {
     const params = new URLSearchParams(window.location.search);
     const heading = document.querySelector("h1")?.textContent?.trim();
-    const title = heading || document.title.replace(/^BrainKernl V2\s*\|\s*/, "") || "Current page";
+    const title = heading || document.title.replace(/^BrainKernl\s*\|\s*/, "") || "Current page";
 
     return {
         classroomId: params.get("classroom") || "",
