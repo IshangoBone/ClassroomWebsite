@@ -24,13 +24,22 @@ if (redirectConfirmedSignupToLogin()) {
 const onboardingForm = qs("[data-onboarding-form]");
 const statusElement = qs("[data-onboarding-status]");
 const profilePhotoInput = onboardingForm.elements["profile-photo"];
+const usernameInput = onboardingForm.elements.username;
 const profilePhotoPreview = qs("[data-profile-photo-preview]");
 const profilePhotoPreviewImage = qs("[data-profile-photo-preview-image]");
 const profilePhotoPreviewName = qs("[data-profile-photo-preview-name]");
 const profilePhotoBucket = "profile-photos";
 const maxProfilePhotoSize = 10 * 1024 * 1024;
 const allowedProfilePhotoTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const usernamePattern = /^[A-Za-z0-9]{3,40}$/;
 let selectedProfilePhotoUrl = "";
+
+function keepUsernameAlphanumeric(input) {
+    const sanitized = String(input.value || "").replace(/[^A-Za-z0-9]/g, "");
+    if (input.value !== sanitized) {
+        input.value = sanitized;
+    }
+}
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -195,6 +204,7 @@ if (profilePhotoInput) {
 }
 
 if (loadedSession) {
+    usernameInput.addEventListener("input", () => keepUsernameAlphanumeric(usernameInput));
     onboardingForm.addEventListener("submit", async (event) => {
         event.preventDefault();
 
@@ -213,6 +223,11 @@ if (loadedSession) {
 
         if (!profileUpdates.legal_first_name || !profileUpdates.legal_last_name || !profileUpdates.username) {
             setStatus("Complete your name and choose a username before continuing.", "error");
+            return;
+        }
+
+        if (!usernamePattern.test(profileUpdates.username)) {
+            setStatus("Username must be 3–40 characters and contain only letters and numbers.", "error");
             return;
         }
 
@@ -245,6 +260,11 @@ if (loadedSession) {
 
         if (error?.code === "23505") {
             setStatus("That username is already in use. Choose another username.", "error");
+            return;
+        }
+
+        if (error?.code === "23514") {
+            setStatus("Username must contain only letters and numbers.", "error");
             return;
         }
 

@@ -2,7 +2,7 @@ import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
 import { createProfileAvatar } from "../utils/profile-images.js";
-import { notifyStatus } from "../utils/ui-components.js";
+import { createModalShell, notifyStatus } from "../utils/ui-components.js";
 
 const statusElement = qs("[data-discovery-status]");
 const shellElements = [...document.querySelectorAll("[data-discovery-shell]")];
@@ -43,6 +43,58 @@ function getJoinPreviewLabel(preview) {
     return preview.classroom_name
         ? `${preview.course_title} / ${preview.classroom_name}`
         : preview.course_title;
+}
+
+function confirmJoin({ title = "Join course?", heading, message, confirmLabel = "Join" } = {}) {
+    return new Promise((resolve) => {
+        const previousFocus = document.activeElement;
+        const body = createElement("div", "join-confirm-body");
+        const titleElement = createElement("strong", "", heading || title);
+        const messageElement = createElement("p", "", message || "You can start learning as soon as you join.");
+        const cancelButton = createElement("button", "secondary-button", "Cancel");
+        const confirmButton = createElement("button", "primary-button", confirmLabel);
+        let overlay = null;
+        let settled = false;
+
+        function close(value) {
+            if (settled) {
+                return;
+            }
+
+            settled = true;
+            document.removeEventListener("keydown", handleKeydown);
+            overlay?.remove();
+            previousFocus?.focus?.();
+            resolve(value);
+        }
+
+        function handleKeydown(event) {
+            if (event.key === "Escape") {
+                close(false);
+            }
+        }
+
+        cancelButton.type = "button";
+        confirmButton.type = "button";
+        cancelButton.addEventListener("click", () => close(false));
+        confirmButton.addEventListener("click", () => close(true));
+        body.append(titleElement, messageElement);
+
+        overlay = createModalShell({
+            title,
+            body,
+            actions: [cancelButton, confirmButton],
+        });
+        overlay.addEventListener("click", (event) => {
+            if (event.target === overlay) {
+                close(false);
+            }
+        });
+
+        document.body.append(overlay);
+        document.addEventListener("keydown", handleKeydown);
+        confirmButton.focus();
+    });
 }
 
 async function loadCurrentProfile() {
@@ -113,7 +165,12 @@ async function joinClassroomWithCode(joinCode, form, expectedCourse) {
         return;
     }
 
-    const confirmed = window.confirm(`Join ${getJoinPreviewLabel(preview)} with this class code?`);
+    const confirmed = await confirmJoin({
+        title: "Join classroom?",
+        heading: getJoinPreviewLabel(preview),
+        message: "This class code will add the classroom to your learning dashboard.",
+        confirmLabel: "Join class",
+    });
 
     if (!confirmed) {
         submitButton.disabled = false;
@@ -262,11 +319,14 @@ async function refreshDiscovery() {
 }
 
 async function joinCourse(course, button) {
-    const confirmed = window.confirm(
-        course.has_classroom_access
-            ? `Join ${course.title || "this public course"} as an independent course too?`
-            : `Join ${course.title || "this public course"}?`
-    );
+    const confirmed = await confirmJoin({
+        title: "Join course?",
+        heading: course.title || "Public course",
+        message: course.has_classroom_access
+            ? "You already have classroom access. This will also add independent course access."
+            : "This will add the course to your learning dashboard.",
+        confirmLabel: "Join independently",
+    });
 
     if (!confirmed) {
         return;

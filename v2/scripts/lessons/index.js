@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { isTeachingRole, loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { getLessonOverview } from "../utils/lesson-metadata.js";
 import { createBadge, setStatusMessage } from "../utils/ui-components.js";
 
 const statusElement = qs("[data-builder-hub-status]");
@@ -81,7 +82,7 @@ function lessonMatchesSearch(course, module, lesson, searchTerm) {
         module.description,
         lesson.title,
         lesson.objective,
-        lesson.summary,
+        getLessonOverview(lesson),
     ].map(normalize).join(" ");
 
     return haystack.includes(searchTerm);
@@ -128,7 +129,7 @@ function createLessonCard(course, module, lesson, contentCount, questionCount) {
     const description = createElement(
         "p",
         "",
-        lesson.summary || lesson.objective || "No overview has been added yet."
+        getLessonOverview(lesson) || lesson.objective || "No overview has been added yet."
     );
     const meta = createElement("div", "lesson-hub-lesson-meta");
     const actions = createElement("div", "lesson-hub-lesson-actions");

@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BrainKernl | Teaching Analytics</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260708-course-details-status" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260720-hall-pass-report" />
 </head>
 
 <body>
@@ -46,6 +46,19 @@
 
             <div class="analytics-summary-grid" data-analytics-summary>
                 <p class="empty-state">Loading analytics summary...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-analytics-shell hidden>
+            <div class="section-header">
+                <div>
+                    <h2>Hall pass analytics</h2>
+                    <p class="section-copy">Monitor active passes, return times, total duration, and per-student pass history.</p>
+                </div>
+            </div>
+
+            <div data-hall-pass-analytics>
+                <p class="empty-state">Loading hall pass analytics...</p>
             </div>
         </section>
 
@@ -128,7 +141,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/analytics/index.js?v=20260602-route-guards"></script>
+    <script type="module" src="../../scripts/analytics/index.js?v=20260720-hall-pass-report"></script>
 </body>
 
 </html>

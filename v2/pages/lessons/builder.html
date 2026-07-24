@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BrainKernl | Lesson Builder</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260708-course-details-status" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260723-organized-standards" />
 </head>
 
 <body class="lesson-authoring-shell">
@@ -138,6 +138,14 @@
                 <div class="lesson-authoring-actions">
                     <span class="badge badge--quiet" data-lesson-visibility-state>Hidden from students</span>
                     <button type="button" class="secondary-button" data-lesson-visibility-toggle>Make visible</button>
+                    <button type="button" class="secondary-button lesson-toolbox-toggle" data-toolbox-open aria-controls="lesson-builder-toolbox" aria-expanded="false">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M4 6h16"></path>
+                            <path d="M4 12h16"></path>
+                            <path d="M4 18h10"></path>
+                        </svg>
+                        Tool tray
+                    </button>
                     <a class="secondary-button" href="view.html" data-editor-preview-link>Preview</a>
                 </div>
             </div>
@@ -192,12 +200,16 @@
                                 <h2 data-canvas-title>Lesson title</h2>
                                 <div class="lesson-page-lesson-meta">
                                     <article>
-                                        <span>Objective</span>
-                                        <p data-canvas-objective>Lesson objective will appear here.</p>
-                                    </article>
-                                    <article>
                                         <span>Overview</span>
                                         <p data-canvas-overview>Lesson overview will appear here.</p>
+                                    </article>
+                                    <article>
+                                        <span>I Can</span>
+                                        <p data-canvas-learning-target>Learning target will appear here.</p>
+                                    </article>
+                                    <article>
+                                        <span>Standards</span>
+                                        <p data-canvas-standards>Standards alignment will appear here.</p>
                                     </article>
                                     <article>
                                         <span>Duration</span>
@@ -211,9 +223,7 @@
                                     <p class="empty-state">Loading lesson content...</p>
                                 </div>
                                 <div class="lesson-inline-draft-list" data-inline-draft-list></div>
-                                <div class="lesson-page-question-canvas" data-question-preview>
-                                    <p class="empty-state empty-state--compact">Data collection blocks will appear here.</p>
-                                </div>
+                                <div class="lesson-page-question-canvas" data-question-preview hidden></div>
                                 <div data-question-list hidden></div>
                             </div>
                         </article>
@@ -239,6 +249,7 @@
                                     <span>Content type</span>
                                     <select name="block-type" data-content-block-type required>
                                         <option value="text">Text section</option>
+                                        <option value="discussion">Discussion board</option>
                                         <option value="link">External link</option>
                                         <option value="youtube">YouTube video</option>
                                         <option value="slides">Slides embed</option>
@@ -255,13 +266,7 @@
 
                     <label class="form-field" data-text-content-field>
                         <span>Section text</span>
-                        <div class="text-format-toolbar" aria-label="Text formatting shortcuts">
-                            <button type="button" class="secondary-button lesson-action" data-format-action="heading">Heading</button>
-                            <button type="button" class="secondary-button lesson-action" data-format-action="bold">Bold</button>
-                            <button type="button" class="secondary-button lesson-action" data-format-action="bullet">Bullets</button>
-                            <button type="button" class="secondary-button lesson-action" data-format-action="link">Link</button>
-                        </div>
-                        <textarea name="body-text" rows="6" maxlength="5000" placeholder="Write lesson content. Use the buttons for headings, bold text, bullet lists, and links." required></textarea>
+                        <textarea name="body-text" rows="6" maxlength="5000" placeholder="Write the text students should see on this part of the page." required></textarea>
                     </label>
 
                     <label class="form-field" data-url-content-field hidden>
@@ -409,10 +414,18 @@
 
                 </div>
 
-                <aside class="lesson-builder-toolbox" aria-label="Lesson builder tools">
+                <aside class="lesson-builder-toolbox" id="lesson-builder-toolbox" aria-label="Lesson builder tools">
                     <div class="lesson-toolbox-header">
-                        <p class="eyebrow">Add to lesson</p>
-                        <h2>Tool tray</h2>
+                        <div>
+                            <p class="eyebrow">Add to lesson</p>
+                            <h2>Tool tray</h2>
+                        </div>
+                        <button type="button" class="lesson-toolbox-close" data-toolbox-close aria-label="Close tool tray">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="m18 6-12 12"></path>
+                                <path d="m6 6 12 12"></path>
+                            </svg>
+                        </button>
                     </div>
                     <div class="lesson-tool-tabs" aria-label="Builder side panel tabs">
                         <button type="button" class="lesson-tool-tab lesson-tool-tab--active" data-tool-tab="lesson-inserts" aria-controls="lesson-insert-tools" aria-selected="true">Lesson inserts</button>
@@ -427,7 +440,7 @@
                                     <span class="lesson-insert-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-text"></use></svg></span>
                                     <span>
                                         <strong>Text box</strong>
-                                        <small>Directions or notes</small>
+                                        <small>Page text or section label</small>
                                     </span>
                                 </button>
                                 <button type="button" class="lesson-insert-tile" data-content-tool="image" aria-controls="lesson-content-editor">
@@ -478,6 +491,13 @@
                         <section class="lesson-tool-card" id="data-collection-tools" data-tool-panel="data-collection" aria-label="Data collection tools" hidden>
                             <h3>Student responses</h3>
                             <div class="lesson-tool-list">
+                                <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-content-tool="discussion" aria-controls="lesson-content-editor">
+                                    <span class="lesson-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-message"></use></svg></span>
+                                    <span>
+                                        <strong>Discussion board</strong>
+                                        <small>Topic and class replies</small>
+                                    </span>
+                                </button>
                                 <button type="button" class="lesson-tool-button lesson-tool-button--simple" data-question-tool="short_response" aria-controls="lesson-question-editor">
                                     <span class="lesson-tool-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><use href="#tool-icon-message"></use></svg></span>
                                     <span>
@@ -531,11 +551,12 @@
                         </section>
                     </div>
                 </aside>
+                <button type="button" class="lesson-toolbox-backdrop" data-toolbox-backdrop aria-label="Close tool tray" hidden></button>
             </div>
         </section>
     </main>
 
-    <script type="module" src="../../scripts/lessons/builder.js?v=20260709-editor-link-version"></script>
+    <script type="module" src="../../scripts/lessons/builder.js?v=20260723-organized-standards"></script>
 </body>
 
 </html>

@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BrainKernl | Manage Course</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260709-remove-builder-placeholder" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260723-wrapped-action-tooltips" />
 </head>
 
 <body>
@@ -28,6 +28,7 @@
                 <button class="teacher-course-tab is-active" type="button" role="tab" data-teacher-course-tab-button="setup" aria-selected="true">Course setup</button>
                 <button class="teacher-course-tab" type="button" role="tab" data-teacher-course-tab-button="content" aria-selected="false">Content</button>
                 <button class="teacher-course-tab" type="button" role="tab" data-teacher-course-tab-button="announcements" aria-selected="false">Announcements</button>
+                <button class="teacher-course-tab" type="button" role="tab" data-teacher-course-tab-button="classrooms" aria-selected="false">Classrooms</button>
                 <button class="teacher-course-tab" type="button" role="tab" data-teacher-course-tab-button="gradebook" aria-selected="false">Gradebook</button>
             </div>
 
@@ -62,13 +63,6 @@
                                 <a class="secondary-button" href="preview.html" data-course-preview-link>Preview as student</a>
                             </div>
                         </div>
-                        <details class="course-danger-zone">
-                            <summary>Advanced course options</summary>
-                            <div class="course-danger-actions">
-                                <button type="button" class="secondary-button" data-archive-course>Archive course</button>
-                                <button type="button" class="secondary-button destructive-button" data-delete-course>Delete course</button>
-                            </div>
-                        </details>
                     </article>
 
                     <form class="course-form course-form--setup" data-course-editor-form>
@@ -154,6 +148,17 @@
                                 <button type="submit" class="primary-button">Save pacing settings</button>
                             </div>
                         </form>
+                    </article>
+
+                    <article class="course-setup-card course-setup-card--danger" aria-labelledby="course-danger-heading">
+                        <div class="section-header">
+                            <h3 id="course-danger-heading">Course actions</h3>
+                            <p class="section-copy">Archive or delete this course when you no longer need it.</p>
+                        </div>
+                        <div class="course-danger-actions">
+                            <button type="button" class="secondary-button" data-archive-course>Archive course</button>
+                            <button type="button" class="secondary-button destructive-button" data-delete-course>Delete course</button>
+                        </div>
                     </article>
                 </div>
             </section>
@@ -243,23 +248,78 @@
             <section class="teacher-course-tab-panel" data-teacher-course-tab-panel="announcements" hidden aria-labelledby="course-announcements-heading">
                 <div class="section-header">
                     <h2 id="course-announcements-heading">Announcements</h2>
-                    <p class="section-copy">Draft class updates for this course. Publishing announcements will be connected next.</p>
+                    <p class="section-copy">Post course updates that students can read from their Announcements tab.</p>
                 </div>
 
-                <form class="teacher-course-planning-form" data-teacher-announcement-form>
+                <form class="teacher-course-planning-form teacher-announcement-composer" data-teacher-announcement-form>
                     <label class="form-field">
                         <span>Announcement title</span>
-                        <input type="text" name="announcement-title" placeholder="Week 1 materials are ready" />
+                        <input type="text" name="announcement-title" placeholder="Week 1 materials are ready" required />
                     </label>
                     <label class="form-field form-field--wide">
                         <span>Announcement message</span>
-                        <textarea name="announcement-message" rows="5" placeholder="Write an update for students in this course."></textarea>
+                        <textarea name="announcement-message" rows="5" placeholder="Write an update for students in this course." required></textarea>
                     </label>
                     <div class="course-form-actions form-field--wide">
+                        <button type="button" class="secondary-button" data-cancel-announcement-edit hidden>Cancel edit</button>
                         <button type="button" class="secondary-button" data-save-announcement-draft>Save draft</button>
-                        <button type="button" class="primary-button" disabled>Publish announcement</button>
+                        <button type="submit" class="primary-button" data-publish-announcement>Publish announcement</button>
                     </div>
                 </form>
+
+                <section class="announcement-stream-section" aria-labelledby="teacher-announcement-stream-heading">
+                    <div class="section-header section-header--compact">
+                        <div>
+                            <h3 id="teacher-announcement-stream-heading">Course stream</h3>
+                            <p class="section-copy">Latest announcements and saved drafts for this course.</p>
+                        </div>
+                    </div>
+                    <div class="announcement-stream" data-teacher-announcement-list>
+                        <p class="empty-state">No announcements yet. Post an update when students need to know what is happening next.</p>
+                    </div>
+                </section>
+            </section>
+
+            <section class="teacher-course-tab-panel" data-teacher-course-tab-panel="classrooms" hidden aria-labelledby="course-classrooms-heading">
+                <div class="section-header section-header--actions">
+                    <div>
+                        <h2 id="course-classrooms-heading">Classrooms</h2>
+                        <p class="section-copy">Create class sections, share join access, open rosters, and review student work for this course.</p>
+                    </div>
+                    <button type="button" class="primary-button management-action" data-toggle-course-classroom-form>Create class</button>
+                </div>
+
+                <form class="management-create-form teacher-course-classroom-form" data-course-classroom-form hidden>
+                    <h3 data-course-classroom-form-heading>Create class</h3>
+                    <p class="section-copy" data-course-classroom-form-copy>Create one class period for this course. Students can join with the class code or invite link.</p>
+                    <input type="hidden" name="classroom-id" />
+
+                    <div class="management-form-grid">
+                        <label class="form-field">
+                            <span>Classroom name</span>
+                            <input type="text" name="name" placeholder="Intro to Computer Science" required />
+                        </label>
+
+                        <label class="form-field">
+                            <span>Period / block</span>
+                            <input type="text" name="period_block" placeholder="Period 1" />
+                        </label>
+
+                        <label class="form-field">
+                            <span>School year</span>
+                            <input type="text" name="school_year" placeholder="2026-2027" />
+                        </label>
+                    </div>
+
+                    <div class="course-form-actions">
+                        <button type="submit" class="primary-button" data-course-classroom-submit>Create class</button>
+                        <button type="button" class="secondary-button" data-cancel-course-classroom-form>Cancel</button>
+                    </div>
+                </form>
+
+                <div data-course-classroom-list>
+                    <p class="empty-state">Loading classrooms...</p>
+                </div>
             </section>
 
             <section class="teacher-course-tab-panel" data-teacher-course-tab-panel="gradebook" hidden aria-labelledby="course-gradebook-heading">
@@ -287,7 +347,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/courses/editor.js?v=20260709-remove-builder-placeholder"></script>
+    <script type="module" src="../../scripts/courses/editor.js?v=20260723-compact-lesson-list"></script>
 </body>
 
 </html>

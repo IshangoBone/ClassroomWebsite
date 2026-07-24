@@ -24,6 +24,7 @@ create table public.profiles (
             or (
                 username = btrim(username)
                 and char_length(username) between 3 and 40
+                and username ~ '^[A-Za-z0-9]+$'
             )
         ),
     constraint profiles_platform_role_check

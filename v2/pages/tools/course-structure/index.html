@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BrainKernl | Course Structure Planner</title>
+    <link rel="stylesheet" href="../../../styles/main.css?v=20260723-full-lesson-planning" />
+</head>
+
+<body>
+    <main class="dashboard-layout toolkit-app-page">
+        <header class="dashboard-header">
+            <div class="dashboard-profile-heading">
+                <div class="toolkit-app-mark" aria-hidden="true">P</div>
+                <div>
+                    <p class="eyebrow">Teacher Toolkit</p>
+                    <h1>Course Structure Planner</h1>
+                    <p class="intro">
+                        Turn a textbook and course standards into a structured, standards-aligned course preview.
+                    </p>
+                </div>
+            </div>
+            <div class="dashboard-header-actions">
+                <a class="secondary-button" href="../index.html">Back to Toolkit</a>
+            </div>
+        </header>
+
+        <p class="auth-status dashboard-status" data-sage-status aria-live="polite">Loading course planner...</p>
+
+        <section class="dashboard-section dashboard-section--panel sage-planner-panel" data-sage-panel="planner" aria-labelledby="course-planner-heading">
+            <div class="section-header section-header--actions">
+                <div>
+                    <p class="eyebrow">Course Planning</p>
+                    <h2 id="course-planner-heading">Build a course from your source materials</h2>
+                    <p class="section-copy">
+                        Upload the course textbook and standards. The planner will build modules, lessons, pacing,
+                        objectives, learning targets, assessments, and standards alignment.
+                    </p>
+                </div>
+                <span class="badge badge--quiet">AI planning workflow</span>
+            </div>
+
+            <div class="sage-planner-shell sage-planner-shell--modal-preview">
+                <form class="sage-planner-form" data-sage-planner-form>
+                    <div class="sage-source-uploads">
+                        <label class="sage-upload-dropzone" data-sage-dropzone="textbook">
+                            <input type="file" name="coursePdf" accept="application/pdf" data-sage-pdf-input />
+                            <span class="sage-upload-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H11a2 2 0 0 1 2 2v16a2 2 0 0 0-2-2H6.5A2.5 2.5 0 0 0 4 21.5z" />
+                                    <path d="M20 5.5A2.5 2.5 0 0 0 17.5 3H13v18a2 2 0 0 1 2-2h2.5a2.5 2.5 0 0 1 2.5 2.5z" />
+                                </svg>
+                                <span>Book</span>
+                            </span>
+                            <strong>Upload textbook or course guide</strong>
+                            <small data-sage-file-name>Required PDF. Drag and drop here, or click to browse.</small>
+                        </label>
+
+                        <label class="sage-upload-dropzone" data-sage-dropzone="standards">
+                            <input type="file" name="standardsPdf" accept="application/pdf" data-sage-standards-input />
+                            <span class="sage-upload-icon sage-upload-icon--standards" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M6 2.5h8l4 4V21.5H6z" />
+                                    <path d="M14 2.5v5h5" />
+                                    <path d="M9 12h6" />
+                                    <path d="M9 16h6" />
+                                </svg>
+                                <span>Standards</span>
+                            </span>
+                            <strong>Upload course standards</strong>
+                            <small data-sage-standards-file-name>Required PDF. Upload state, national, AP, or district standards.</small>
+                        </label>
+                    </div>
+
+                    <div class="sage-form-grid sage-form-grid--two">
+                        <label class="form-field">
+                            <span>Course title</span>
+                            <input name="courseTitle" type="text" placeholder="Example: AP Computer Science A" />
+                        </label>
+                        <label class="form-field">
+                            <span>Number of class days</span>
+                            <input name="classDays" type="number" min="1" max="220" value="180" />
+                        </label>
+                    </div>
+
+                    <div class="sage-form-grid sage-form-grid--two">
+                        <fieldset class="form-field sage-grade-field">
+                            <legend>Select grade level(s)</legend>
+                            <div class="sage-grade-options" aria-label="Select grade levels for course plan">
+                                <label><input type="checkbox" name="plannerGradeLevel" value="9th grade" /><span>9</span></label>
+                                <label><input type="checkbox" name="plannerGradeLevel" value="10th grade" checked /><span>10</span></label>
+                                <label><input type="checkbox" name="plannerGradeLevel" value="11th grade" checked /><span>11</span></label>
+                                <label><input type="checkbox" name="plannerGradeLevel" value="12th grade" /><span>12</span></label>
+                            </div>
+                        </fieldset>
+                        <label class="form-field">
+                            <span>Pacing style</span>
+                            <select name="pacingStyle">
+                                <option value="balanced">Balanced across modules</option>
+                                <option value="exam weighted">Weighted by exam importance</option>
+                                <option value="skills first">Skills-first with extra practice</option>
+                                <option value="project based">Project-based checkpoints</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <label class="form-field">
+                        <span>Planning notes</span>
+                        <textarea name="planningNotes" rows="4" placeholder="Example: Expand difficult topics, include bell ringers, and leave room for review days."></textarea>
+                    </label>
+
+                    <div class="sage-generator-options" aria-label="Course planning options">
+                        <label class="sage-toggle-card">
+                            <input type="checkbox" name="includeEssentialQuestions" checked />
+                            <span><strong>Essential questions</strong><small>Use them for bell ringers and lesson openings.</small></span>
+                        </label>
+                        <label class="sage-toggle-card">
+                            <input type="checkbox" name="includeLearningTargets" checked />
+                            <span><strong>I can targets</strong><small>Create student-facing learning targets for each lesson.</small></span>
+                        </label>
+                        <label class="sage-toggle-card">
+                            <input type="checkbox" name="includeAssessmentPlan" checked />
+                            <span><strong>Assessment map</strong><small>Plan checks, quizzes, reviews, and module assessments.</small></span>
+                        </label>
+                        <label class="sage-toggle-card">
+                            <input type="checkbox" name="includeInstructionalStrategies" checked />
+                            <span><strong>Instructional strategies</strong><small>Assign a varied, subject-appropriate strategy to each lesson.</small></span>
+                        </label>
+                    </div>
+
+                    <div class="form-actions form-actions--left">
+                        <button class="primary-button sage-generate-button" type="submit" data-sage-generate-button>
+                            <span class="sage-button-spinner" data-sage-generate-spinner aria-hidden="true" hidden></span>
+                            <span data-sage-generate-label>Generate course preview</span>
+                        </button>
+                        <button class="secondary-button" type="button" data-sage-planner-reset>Reset</button>
+                    </div>
+                </form>
+
+                <aside class="sage-planner-launcher" aria-live="polite">
+                    <div>
+                        <p class="eyebrow">Course Preview</p>
+                        <h3>Generated course map</h3>
+                        <p data-sage-preview-launcher-copy>Upload both source PDFs and generate the course to open its module and lesson map.</p>
+                    </div>
+                    <button class="primary-button" type="button" data-sage-preview-open disabled>View generated course map</button>
+                </aside>
+            </div>
+        </section>
+
+        <dialog class="sage-blueprint-dialog" data-sage-blueprint-dialog aria-labelledby="blueprint-dialog-title">
+            <div class="sage-blueprint-dialog__shell">
+                <header class="sage-blueprint-dialog__header">
+                    <div>
+                        <p class="eyebrow">Course Structure Planner</p>
+                        <h2 id="blueprint-dialog-title">Generated course map</h2>
+                    </div>
+                    <button class="sage-blueprint-dialog__close" type="button" data-sage-preview-close aria-label="Close course map">Close</button>
+                </header>
+                <div class="sage-planner-preview sage-blueprint-dialog__content" data-sage-planner-preview aria-live="polite">
+                    <div class="sage-empty-state">
+                        <p class="eyebrow">Course Preview</p>
+                        <h3>Your course structure will appear here</h3>
+                        <p>Upload both source PDFs and choose the planning settings to begin.</p>
+                    </div>
+                </div>
+                <footer class="sage-blueprint-dialog__footer">
+                    <p data-sage-course-create-status>Review the generated structure before creating the draft course.</p>
+                    <button class="primary-button" type="button" data-sage-create-course disabled>Create course</button>
+                </footer>
+            </div>
+        </dialog>
+    </main>
+
+    <script type="module" src="../../../scripts/sage/index.js?v=20260723-unique-lesson-fields"></script>
+</body>
+
+</html>

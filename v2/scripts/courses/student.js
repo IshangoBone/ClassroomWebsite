@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { getLessonOverview } from "../utils/lesson-metadata.js";
 import { notifyStatus } from "../utils/ui-components.js";
 
 const params = new URLSearchParams(window.location.search);
@@ -28,10 +29,27 @@ const nextLinkElement = qs("[data-student-course-next-link]");
 const moduleListElement = qs("[data-student-course-module-list]");
 const gradebookElement = qs("[data-student-course-gradebook]");
 const detailsElement = qs("[data-student-course-details]");
+const announcementsElement = qs("[data-student-course-announcements]");
 const unenrollButton = qs("[data-student-course-unenroll]");
 
 let currentProfileId = "";
 let currentEnrollment = null;
+const validCourseTabs = new Set(["details", "content", "announcements", "gradebook"]);
+
+function getCourseTabStorageKey() {
+    return `brainkernl:student-course-tab:${courseId || "new"}:${classroomId || "independent"}`;
+}
+
+function getInitialTabName() {
+    const hashTab = window.location.hash.replace(/^#/, "");
+
+    if (validCourseTabs.has(hashTab)) {
+        return hashTab;
+    }
+
+    const storedTab = window.localStorage.getItem(getCourseTabStorageKey());
+    return validCourseTabs.has(storedTab) ? storedTab : "details";
+}
 
 function setStatus(message, tone = "info") {
     statusElement.textContent = message;
@@ -70,15 +88,22 @@ function formatDate(dateLike) {
 }
 
 function setActiveTab(tabName) {
+    const nextTabName = validCourseTabs.has(tabName) ? tabName : "details";
+
     tabButtons.forEach((button) => {
-        const isActive = button.dataset.courseTabButton === tabName;
+        const isActive = button.dataset.courseTabButton === nextTabName;
 
         button.classList.toggle("is-active", isActive);
         button.setAttribute("aria-selected", String(isActive));
     });
     tabPanels.forEach((panel) => {
-        panel.hidden = panel.dataset.courseTabPanel !== tabName;
+        panel.hidden = panel.dataset.courseTabPanel !== nextTabName;
     });
+
+    window.localStorage.setItem(getCourseTabStorageKey(), nextTabName);
+    if (window.location.hash !== `#${nextTabName}`) {
+        window.history.replaceState(null, "", `#${nextTabName}`);
+    }
 }
 
 function formatTeacherName(profile) {
@@ -490,7 +515,7 @@ function renderModules(modules, lessons, submissions, enrollment, course, classr
                 const header = createElement("div", "lesson-card-header");
                 const content = createElement("div");
                 const lessonTitle = createElement("h5", "lesson-title", lesson.title || "Untitled lesson");
-                const lessonSummary = createElement("p", "course-muted", lesson.summary || lesson.objective || "No lesson overview added yet.");
+                const lessonSummary = createElement("p", "course-muted", getLessonOverview(lesson) || lesson.objective || "No lesson overview added yet.");
                 const metaRow = createElement("div", "badge-row lesson-meta-row");
                 const actions = createElement("div", "lesson-header-actions");
                 const lessonLink = availability.isAvailable
@@ -567,6 +592,56 @@ function renderGradebook(modules, lessons, submissions) {
     });
 
     gradebookElement.replaceChildren(list);
+}
+
+async function loadAnnouncements() {
+    const { data, error } = await supabase
+        .from("course_announcements")
+        .select("id, title, message, published_at, created_at")
+        .eq("course_id", courseId)
+        .eq("status", "published")
+        .is("archived_at", null)
+        .order("published_at", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        throw error;
+    }
+
+    return data || [];
+}
+
+function renderAnnouncements(announcements, teacherName = "Teacher") {
+    if (!announcementsElement) {
+        return;
+    }
+
+    if (!announcements.length) {
+        announcementsElement.replaceChildren(createElement("p", "empty-state", "No announcements have been posted for this course yet."));
+        return;
+    }
+
+    const list = createElement("ol", "announcement-list announcement-list--student");
+
+    announcements.forEach((announcement) => {
+        const item = createElement("li", "announcement-card");
+        const header = createElement("div", "announcement-card-header");
+        const titleGroup = createElement("div");
+        const title = createElement("h3", "", announcement.title || "Course announcement");
+        const meta = createElement(
+            "p",
+            "announcement-meta",
+            `From ${teacherName} · Posted ${formatDate(announcement.published_at || announcement.created_at)}`
+        );
+        const message = createElement("p", "announcement-message", announcement.message || "");
+
+        titleGroup.append(title, meta);
+        header.append(titleGroup);
+        item.append(header, message);
+        list.append(item);
+    });
+
+    announcementsElement.replaceChildren(list);
 }
 
 function renderCourseDetails(course, classroom, teacherName, enrollment, modules, lessons) {
@@ -651,9 +726,18 @@ async function initializePage() {
         ]);
         const lessons = await loadLessons(modules.map((module) => module.id));
         const submissions = await loadSubmissions(enrollment);
+        let announcements = [];
+        let announcementsLoaded = true;
         const classroomLabel = classroom
             ? `${classroom.name}${classroom.period_block ? ` - ${classroom.period_block}` : ""}`
             : "Independent course";
+
+        try {
+            announcements = await loadAnnouncements();
+        } catch (error) {
+            announcementsLoaded = false;
+            announcementsElement?.replaceChildren(createElement("p", "empty-state", "Announcements could not be loaded."));
+        }
 
         headingElement.textContent = course.title || "Untitled course";
         contextElement.textContent = `${classroomLabel} / ${teacherName}`;
@@ -662,9 +746,13 @@ async function initializePage() {
         renderSummary(enrollment, course, classroom, modules, lessons, submissions);
         renderModules(modules, lessons, submissions, enrollment, course, classroom);
         renderGradebook(modules, lessons, submissions);
+        if (announcementsLoaded) {
+            renderAnnouncements(announcements, teacherName);
+        }
         renderCourseDetails(course, classroom, teacherName, enrollment, modules, lessons);
         workspaceElement.hidden = false;
         shellElement.hidden = false;
+        setActiveTab(getInitialTabName());
         setStatus("");
     } catch (error) {
         setStatus(error.message || "Student course view could not be loaded.", "error");

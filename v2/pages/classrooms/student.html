@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BrainKernl | Roster Student</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260708-course-details-status" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260720-hall-pass-report" />
 </head>
 
 <body>
@@ -37,6 +37,22 @@
         <section class="management-section" data-student-shell hidden>
             <div class="section-header">
                 <div>
+                    <h2>Hall pass report</h2>
+                    <p class="section-copy">Active and past hall passes logged for this student from your teacher tools.</p>
+                </div>
+            </div>
+
+            <div class="hall-pass-report-grid" data-student-hall-pass-summary>
+                <p class="empty-state">Loading hall pass report...</p>
+            </div>
+            <div class="hall-pass-history-list hall-pass-history-list--compact" data-student-hall-pass-list>
+                <p class="empty-state">Loading hall pass history...</p>
+            </div>
+        </section>
+
+        <section class="management-section" data-student-shell hidden>
+            <div class="section-header">
+                <div>
                     <h2>Lesson work</h2>
                     <p class="section-copy">Drafts and submissions for this classroom context.</p>
                 </div>
@@ -48,7 +64,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/classrooms/student.js?v=20260708-course-details-status"></script>
+    <script type="module" src="../../scripts/classrooms/student.js?v=20260720-hall-pass-report"></script>
 </body>
 
 </html>

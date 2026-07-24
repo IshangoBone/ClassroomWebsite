@@ -50,7 +50,9 @@
                         </label>
                         <label class="form-field form-field--wide">
                             <span>Username</span>
-                            <input type="text" name="username" autocomplete="username" minlength="3" maxlength="40" required />
+                            <input type="text" name="username" autocomplete="username" minlength="3" maxlength="40"
+                                pattern="[A-Za-z0-9]+" title="Use only letters and numbers." required />
+                            <small class="form-hint">Use 3–40 letters and numbers. Usernames must be unique.</small>
                         </label>
                     </div>
                 </div>
@@ -79,7 +81,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/settings/index.js?v=20260708-profile-editor"></script>
+    <script type="module" src="../../scripts/settings/index.js?v=20260723-quiet-username-filter"></script>
 </body>
 
 </html>

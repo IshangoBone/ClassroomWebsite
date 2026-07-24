@@ -12,6 +12,9 @@ const tabButtons = [...document.querySelectorAll("[data-teacher-course-tab-butto
 const tabPanels = [...document.querySelectorAll("[data-teacher-course-tab-panel]")];
 const announcementForm = qs("[data-teacher-announcement-form]");
 const saveAnnouncementDraftButton = qs("[data-save-announcement-draft]");
+const publishAnnouncementButton = qs("[data-publish-announcement]");
+const cancelAnnouncementEditButton = qs("[data-cancel-announcement-edit]");
+const announcementList = qs("[data-teacher-announcement-list]");
 const editorForm = qs("[data-course-editor-form]");
 const pacingForm = qs("[data-course-pacing-form]");
 const moduleCount = qs("[data-module-count]");
@@ -34,6 +37,13 @@ const copyPublicCourseLinkButton = qs("[data-copy-public-course-link]");
 const coursePreviewLink = qs("[data-course-preview-link]");
 const archiveCourseButton = qs("[data-archive-course]");
 const deleteCourseButton = qs("[data-delete-course]");
+const courseClassroomList = qs("[data-course-classroom-list]");
+const courseClassroomForm = qs("[data-course-classroom-form]");
+const courseClassroomFormHeading = qs("[data-course-classroom-form-heading]");
+const courseClassroomFormCopy = qs("[data-course-classroom-form-copy]");
+const courseClassroomSubmitButton = qs("[data-course-classroom-submit]");
+const addCourseClassroomButton = qs("[data-toggle-course-classroom-form]");
+const cancelCourseClassroomButton = qs("[data-cancel-course-classroom-form]");
 const courseThumbnailInput = editorForm.elements["course-thumbnail"];
 const courseThumbnailPreview = qs("[data-course-thumbnail-preview]");
 const courseThumbnailPreviewImage = qs("[data-course-thumbnail-preview-image]");
@@ -65,16 +75,21 @@ let loadedModules = [];
 let loadedLessons = [];
 let loadedContentBlocks = [];
 let loadedQuestions = [];
+let loadedAnnouncements = [];
+let loadedCourseClassrooms = [];
 let loadedCourse = null;
 let currentProfile = null;
 let selectedCourseThumbnailUrl = "";
+let editingAnnouncementId = "";
 const collapsedModuleIds = new Set();
 let hasAppliedInitialModuleCollapse = false;
 let dragAutoScrollFrame = null;
 let dragAutoScrollSpeed = 0;
 let isReorderDragActive = false;
 let activeReorderDrag = null;
-const validCourseTabs = new Set(["setup", "content", "announcements", "gradebook"]);
+let courseClassroomInsights = new Map();
+let courseClassroomInsightsWarning = false;
+const validCourseTabs = new Set(["setup", "content", "announcements", "classrooms", "gradebook"]);
 
 function getCourseTabStorageKey() {
     return `brainkernl:teacher-course-tab:${courseId || "new"}`;
@@ -98,6 +113,7 @@ const moduleActionIcons = {
     lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>',
     unlock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path>',
     plus: '<path d="M12 5v14"></path><path d="M5 12h14"></path>',
+    send: '<path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path>',
     trash: '<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path>',
 };
 
@@ -115,8 +131,8 @@ function createModuleIconButton(iconName, label, modifiers = []) {
     const button = createElement("button", `module-icon-button${modifierClasses}`);
 
     button.type = "button";
-    button.title = label;
     button.setAttribute("aria-label", label);
+    button.dataset.tooltip = label;
     button.append(createModuleIcon(iconName));
 
     return button;
@@ -127,8 +143,8 @@ function createModuleIconLink(iconName, label, href, modifiers = []) {
     const link = createElement("a", `module-icon-button${modifierClasses}`);
 
     link.href = href;
-    link.title = label;
     link.setAttribute("aria-label", label);
+    link.dataset.tooltip = label;
     link.append(createModuleIcon(iconName));
 
     return link;
@@ -359,6 +375,50 @@ function getPublicCourseUrl(course) {
     return url.href;
 }
 
+function getClassroomInviteUrl(inviteToken) {
+    const url = new URL("../dashboard/index.html", window.location.href);
+    url.searchParams.set("classroomInvite", inviteToken);
+
+    return url.href;
+}
+
+function createJoinCode() {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const values = new Uint32Array(6);
+    window.crypto.getRandomValues(values);
+
+    return `CTC-${[...values].map((value) => alphabet[value % alphabet.length]).join("")}`;
+}
+
+function createInviteToken() {
+    const values = new Uint8Array(18);
+    window.crypto.getRandomValues(values);
+
+    return btoa(String.fromCharCode(...values))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/g, "");
+}
+
+function formatClassroomName(classroom) {
+    return classroom.period_block
+        ? `${classroom.name} - ${classroom.period_block}`
+        : classroom.name || "Untitled class";
+}
+
+function formatLatestClassroomActivity(value) {
+    if (!value) {
+        return "No submissions yet";
+    }
+
+    return new Date(value).toLocaleString([], {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    });
+}
+
 function formatCourseStatus(status) {
     const labels = {
         archived: "Archived",
@@ -369,6 +429,725 @@ function formatCourseStatus(status) {
     };
 
     return labels[status] || "Private";
+}
+
+function formatAnnouncementDate(dateLike) {
+    if (!dateLike) {
+        return "Not published";
+    }
+
+    return new Date(dateLike).toLocaleString([], {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    });
+}
+
+function getProfileDisplayName(profile) {
+    const fullName = [profile?.legal_first_name, profile?.legal_last_name]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+
+    return fullName || profile?.username || "Course teacher";
+}
+
+function resetAnnouncementForm() {
+    announcementForm.reset();
+    cancelAnnouncementEditButton.hidden = true;
+    publishAnnouncementButton.textContent = "Publish announcement";
+    saveAnnouncementDraftButton.textContent = "Save draft";
+    announcementForm.removeAttribute("data-editing-announcement");
+}
+
+function getAnnouncementFormValues() {
+    const title = String(announcementForm.elements["announcement-title"]?.value || "").trim();
+    const message = String(announcementForm.elements["announcement-message"]?.value || "").trim();
+
+    return { title, message };
+}
+
+function editAnnouncement(announcement) {
+    editingAnnouncementId = announcement.id;
+    renderAnnouncements();
+
+    const editTitle = announcementList?.querySelector(`[data-announcement-edit-title="${announcement.id}"]`);
+    editTitle?.focus();
+}
+
+function renderAnnouncements(announcements = loadedAnnouncements) {
+    if (!announcementList) {
+        return;
+    }
+
+    if (!announcements.length) {
+        announcementList.replaceChildren(createElement("p", "empty-state", "No announcements yet. Post an update when students need to know what is happening next."));
+        return;
+    }
+
+    const list = createElement("ol", "announcement-list");
+
+    announcements.forEach((announcement) => {
+        const item = createElement("li", "announcement-card");
+        const isEditing = editingAnnouncementId === announcement.id;
+        const header = createElement("div", "announcement-card-header");
+        const titleGroup = createElement("div");
+        const title = createElement("h3", "", announcement.title || "Untitled announcement");
+        const meta = createElement(
+            "p",
+            "announcement-meta",
+            `From ${announcement.author_user_id === currentProfile?.id ? getProfileDisplayName(currentProfile) : "Course teacher"} · ${announcement.status === "published" ? "Posted" : "Draft saved"} ${formatAnnouncementDate(announcement.published_at || announcement.updated_at || announcement.created_at)}`
+        );
+        const statusBadge = createElement(
+            "span",
+            announcement.status === "published" ? "badge" : "badge badge--quiet",
+            announcement.status === "published" ? "Published" : "Draft"
+        );
+        const message = createElement("p", "announcement-message", announcement.message || "");
+        const actions = createElement("div", "announcement-actions");
+
+        titleGroup.append(title, meta);
+        header.append(titleGroup, statusBadge);
+
+        if (isEditing) {
+            const editForm = createElement("form", "announcement-inline-editor");
+            const titleField = createElement("label", "field-label", "Announcement title");
+            const titleInput = createElement("input");
+            const messageField = createElement("label", "field-label", "Announcement message");
+            const messageInput = createElement("textarea");
+            const inlineActions = createElement("div", "announcement-inline-actions");
+            const cancelButton = createElement("button", "secondary-button", "Cancel");
+            const saveButton = createElement("button", "primary-button", "Save changes");
+
+            titleInput.type = "text";
+            titleInput.required = true;
+            titleInput.value = announcement.title || "";
+            titleInput.dataset.announcementEditTitle = announcement.id;
+            messageInput.required = true;
+            messageInput.rows = 4;
+            messageInput.value = announcement.message || "";
+            cancelButton.type = "button";
+            saveButton.type = "submit";
+
+            cancelButton.addEventListener("click", () => {
+                editingAnnouncementId = "";
+                renderAnnouncements();
+            });
+            editForm.addEventListener("submit", (event) => {
+                event.preventDefault();
+                updateAnnouncementFromInline(announcement, titleInput.value, messageInput.value);
+            });
+
+            titleField.append(titleInput);
+            messageField.append(messageInput);
+            inlineActions.append(cancelButton, saveButton);
+            editForm.append(titleField, messageField, inlineActions);
+            item.append(header, editForm);
+            list.append(item);
+            return;
+        }
+
+        if (announcement.status === "draft") {
+            const publishButton = createModuleIconButton("send", "Publish announcement");
+
+            publishButton.type = "button";
+            publishButton.addEventListener("click", () => publishAnnouncementDraft(announcement.id));
+            actions.append(publishButton);
+        }
+
+        const editButton = createModuleIconButton("edit", "Edit announcement");
+        const deleteButton = createModuleIconButton("trash", "Delete announcement", ["danger"]);
+
+        editButton.type = "button";
+        deleteButton.type = "button";
+        editButton.addEventListener("click", () => editAnnouncement(announcement));
+        deleteButton.addEventListener("click", () => archiveAnnouncement(announcement));
+        actions.append(editButton, deleteButton);
+
+        item.append(header, message, actions);
+        list.append(item);
+    });
+
+    announcementList.replaceChildren(list);
+}
+
+async function loadAnnouncements() {
+    const { data, error } = await supabase
+        .from("course_announcements")
+        .select("id, course_id, author_user_id, title, message, status, published_at, created_at, updated_at")
+        .eq("course_id", courseId)
+        .is("archived_at", null)
+        .order("updated_at", { ascending: false })
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        announcementList?.replaceChildren(createElement("p", "empty-state", "Announcements could not be loaded."));
+        setStatus(error.message || "Announcements could not be loaded.", "error");
+        return null;
+    }
+
+    loadedAnnouncements = data || [];
+    renderAnnouncements();
+    return loadedAnnouncements;
+}
+
+async function updateAnnouncementFromInline(announcement, titleValue, messageValue) {
+    const title = String(titleValue || "").trim();
+    const message = String(messageValue || "").trim();
+    const isPublished = announcement.status === "published";
+
+    if (!title || !message) {
+        setStatus("Enter an announcement title and message before saving.", "error");
+        return;
+    }
+
+    setStatus("Saving announcement...");
+
+    const { error } = await supabase
+        .from("course_announcements")
+        .update({
+            title,
+            message,
+            status: announcement.status,
+            published_at: isPublished ? announcement.published_at || new Date().toISOString() : null,
+        })
+        .eq("id", announcement.id);
+
+    if (error) {
+        setStatus(error.message || "Announcement could not be saved.", "error");
+        return;
+    }
+
+    editingAnnouncementId = "";
+    await loadAnnouncements();
+    setStatus("Announcement saved.", "success");
+}
+
+async function saveAnnouncement(status = "published") {
+    const { title, message } = getAnnouncementFormValues();
+    const isPublished = status === "published";
+
+    if (!title || !message) {
+        setStatus("Enter an announcement title and message before saving.", "error");
+        return;
+    }
+
+    setStatus(isPublished ? "Publishing announcement..." : "Saving announcement draft...");
+
+    const { error } = await supabase
+        .from("course_announcements")
+        .insert({
+            course_id: courseId,
+            author_user_id: currentProfile.id,
+            title,
+            message,
+            status,
+            published_at: isPublished ? new Date().toISOString() : null,
+        });
+
+    if (error) {
+        setStatus(error.message || "Announcement could not be saved.", "error");
+        return;
+    }
+
+    resetAnnouncementForm();
+    await loadAnnouncements();
+    setStatus(isPublished ? "Announcement published." : "Announcement draft saved.", "success");
+}
+
+async function publishAnnouncementDraft(announcementId) {
+    setStatus("Publishing announcement...");
+
+    const { error } = await supabase
+        .from("course_announcements")
+        .update({
+            status: "published",
+            published_at: new Date().toISOString(),
+        })
+        .eq("id", announcementId);
+
+    if (error) {
+        setStatus(error.message || "Announcement could not be published.", "error");
+        return;
+    }
+
+    await loadAnnouncements();
+    setStatus("Announcement published.", "success");
+}
+
+async function archiveAnnouncement(announcement) {
+    const confirmed = await confirmInApp({
+        title: "Delete announcement?",
+        message: `Delete "${announcement.title || "this announcement"}"?`,
+        confirmLabel: "Delete",
+        destructive: true,
+    });
+
+    if (!confirmed) {
+        return;
+    }
+
+    if (editingAnnouncementId === announcement.id) {
+        editingAnnouncementId = "";
+    }
+
+    setStatus("Deleting announcement...");
+
+    const { error } = await supabase
+        .from("course_announcements")
+        .delete()
+        .eq("id", announcement.id);
+
+    if (error) {
+        setStatus(error.message || "Announcement could not be deleted.", "error");
+        return;
+    }
+
+    await loadAnnouncements();
+    setStatus("Announcement deleted.", "success");
+}
+
+function resetCourseClassroomFormText() {
+    courseClassroomFormHeading.textContent = "Create class";
+    courseClassroomFormCopy.textContent = "Create one class period for this course. Students can join with the class code or invite link.";
+    courseClassroomSubmitButton.textContent = "Create class";
+}
+
+function toggleCourseClassroomForm(isOpen, classroom = null) {
+    courseClassroomForm.hidden = !isOpen;
+    addCourseClassroomButton.hidden = isOpen;
+
+    if (!isOpen) {
+        courseClassroomForm.reset();
+        courseClassroomForm.elements["classroom-id"].value = "";
+        resetCourseClassroomFormText();
+        return;
+    }
+
+    courseClassroomForm.reset();
+    courseClassroomForm.elements["classroom-id"].value = "";
+
+    if (classroom) {
+        courseClassroomForm.elements["classroom-id"].value = classroom.id;
+        courseClassroomForm.elements.name.value = classroom.name || "";
+        courseClassroomForm.elements.period_block.value = classroom.period_block || "";
+        courseClassroomForm.elements.school_year.value = classroom.school_year || "";
+        courseClassroomFormHeading.textContent = `Edit ${formatClassroomName(classroom)}`;
+        courseClassroomFormCopy.textContent = "Update the class name, period, or school year shown in the teacher workspace.";
+        courseClassroomSubmitButton.textContent = "Save class details";
+    } else {
+        resetCourseClassroomFormText();
+    }
+
+    courseClassroomForm.elements.name.focus();
+}
+
+function getCourseClassroomInsights(classroomId) {
+    return courseClassroomInsights.get(classroomId) || {
+        activeStudents: 0,
+        draftSubmissions: 0,
+        latestActivityAt: "",
+        submittedSubmissions: 0,
+    };
+}
+
+function createClassroomMetric(label, value) {
+    const metric = createElement("article", "class-hub-metric");
+
+    metric.append(
+        createElement("strong", "", value),
+        createElement("span", "", label)
+    );
+    return metric;
+}
+
+async function copyClassroomText(text, successMessage, fallbackPrefix) {
+    try {
+        await navigator.clipboard.writeText(text);
+        setStatus(successMessage, "success");
+    } catch (error) {
+        setStatus(`${fallbackPrefix}: ${text}`, "success");
+    }
+}
+
+async function generateCourseClassroomJoinCode(classroom) {
+    if (classroom.join_code) {
+        const confirmed = await confirmInApp({
+            title: "Replace join code?",
+            message: `Replace the join code for "${formatClassroomName(classroom)}"?`,
+            confirmLabel: "Replace code",
+        });
+
+        if (!confirmed) {
+            return;
+        }
+    }
+
+    const joinCode = createJoinCode();
+    setStatus("Generating join code...");
+
+    const { error } = await supabase
+        .from("classrooms")
+        .update({ join_code: joinCode })
+        .eq("id", classroom.id)
+        .eq("course_id", courseId);
+
+    if (error) {
+        setStatus(error.message || "Join code could not be generated.", "error");
+        return;
+    }
+
+    await loadCourseClassrooms();
+    setStatus(`Join code generated: ${joinCode}`, "success");
+}
+
+async function copyCourseClassroomInviteLink(classroom) {
+    let inviteToken = classroom.invite_token;
+
+    if (!inviteToken) {
+        inviteToken = createInviteToken();
+        setStatus("Creating invite link...");
+
+        const { error } = await supabase
+            .from("classrooms")
+            .update({ invite_token: inviteToken })
+            .eq("id", classroom.id)
+            .eq("course_id", courseId);
+
+        if (error) {
+            setStatus(error.message || "Invite link could not be created.", "error");
+            return;
+        }
+
+        await loadCourseClassrooms();
+    }
+
+    copyClassroomText(getClassroomInviteUrl(inviteToken), "Invite link copied.", "Copy this invite link");
+}
+
+async function toggleCourseClassroomJoining(classroom) {
+    const nextJoinState = !classroom.join_enabled;
+    setStatus(nextJoinState ? "Opening classroom joining..." : "Closing classroom joining...");
+
+    const { error } = await supabase
+        .from("classrooms")
+        .update({ join_enabled: nextJoinState })
+        .eq("id", classroom.id)
+        .eq("course_id", courseId);
+
+    if (error) {
+        setStatus(error.message || "Joining status could not be changed.", "error");
+        return;
+    }
+
+    await loadCourseClassrooms();
+    setStatus(nextJoinState ? "Classroom joining opened." : "Classroom joining closed.", "success");
+}
+
+async function archiveCourseClassroom(classroom) {
+    const confirmed = await confirmInApp({
+        title: "Archive classroom?",
+        message: `Archive "${formatClassroomName(classroom)}"? Students will not be able to join or submit new work.`,
+        confirmLabel: "Archive",
+    });
+
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus("Archiving classroom...");
+
+    const { error } = await supabase
+        .from("classrooms")
+        .update({ status: "archived", join_enabled: false })
+        .eq("id", classroom.id)
+        .eq("course_id", courseId);
+
+    if (error) {
+        setStatus(error.message || "The classroom could not be archived.", "error");
+        return;
+    }
+
+    toggleCourseClassroomForm(false);
+    await loadCourseClassrooms();
+    setStatus("Classroom archived.", "success");
+}
+
+async function deleteCourseClassroom(classroom) {
+    const confirmed = await confirmInApp({
+        title: "Delete classroom?",
+        message: `Delete "${formatClassroomName(classroom)}"?`,
+        confirmLabel: "Delete",
+        destructive: true,
+    });
+
+    if (!confirmed) {
+        return;
+    }
+
+    setStatus("Deleting classroom...");
+
+    const { error } = await supabase
+        .from("classrooms")
+        .update({ status: "deleted" })
+        .eq("id", classroom.id)
+        .eq("course_id", courseId);
+
+    if (error) {
+        setStatus(error.message || "The classroom could not be deleted.", "error");
+        return;
+    }
+
+    toggleCourseClassroomForm(false);
+    await loadCourseClassrooms();
+    setStatus("Classroom deleted.", "success");
+}
+
+function renderCourseClassrooms(classrooms = loadedCourseClassrooms) {
+    if (!courseClassroomList) {
+        return;
+    }
+
+    loadedCourseClassrooms = classrooms || [];
+
+    if (!loadedCourseClassrooms.length) {
+        courseClassroomList.replaceChildren(
+            createElement("p", "empty-state", "No classrooms are attached to this course yet.")
+        );
+        return;
+    }
+
+    const list = createElement("ul", "managed-classroom-list");
+
+    loadedCourseClassrooms.forEach((classroom) => {
+        const isArchived = classroom.status === "archived";
+        const insights = getCourseClassroomInsights(classroom.id);
+        const item = createElement("li", "managed-classroom-card");
+        const header = createElement("div", "class-hub-card-header");
+        const copy = createElement("div", "class-hub-card-copy");
+        const title = createElement("h3", "course-title", formatClassroomName(classroom));
+        const details = createElement(
+            "p",
+            "course-muted",
+            [classroom.school_year, isArchived ? "Archived" : classroom.join_enabled ? "Joining open" : "Joining closed"]
+                .filter(Boolean)
+                .join(" | ") || "Class details not set yet."
+        );
+        const badge = createElement("span", "badge badge--quiet", classroom.status || "active");
+        const metrics = createElement("div", "class-hub-metrics");
+        const access = createElement("div", "class-hub-access");
+        const actions = createElement("div", "managed-classroom-actions managed-classroom-actions--primary");
+        const settings = createElement("details", "managed-classroom-settings");
+        const settingsSummary = createElement("summary", "", "Class settings");
+        const settingsActions = createElement("div", "managed-classroom-settings-actions");
+        const editButton = createElement("button", "secondary-button lesson-action", "Edit details");
+        const joinButton = createElement("button", "secondary-button lesson-action", classroom.join_code ? "Copy join code" : "Generate join code");
+        const inviteButton = createElement("button", "secondary-button lesson-action", "Copy invite link");
+        const rosterLink = createElement("a", "primary-button lesson-action", "Open roster");
+        const reviewLink = createElement("a", "secondary-button lesson-action", "Review work");
+        const regenerateButton = createElement("button", "secondary-button lesson-action", "Regenerate code");
+        const archiveButton = createElement("button", "secondary-button lesson-action", "Archive");
+        const joinToggleButton = createElement("button", "secondary-button lesson-action", classroom.join_enabled ? "Close joining" : "Open joining");
+        const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete");
+
+        item.classList.toggle("managed-classroom-card--archived", isArchived);
+        copy.append(title, details);
+        header.append(copy, badge);
+        metrics.append(
+            createClassroomMetric("students", String(insights.activeStudents)),
+            createClassroomMetric("submitted", String(insights.submittedSubmissions)),
+            createClassroomMetric("drafts", String(insights.draftSubmissions)),
+            createClassroomMetric("latest activity", formatLatestClassroomActivity(insights.latestActivityAt))
+        );
+        access.append(
+            createElement("p", "managed-classroom-join-code", classroom.join_code ? `Join code: ${classroom.join_code}` : "No join code generated yet."),
+            createElement(
+                "p",
+                classroom.join_enabled && !isArchived ? "managed-classroom-join-state" : "managed-classroom-join-state managed-classroom-join-state--closed",
+                isArchived ? "Archived classes are view-only" : classroom.join_enabled ? "Students can join this class" : "Joining is closed"
+            ),
+            createElement("p", "managed-classroom-invite-state", classroom.invite_token ? "Invite link ready" : "No invite link created yet.")
+        );
+
+        editButton.type = "button";
+        editButton.disabled = isArchived;
+        editButton.addEventListener("click", () => toggleCourseClassroomForm(true, classroom));
+        joinButton.type = "button";
+        joinButton.disabled = isArchived;
+        joinButton.addEventListener("click", () => {
+            if (classroom.join_code) {
+                copyClassroomText(classroom.join_code, "Join code copied.", "Copy this join code");
+                return;
+            }
+
+            generateCourseClassroomJoinCode(classroom);
+        });
+        inviteButton.type = "button";
+        inviteButton.disabled = isArchived;
+        inviteButton.addEventListener("click", () => copyCourseClassroomInviteLink(classroom));
+        rosterLink.href = `../classrooms/roster.html?classroom=${encodeURIComponent(classroom.id)}`;
+        reviewLink.href = `../submissions/index.html?classroom=${encodeURIComponent(classroom.id)}`;
+        regenerateButton.type = "button";
+        regenerateButton.hidden = !classroom.join_code || isArchived;
+        regenerateButton.addEventListener("click", () => generateCourseClassroomJoinCode(classroom));
+        archiveButton.type = "button";
+        archiveButton.hidden = isArchived;
+        archiveButton.addEventListener("click", () => archiveCourseClassroom(classroom));
+        joinToggleButton.type = "button";
+        joinToggleButton.disabled = isArchived;
+        joinToggleButton.addEventListener("click", () => toggleCourseClassroomJoining(classroom));
+        deleteButton.type = "button";
+        deleteButton.addEventListener("click", () => deleteCourseClassroom(classroom));
+
+        actions.append(rosterLink, reviewLink, joinButton, inviteButton);
+        settingsActions.append(joinToggleButton, editButton, regenerateButton, archiveButton, deleteButton);
+        settings.append(settingsSummary, settingsActions);
+        item.append(header, metrics, access, actions, settings);
+        list.append(item);
+    });
+
+    courseClassroomList.replaceChildren(list);
+}
+
+async function loadCourseClassroomInsights(classrooms) {
+    const classroomIds = classrooms.map((classroom) => classroom.id);
+
+    courseClassroomInsights = new Map();
+    courseClassroomInsightsWarning = false;
+
+    if (!classroomIds.length) {
+        return;
+    }
+
+    const [enrollmentResult, submissionResult] = await Promise.all([
+        supabase
+            .from("enrollments")
+            .select("classroom_id, enrollment_status")
+            .in("classroom_id", classroomIds)
+            .eq("enrollment_type", "classroom"),
+        supabase
+            .from("lesson_submissions")
+            .select("classroom_id, status, submitted_at, updated_at")
+            .in("classroom_id", classroomIds),
+    ]);
+
+    if (enrollmentResult.error || submissionResult.error) {
+        courseClassroomInsightsWarning = true;
+        setStatus("Classrooms loaded, but roster/submission summaries could not be loaded.", "warning");
+        return;
+    }
+
+    classroomIds.forEach((classroomId) => {
+        courseClassroomInsights.set(classroomId, getCourseClassroomInsights(classroomId));
+    });
+
+    (enrollmentResult.data || []).forEach((enrollment) => {
+        const insights = getCourseClassroomInsights(enrollment.classroom_id);
+
+        if (enrollment.enrollment_status === "active") {
+            insights.activeStudents += 1;
+        }
+
+        courseClassroomInsights.set(enrollment.classroom_id, insights);
+    });
+
+    (submissionResult.data || []).forEach((submission) => {
+        const insights = getCourseClassroomInsights(submission.classroom_id);
+        const activityAt = submission.submitted_at || submission.updated_at;
+
+        if (submission.status === "submitted") {
+            insights.submittedSubmissions += 1;
+        }
+
+        if (submission.status === "draft") {
+            insights.draftSubmissions += 1;
+        }
+
+        if (activityAt && (!insights.latestActivityAt || new Date(activityAt) > new Date(insights.latestActivityAt))) {
+            insights.latestActivityAt = activityAt;
+        }
+
+        courseClassroomInsights.set(submission.classroom_id, insights);
+    });
+}
+
+async function loadCourseClassrooms() {
+    if (!courseClassroomList) {
+        return [];
+    }
+
+    const { data, error } = await supabase
+        .from("classrooms")
+        .select("id, name, period_block, school_year, status, display_order, join_code, join_enabled, invite_token, created_at")
+        .eq("course_id", courseId)
+        .neq("status", "deleted")
+        .order("display_order", { ascending: true })
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        courseClassroomList.replaceChildren(createElement("p", "empty-state", "Classrooms could not be loaded."));
+        setStatus(error.message || "Classroom information could not be loaded.", "error");
+        return null;
+    }
+
+    await loadCourseClassroomInsights(data || []);
+    renderCourseClassrooms(data || []);
+    return loadedCourseClassrooms;
+}
+
+async function handleCourseClassroomSubmit(event) {
+    event.preventDefault();
+
+    const formData = new FormData(courseClassroomForm);
+    const classroomId = String(formData.get("classroom-id") || "").trim();
+    const name = String(formData.get("name") || "").trim();
+    const periodBlock = String(formData.get("period_block") || "").trim();
+    const schoolYear = String(formData.get("school_year") || "").trim();
+    const nextDisplayOrder = loadedCourseClassrooms.reduce(
+        (highest, classroom) => Math.max(highest, Number(classroom.display_order) || 0),
+        -1
+    ) + 1;
+
+    if (!name) {
+        setStatus("Enter a classroom name before saving.", "error");
+        return;
+    }
+
+    setStatus(classroomId ? "Saving class details..." : "Creating class...");
+    courseClassroomSubmitButton.disabled = true;
+
+    const { error } = classroomId
+        ? await supabase
+            .from("classrooms")
+            .update({
+                name,
+                period_block: periodBlock || null,
+                school_year: schoolYear || null,
+            })
+            .eq("id", classroomId)
+            .eq("course_id", courseId)
+        : await supabase
+            .from("classrooms")
+            .insert({
+                course_id: courseId,
+                owner_teacher_id: currentProfile.id,
+                name,
+                period_block: periodBlock || null,
+                school_year: schoolYear || null,
+                display_order: nextDisplayOrder,
+            });
+
+    courseClassroomSubmitButton.disabled = false;
+
+    if (error) {
+        setStatus(error.message || `The class could not be ${classroomId ? "updated" : "created"}.`, "error");
+        return;
+    }
+
+    toggleCourseClassroomForm(false);
+    await loadCourseClassrooms();
+    setStatus(classroomId ? "Class details saved." : "Class created.", "success");
 }
 
 function getPublishingBlockers() {
@@ -1015,11 +1794,6 @@ function renderLessons(module, lessons, contentBlocks, questions) {
         const header = createElement("div", "lesson-card-header");
         const content = createElement("div");
         const title = createElement("h5", "lesson-title", lesson.title);
-        const objective = createElement(
-            "p",
-            "course-muted",
-            lesson.summary || lesson.objective || "No lesson overview added yet."
-        );
         const labelText = lesson.estimated_time
             ? `Lesson ${lesson.order_index + 1} | ${lesson.estimated_time}`
             : `Lesson ${lesson.order_index + 1}`;
@@ -1080,7 +1854,7 @@ function renderLessons(module, lessons, contentBlocks, questions) {
         deleteLessonButton.type = "button";
         deleteLessonButton.addEventListener("click", () => deleteLesson(lesson));
         metaRow.append(contentCount, questionCount, lockStatus);
-        content.append(title, objective, metaRow);
+        content.append(title, metaRow);
         lessonActionGroup.append(openLessonBuilderLink, toggleLessonLockButton, deleteLessonButton);
         headerActions.append(dragHint, label, lessonActionGroup);
         header.append(content, headerActions);
@@ -1330,8 +2104,10 @@ async function initializePage() {
     showContent();
     setActiveTab(getInitialTabName());
     const modules = await loadModules();
+    const announcements = await loadAnnouncements();
+    const classrooms = await loadCourseClassrooms();
 
-    if (modules) {
+    if (modules && announcements && classrooms && !courseClassroomInsightsWarning) {
         setStatus("");
     }
 }
@@ -1456,10 +2232,15 @@ tabButtons.forEach((button) => {
 });
 announcementForm.addEventListener("submit", (event) => {
     event.preventDefault();
+    saveAnnouncement("published");
 });
 saveAnnouncementDraftButton.addEventListener("click", () => {
-    setStatus("Announcement drafts are ready in the editor. Publishing storage will be connected next.", "info");
+    saveAnnouncement("draft");
 });
+cancelAnnouncementEditButton.addEventListener("click", resetAnnouncementForm);
+addCourseClassroomButton.addEventListener("click", () => toggleCourseClassroomForm(true));
+cancelCourseClassroomButton.addEventListener("click", () => toggleCourseClassroomForm(false));
+courseClassroomForm.addEventListener("submit", handleCourseClassroomSubmit);
 
 moduleForm.addEventListener("submit", async (event) => {
     event.preventDefault();

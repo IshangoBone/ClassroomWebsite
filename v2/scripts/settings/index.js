@@ -11,6 +11,7 @@ const cancelProfileEditButton = qs("[data-cancel-profile-edit-button]");
 const profileForm = qs("[data-settings-profile-form]");
 const avatarPreviewElement = qs("[data-settings-avatar-preview]");
 const profilePhotoInput = profileForm.elements["profile-photo"];
+const usernameInput = profileForm.elements.username;
 const profilePhotoPreview = qs("[data-settings-photo-preview]");
 const profilePhotoPreviewImage = qs("[data-settings-photo-preview-image]");
 const profilePhotoPreviewName = qs("[data-settings-photo-preview-name]");
@@ -19,10 +20,18 @@ const logoutButton = qs("[data-settings-logout-button]");
 const profilePhotoBucket = "profile-photos";
 const maxProfilePhotoSize = 10 * 1024 * 1024;
 const allowedProfilePhotoTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const usernamePattern = /^[A-Za-z0-9]{3,40}$/;
 
 let currentProfile = null;
 let currentEmail = "";
 let selectedProfilePhotoUrl = "";
+
+function keepUsernameAlphanumeric(input) {
+    const sanitized = String(input.value || "").replace(/[^A-Za-z0-9]/g, "");
+    if (input.value !== sanitized) {
+        input.value = sanitized;
+    }
+}
 
 function formatStatus(status) {
     return String(status || "active")
@@ -218,6 +227,11 @@ async function saveProfile(event) {
         return;
     }
 
+    if (!usernamePattern.test(profileUpdates.username)) {
+        setStatus("Username must be 3–40 characters and contain only letters and numbers.", "error");
+        return;
+    }
+
     if (profilePhotoError) {
         setStatus(profilePhotoError, "error");
         return;
@@ -256,6 +270,11 @@ async function saveProfile(event) {
 
     if (error?.code === "23505") {
         setStatus("That username is already in use. Choose another username.", "error");
+        return;
+    }
+
+    if (error?.code === "23514") {
+        setStatus("Username must contain only letters and numbers.", "error");
         return;
     }
 
@@ -348,6 +367,7 @@ profilePhotoInput.addEventListener("change", () => {
     setStatus(file ? "Profile photo ready to upload when you save." : "", "info");
 });
 profileForm.addEventListener("submit", saveProfile);
+usernameInput.addEventListener("input", () => keepUsernameAlphanumeric(usernameInput));
 resetButton.addEventListener("click", sendPasswordReset);
 logoutButton.addEventListener("click", logOut);
 initSettings();

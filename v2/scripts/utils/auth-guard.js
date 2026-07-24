@@ -22,6 +22,21 @@ function applyStatus(statusElement, message, tone = "error") {
     statusElement.dataset.tone = tone;
 }
 
+function includeNavigationProfileColumns(profileColumns) {
+    const navigationColumns = [
+        "username",
+        "legal_first_name",
+        "legal_last_name",
+        "email",
+    ];
+    const requestedColumns = String(profileColumns || "")
+        .split(",")
+        .map((column) => column.trim())
+        .filter(Boolean);
+
+    return [...new Set([...requestedColumns, ...navigationColumns])].join(", ");
+}
+
 export async function loadProtectedProfile({
     loginPath = "../auth/login.html",
     onboardingPath = "../auth/onboarding.html",
@@ -41,7 +56,7 @@ export async function loadProtectedProfile({
 
     const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select(profileColumns)
+        .select(includeNavigationProfileColumns(profileColumns))
         .eq("auth_user_id", authData.user.id)
         .maybeSingle();
 

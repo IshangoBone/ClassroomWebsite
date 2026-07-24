@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { getLessonOverview } from "../utils/lesson-metadata.js";
 import { notifyStatus } from "../utils/ui-components.js";
 
 const params = new URLSearchParams(window.location.search);
@@ -145,7 +146,7 @@ function createLessonCard(lesson, contentBlocks, questions) {
     const header = createElement("div", "lesson-card-header");
     const content = createElement("div");
     const title = createElement("h5", "lesson-title", lesson.title || "Untitled lesson");
-    const summary = createElement("p", "course-muted", lesson.summary || lesson.objective || "No student-facing overview added yet.");
+    const summary = createElement("p", "course-muted", getLessonOverview(lesson) || lesson.objective || "No student-facing overview added yet.");
     const metaRow = createElement("div", "badge-row lesson-meta-row");
     const actions = createElement("div", "lesson-header-actions");
     const lessonContent = contentBlocks.filter((contentBlock) => contentBlock.lesson_id === lesson.id);

@@ -1,6 +1,15 @@
 import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import {
+    filterHallPassesByStudent,
+    formatHallPassDateTime,
+    formatHallPassDuration,
+    getHallPassDestination,
+    getPassDurationSeconds,
+    readHallPassesForOwner,
+    summarizeHallPasses,
+} from "../utils/hall-pass-data.js";
 import { notifyStatus } from "../utils/ui-components.js";
 
 const params = new URLSearchParams(window.location.search);
@@ -13,6 +22,8 @@ const statusElement = qs("[data-student-status]");
 const shellElements = [...document.querySelectorAll("[data-student-shell]")];
 const summaryElement = qs("[data-student-summary]");
 const reviewStudentLink = qs("[data-review-student-link]");
+const hallPassSummaryElement = qs("[data-student-hall-pass-summary]");
+const hallPassListElement = qs("[data-student-hall-pass-list]");
 const workListElement = qs("[data-student-work-list]");
 
 function setStatus(message, tone = "info") {
@@ -229,6 +240,59 @@ function renderStudentWork(submissions, lessonNames) {
     workListElement.replaceChildren(list);
 }
 
+function createHallPassRow(pass) {
+    const item = createElement("article", "hall-pass-report-row");
+    const main = createElement("div", "hall-pass-report-row__main");
+    const status = pass.status === "active"
+        ? createElement("span", "badge", "Active")
+        : createElement("span", "badge badge--quiet", "Closed");
+
+    main.append(
+        createElement("strong", "", getHallPassDestination(pass)),
+        createElement("span", "course-muted", pass.pass_code || "No pass ID")
+    );
+    item.append(
+        main,
+        createElement("span", "course-muted", `Out: ${formatHallPassDateTime(pass.departure_time, "No time out")}`),
+        createElement(
+            "span",
+            "course-muted",
+            pass.status === "active"
+                ? `Elapsed: ${formatHallPassDuration(getPassDurationSeconds(pass))}`
+                : `Duration: ${formatHallPassDuration(getPassDurationSeconds(pass))}`
+        ),
+        status
+    );
+
+    return item;
+}
+
+function renderHallPassReport(profile, student) {
+    if (!hallPassSummaryElement || !hallPassListElement) {
+        return;
+    }
+
+    const passes = filterHallPassesByStudent(readHallPassesForOwner(profile.id), student.student_user_id);
+    const summary = summarizeHallPasses(passes);
+
+    hallPassSummaryElement.replaceChildren(
+        createSummaryCard("Total passes", String(summary.totalPasses)),
+        createSummaryCard("Active now", String(summary.activePasses)),
+        createSummaryCard("Average time", formatHallPassDuration(summary.averageDurationSeconds)),
+        createSummaryCard(
+            "Longest pass",
+            summary.longestPass ? formatHallPassDuration(getPassDurationSeconds(summary.longestPass)) : "None"
+        )
+    );
+
+    if (!passes.length) {
+        hallPassListElement.replaceChildren(createElement("p", "empty-state", "No hall passes have been logged for this student yet."));
+        return;
+    }
+
+    hallPassListElement.replaceChildren(...passes.slice(0, 10).map(createHallPassRow));
+}
+
 async function initializePage() {
     const profile = await loadCurrentProfile();
 
@@ -275,6 +339,7 @@ async function initializePage() {
     });
 
     renderSummary(student, submissions, lessonCount);
+    renderHallPassReport(profile, student);
     renderStudentWork(submissions, lessonNames);
     setStatus("");
 }

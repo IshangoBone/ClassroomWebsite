@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BrainKernl | Teacher Tools</title>
+    <link rel="stylesheet" href="../../styles/main.css?v=20260722-toolkit-planner-install" />
+</head>
+
+<body>
+    <main class="dashboard-layout toolkit-store-page">
+        <section class="dashboard-hero toolkit-store-hero" aria-labelledby="toolkit-store-heading">
+            <div>
+                <p class="eyebrow">Teacher Tools</p>
+                <h1 id="toolkit-store-heading">Teacher app store</h1>
+                <p class="intro">
+                    Add focused classroom tools to your teaching workspace and open installed apps from one place.
+                </p>
+            </div>
+            <div class="toolkit-store-hero__stats" aria-label="Teacher tools summary">
+                <span><strong data-toolkit-installed-count>0</strong> installed</span>
+                <span><strong data-toolkit-catalog-count>0</strong> in catalog</span>
+            </div>
+        </section>
+
+        <p class="auth-status dashboard-status" data-toolkit-status aria-live="polite">Loading teacher tools...</p>
+
+        <section class="dashboard-section dashboard-section--panel toolkit-store-section" aria-labelledby="installed-apps-heading">
+            <div class="section-header section-header--actions">
+                <div>
+                    <h2 id="installed-apps-heading">Available apps</h2>
+                    <p class="section-copy">Browse tools you can add to your BrainKernl classroom workflow.</p>
+                </div>
+                <span class="badge badge--quiet" data-toolkit-app-count>0 apps</span>
+            </div>
+            <div class="toolkit-store-toolbar" aria-label="Filter teacher apps">
+                <label class="sr-only" for="toolkit-search">Search apps</label>
+                <input id="toolkit-search" class="toolkit-store-search" type="search" placeholder="Search teacher tools" data-toolkit-search />
+                <div class="toolkit-store-categories" aria-label="App categories">
+                    <button class="toolkit-store-category toolkit-store-category--active" type="button" data-toolkit-category="All">All</button>
+                    <button class="toolkit-store-category" type="button" data-toolkit-category="Classroom operations">Classroom operations</button>
+                    <button class="toolkit-store-category" type="button" data-toolkit-category="Planning">Planning</button>
+                    <button class="toolkit-store-category" type="button" data-toolkit-category="Assessment">Assessment</button>
+                </div>
+            </div>
+            <div class="toolkit-store-grid" data-toolkit-app-list>
+                <p class="empty-state">Loading teacher apps...</p>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../scripts/tools/index.js?v=20260723-account-name"></script>
+</body>
+
+</html>

@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { formatStandardsAlignment, getLessonMetadata } from "../utils/lesson-metadata.js";
 import { notifyStatus } from "../utils/ui-components.js";
 
 document.body.classList.add("lesson-authoring-shell");
@@ -60,8 +61,9 @@ const authoringStatusElement = qs(".lesson-authoring-status");
 const authoringSaveStateElement = qs(".lesson-authoring-save-state");
 const canvasContextElement = qs("[data-canvas-context]");
 const canvasTitleElement = qs("[data-canvas-title]");
-const canvasObjectiveElement = qs("[data-canvas-objective]");
 const canvasOverviewElement = qs("[data-canvas-overview]");
+const canvasLearningTargetElement = qs("[data-canvas-learning-target]");
+const canvasStandardsElement = qs("[data-canvas-standards]");
 const canvasDurationElement = qs("[data-canvas-duration]");
 const activePageTitleElement = qs("[data-active-page-title]");
 const pageCounterElement = qs("[data-page-counter]");
@@ -69,12 +71,15 @@ const previousPageButton = qs("[data-previous-page]");
 const nextPageButton = qs("[data-next-page]");
 const createPageButton = qs("[data-create-page]");
 const deletePageButton = qs("[data-delete-page]");
+const toolboxElement = qs("#lesson-builder-toolbox");
+const toolboxOpenButton = qs("[data-toolbox-open]");
+const toolboxCloseButton = qs("[data-toolbox-close]");
+const toolboxBackdrop = qs("[data-toolbox-backdrop]");
 const lessonVisibilityState = qs("[data-lesson-visibility-state]");
 const lessonVisibilityToggle = qs("[data-lesson-visibility-toggle]");
 const correctAnswerField = qs("[data-correct-answer-field]");
 const responseRulesField = qs("[data-response-rules-field]");
 const questionOptionsField = qs("[data-question-options-field]");
-const textFormatButtons = [...document.querySelectorAll("[data-format-action]")];
 let loadedContentBlocks = [];
 let loadedQuestions = [];
 let loadedLessonPages = [];
@@ -122,6 +127,7 @@ const questionDefaultInstructions = {
 };
 const contentTypeLabels = {
     text: "Text section",
+    discussion: "Discussion board",
     flashcards: "Flashcards",
     link: "External link",
     youtube: "YouTube video",
@@ -140,8 +146,20 @@ const questionPhases = [
     ["reflection", "Reflection"],
 ];
 const lessonLayoutMarker = "__ctc_lesson_layout_v1__";
-const savedLayoutTemplates = new Set(["text", "wide", "image-text", "feature", "image", "columns", "gallery", "carousel", "divider", "spacer", "toc", "flashcards"]);
+const savedLayoutTemplates = new Set(["text", "wide", "image-text", "feature", "image", "columns", "gallery", "carousel", "divider", "spacer", "toc", "flashcards", "discussion"]);
 const inlineAutosaveTimers = new WeakMap();
+const dragAutoScrollEdge = 82;
+const dragAutoScrollMaxSpeed = 18;
+const builderActionIcons = {
+    edit: '<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>',
+    trash: '<path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path>',
+    unlink: '<path d="m18.84 12.25 1.42-1.42a4 4 0 0 0-5.66-5.66l-2.12 2.12"></path><path d="m5.17 11.75-1.42 1.42a4 4 0 0 0 5.66 5.66l2.12-2.12"></path><path d="m8 8 8 8"></path>',
+};
+let dragAutoScrollFrame = null;
+let dragAutoScrollSpeed = 0;
+let dragAutoScrollPointerY = null;
+let isReorderDragActive = false;
+let activeReorderDrag = null;
 
 function encodeLessonLayout(layout) {
     return `${lessonLayoutMarker}\n${JSON.stringify(layout)}`;
@@ -235,11 +253,16 @@ function showContent() {
 
 function buildDetailsList(lesson, module, course) {
     const list = createElement("dl", "course-classrooms");
+    const metadata = getLessonMetadata(lesson);
     const details = [
         ["Course", course.title || "Untitled course"],
         ["Module", module.title || "Untitled module"],
         ["Objective", lesson.objective || "No objective added yet."],
-        ["Overview", lesson.summary || "No lesson overview added yet."],
+        ["Overview", metadata.overview || "No lesson overview added yet."],
+        ["I Can", metadata.learningTarget || "No learning target added yet."],
+        ["Essential Question", metadata.essentialQuestion || "No essential question added yet."],
+        ["Standards", formatStandardsAlignment(metadata.standards) || "No standards alignment added yet."],
+        ["Instructional Strategy", metadata.instructionalStrategies.map((strategy) => strategy.name).join(", ") || "No instructional strategy added yet."],
         ["Estimated time", lesson.estimated_time || "Not set"],
     ];
 
@@ -256,10 +279,16 @@ function buildDetailsList(lesson, module, course) {
 }
 
 function formatContentBlockType(blockType) {
-    return ["file", "image", "audio", "link", "slides", "youtube", "flashcards"].includes(blockType) ? blockType : "text";
+    return ["file", "image", "audio", "link", "slides", "youtube", "flashcards", "discussion"].includes(blockType) ? blockType : "text";
 }
 
 function getContentBlockFormType(contentBlock) {
+    const layout = decodeLessonLayout(contentBlock.body_text || "");
+
+    if (layout?.type === "discussion") {
+        return "discussion";
+    }
+
     if (contentBlock.file_type === "image" || contentBlock.block_type === "image") {
         return "image";
     }
@@ -272,7 +301,7 @@ function getContentBlockFormType(contentBlock) {
 }
 
 function getStoredBlockType(formBlockType) {
-    if (formBlockType === "flashcards") {
+    if (formBlockType === "flashcards" || formBlockType === "discussion") {
         return "text";
     }
 
@@ -286,6 +315,10 @@ function getDefaultContentBlockTitle(contentBlock) {
 
     if (contentBlock.block_type === "text") {
         const layout = decodeLessonLayout(contentBlock.body_text || "");
+
+        if (layout?.type === "discussion") {
+            return "Discussion board";
+        }
 
         if (layout?.type === "flashcards") {
             return "Flashcards";
@@ -306,6 +339,10 @@ function getDefaultContentBlockTitle(contentBlock) {
         return "External link";
     }
 
+    if (contentBlock.block_type === "discussion") {
+        return "Discussion board";
+    }
+
     if (contentBlock.file_type === "image") {
         return "Image resource";
     }
@@ -315,6 +352,34 @@ function getDefaultContentBlockTitle(contentBlock) {
     }
 
     return "File resource";
+}
+
+function isDiscussionContentBlock(contentBlock) {
+    return contentBlock.block_type === "discussion" || decodeLessonLayout(contentBlock.body_text || "")?.type === "discussion";
+}
+
+function getDiscussionDetails(contentBlock) {
+    const layout = decodeLessonLayout(contentBlock.body_text || "");
+
+    if (layout?.type === "discussion") {
+        return layout.bodyText || layout.body || "";
+    }
+
+    return contentBlock.body_text || "";
+}
+
+function getContentBlockEditableBody(contentBlock) {
+    if (isDiscussionContentBlock(contentBlock)) {
+        return getDiscussionDetails(contentBlock);
+    }
+
+    const layout = decodeLessonLayout(contentBlock.body_text || "");
+
+    if (layout && typeof layout === "object") {
+        return layout.bodyText || layout.body || "";
+    }
+
+    return contentBlock.body_text || "";
 }
 
 function isImageContentBlock(contentBlock) {
@@ -433,39 +498,6 @@ function getSelectedLessonResource(resourceId) {
     return loadedLessonResources.find((resource) => resource.id === resourceId) || null;
 }
 
-function insertTextFormatting(action) {
-    const textarea = contentBlockForm.elements["body-text"];
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = textarea.value.slice(start, end);
-    const before = textarea.value.slice(0, start);
-    const after = textarea.value.slice(end);
-    const leadingBreak = before && !before.endsWith("\n") ? "\n" : "";
-    const trailingBreak = after && !after.startsWith("\n") ? "\n" : "";
-    let replacement = "";
-
-    if (action === "heading") {
-        replacement = `${leadingBreak}## ${selectedText || "Heading"}${trailingBreak}`;
-    } else if (action === "bold") {
-        replacement = `**${selectedText || "bold text"}**`;
-    } else if (action === "bullet") {
-        const lines = (selectedText || "First point\nSecond point")
-            .split("\n")
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .map((line) => `- ${line}`)
-            .join("\n");
-
-        replacement = `${leadingBreak}${lines}${trailingBreak}`;
-    } else if (action === "link") {
-        replacement = `[${selectedText || "link text"}](https://example.com)`;
-    }
-
-    textarea.value = `${before}${replacement}${after}`;
-    textarea.focus();
-    textarea.setSelectionRange(start, start + replacement.length);
-}
-
 function getDragAfterElement(container, y, itemClass, draggingClass) {
     const draggableElements = [...container.children].filter((child) => {
         return child.classList.contains(itemClass) && !child.classList.contains(draggingClass);
@@ -484,6 +516,124 @@ function getDragAfterElement(container, y, itemClass, draggingClass) {
         },
         { offset: Number.NEGATIVE_INFINITY, element: null }
     ).element;
+}
+
+function placeDraggingItemFromPointer(container, y, itemClass, draggingClass) {
+    const draggingItem = container.querySelector(`.${draggingClass}`);
+
+    if (!draggingItem) {
+        return;
+    }
+
+    const afterElement = getDragAfterElement(container, y, itemClass, draggingClass);
+
+    if (afterElement) {
+        container.insertBefore(draggingItem, afterElement);
+    } else {
+        container.append(draggingItem);
+    }
+}
+
+function stopDragAutoScroll() {
+    if (dragAutoScrollFrame) {
+        window.cancelAnimationFrame(dragAutoScrollFrame);
+    }
+
+    dragAutoScrollFrame = null;
+    dragAutoScrollSpeed = 0;
+    dragAutoScrollPointerY = null;
+}
+
+function runDragAutoScroll() {
+    if (!isReorderDragActive || !dragAutoScrollSpeed || dragAutoScrollPointerY === null) {
+        dragAutoScrollFrame = null;
+        dragAutoScrollSpeed = 0;
+        return;
+    }
+
+    window.scrollBy({ top: dragAutoScrollSpeed, behavior: "auto" });
+
+    if (activeReorderDrag) {
+        placeDraggingItemFromPointer(
+            activeReorderDrag.list,
+            dragAutoScrollPointerY,
+            activeReorderDrag.itemClass,
+            activeReorderDrag.draggingClass
+        );
+    }
+
+    dragAutoScrollFrame = window.requestAnimationFrame(runDragAutoScroll);
+}
+
+function updateDragAutoScroll(clientY) {
+    const viewportHeight = window.innerHeight;
+    let nextSpeed = 0;
+
+    if (clientY < 0 || clientY > viewportHeight) {
+        stopDragAutoScroll();
+        return;
+    }
+
+    dragAutoScrollPointerY = clientY;
+
+    if (clientY <= dragAutoScrollEdge) {
+        const strength = (dragAutoScrollEdge - clientY) / dragAutoScrollEdge;
+        nextSpeed = -Math.max(6, Math.round(strength * dragAutoScrollMaxSpeed));
+    } else if (clientY >= viewportHeight - dragAutoScrollEdge) {
+        const strength = (clientY - (viewportHeight - dragAutoScrollEdge)) / dragAutoScrollEdge;
+        nextSpeed = Math.max(6, Math.round(strength * dragAutoScrollMaxSpeed));
+    }
+
+    dragAutoScrollSpeed = nextSpeed;
+
+    if (nextSpeed && !dragAutoScrollFrame) {
+        dragAutoScrollFrame = window.requestAnimationFrame(runDragAutoScroll);
+    } else if (!nextSpeed) {
+        stopDragAutoScroll();
+    }
+}
+
+function handleReorderDragOver(event) {
+    if (!isReorderDragActive) {
+        return;
+    }
+
+    event.preventDefault();
+    updateDragAutoScroll(event.clientY);
+
+    if (activeReorderDrag) {
+        placeDraggingItemFromPointer(
+            activeReorderDrag.list,
+            event.clientY,
+            activeReorderDrag.itemClass,
+            activeReorderDrag.draggingClass
+        );
+    }
+}
+
+function startReorderDrag(options = null) {
+    if (isReorderDragActive) {
+        stopReorderDrag();
+    }
+
+    activeReorderDrag = options;
+    isReorderDragActive = true;
+    document.addEventListener("dragover", handleReorderDragOver);
+    document.addEventListener("dragend", stopReorderDrag);
+    document.addEventListener("drop", stopReorderDrag);
+}
+
+function stopReorderDrag() {
+    if (!isReorderDragActive) {
+        return;
+    }
+
+    isReorderDragActive = false;
+    activeReorderDrag = null;
+    document.removeEventListener("dragover", handleReorderDragOver);
+    document.removeEventListener("dragend", stopReorderDrag);
+    document.removeEventListener("drop", stopReorderDrag);
+    stopDragAutoScroll();
 }
 
 function setToolButtonState(buttons, activeValue) {
@@ -507,6 +657,23 @@ function activateToolTab(tabName = "lesson-inserts") {
     toolPanels.forEach((panel) => {
         panel.hidden = panel.dataset.toolPanel !== tabName;
     });
+}
+
+function setToolboxDrawerOpen(isOpen, { returnFocus = true } = {}) {
+    if (!toolboxElement || !toolboxOpenButton || !toolboxBackdrop) {
+        return;
+    }
+
+    toolboxElement.classList.toggle("is-open", isOpen);
+    toolboxOpenButton.setAttribute("aria-expanded", String(isOpen));
+    toolboxBackdrop.hidden = !isOpen;
+    document.body.classList.toggle("lesson-toolbox-drawer-open", isOpen);
+
+    if (isOpen) {
+        toolboxCloseButton?.focus();
+    } else if (returnFocus) {
+        toolboxOpenButton.focus();
+    }
 }
 
 function focusEditor(editorId) {
@@ -580,6 +747,29 @@ function openBuilderTool(toolType, value) {
     if (toolType === "question") {
         openQuestionTool(value);
     }
+}
+
+function createBuilderActionIcon(name) {
+    const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+
+    icon.setAttribute("viewBox", "0 0 24 24");
+    icon.setAttribute("aria-hidden", "true");
+    icon.setAttribute("focusable", "false");
+    icon.innerHTML = builderActionIcons[name] || "";
+
+    return icon;
+}
+
+function createBuilderIconButton(iconName, label, modifiers = []) {
+    const modifierClasses = modifiers.map((modifier) => ` module-icon-button--${modifier}`).join("");
+    const button = createElement("button", `module-icon-button${modifierClasses}`);
+
+    button.type = "button";
+    button.setAttribute("aria-label", label);
+    button.dataset.tooltip = label;
+    button.append(createBuilderActionIcon(iconName));
+
+    return button;
 }
 
 function makeEditableText(className, placeholder, tagName = "div") {
@@ -919,8 +1109,8 @@ function createInlineTextStack(titlePlaceholder = "Click to edit text", bodyPlac
 }
 
 function getNextContentOrderIndex() {
-    return getActiveContentBlocks().reduce(
-        (highest, contentBlock) => Math.max(highest, Number(contentBlock.order_index || 0)),
+    return getActivePageItems().reduce(
+        (highest, pageItem) => Math.max(highest, Number(pageItem.order_index || 0)),
         -1
     ) + 1;
 }
@@ -967,6 +1157,34 @@ function getActiveQuestions() {
         .sort((first, second) => first.order_index - second.order_index);
 }
 
+function getActivePageItems() {
+    const contentItems = getActiveContentBlocks().map((contentBlock) => ({
+        type: "content",
+        id: contentBlock.id,
+        order_index: Number(contentBlock.order_index || 0),
+        item: contentBlock,
+    }));
+    const questionItems = getActiveQuestions().map((question) => ({
+        type: "question",
+        id: question.id,
+        order_index: Number(question.order_index || 0),
+        item: question,
+    }));
+    const typePriority = { question: 0, content: 1 };
+
+    return [...contentItems, ...questionItems].sort((first, second) => {
+        if (first.order_index !== second.order_index) {
+            return first.order_index - second.order_index;
+        }
+
+        return typePriority[first.type] - typePriority[second.type];
+    });
+}
+
+function getPageItemKey(pageItem) {
+    return `${pageItem.type}:${pageItem.id}`;
+}
+
 function renderActiveLessonPage() {
     const pages = getSortedLessonPages();
     const activePage = getActiveLessonPage();
@@ -1000,9 +1218,12 @@ function renderActiveLessonPage() {
         deletePageButton.title = lessonPagesEnabled ? "" : "Apply the lesson pages migration to delete pages.";
     }
 
-    renderContentBlocks(getActiveContentBlocks());
+    renderContentBlocks(getActivePageItems());
     renderQuestions(getActiveQuestions());
-    renderQuestionPreview(getActiveQuestions());
+    questionPreview?.replaceChildren();
+    if (questionPreview) {
+        questionPreview.hidden = true;
+    }
 }
 
 function getFileTypeForInlineUpload(file, requestedType) {
@@ -1947,7 +2168,8 @@ function createInlineDraftBlock(button, existingContentBlock = null) {
 
 function setContentBlockFormMode(blockType) {
     const normalizedBlockType = formatContentBlockType(blockType);
-    const isText = normalizedBlockType === "text";
+    const isText = normalizedBlockType === "text" || normalizedBlockType === "discussion";
+    const isDiscussion = normalizedBlockType === "discussion";
     const isSlides = normalizedBlockType === "slides";
     const isYoutube = normalizedBlockType === "youtube";
     const isImage = normalizedBlockType === "image";
@@ -1970,7 +2192,15 @@ function setContentBlockFormMode(blockType) {
         contentBlockForm.elements["file-type"].value = "audio";
     }
     contentBlockForm.elements["file-type"].disabled = isAudio;
-    contentTitleInput.placeholder = isText ? "What is a computer?" : isYoutube ? "Video title" : isAudio ? "Audio title" : "Resource title";
+    textContentField.querySelector("span").textContent = isDiscussion ? "Discussion details" : "Section text";
+    contentBlockForm.elements["body-text"].placeholder = isDiscussion
+        ? "Write the prompt, expectations, and response directions for this discussion board."
+        : "Write the text students should see on this part of the page.";
+    contentTitleInput.placeholder = isDiscussion
+        ? "Discussion topic"
+        : isText
+            ? "What is a computer?"
+            : isYoutube ? "Video title" : isAudio ? "Audio title" : "Resource title";
     urlContentLabel.textContent = isYoutube
         ? "YouTube URL"
         : isSlides
@@ -2124,6 +2354,10 @@ async function linkLessonResource(fileRecord, contentBlockId) {
 }
 
 function getContentBlockTypeLabel(contentBlock) {
+    if (isDiscussionContentBlock(contentBlock)) {
+        return contentBlock.is_visible ? "Discussion" : "Draft discussion";
+    }
+
     if (contentBlock.block_type === "file" && contentBlock.file_type === "image") {
         return contentBlock.is_visible ? "Image" : "Draft image";
     }
@@ -2177,7 +2411,7 @@ function editContentBlock(contentBlock) {
     showBuilderEditor(contentEditorCard);
     contentBlockForm.elements["content-block-id"].value = contentBlock.id;
     contentBlockForm.elements.title.value = contentBlock.title || "";
-    contentBlockForm.elements["body-text"].value = contentBlock.body_text || "";
+    contentBlockForm.elements["body-text"].value = getContentBlockEditableBody(contentBlock);
     contentBlockForm.elements["content-url"].value = contentBlock.file_resource ? "" : contentBlock.file_url || contentBlock.external_url || "";
     contentBlockForm.elements["file-type"].value = contentBlock.file_type || "pdf";
     populateResourceLibrary(blockType, contentBlock.file_resource?.id || "");
@@ -2291,24 +2525,41 @@ async function moveContentBlock(contentBlock, direction) {
 }
 
 async function saveContentBlockOrder(list) {
-    const orderedIds = [...list.children].map((child) => child.dataset.contentBlockId).filter(Boolean);
-    const updates = orderedIds
-        .map((id, orderIndex) => ({ id, order_index: orderIndex }))
-        .filter((update) => {
+    const orderedItems = [...list.children]
+        .map((child, orderIndex) => {
+            const [type, id] = String(child.dataset.pageItemKey || "").split(":");
+
+            return type && id ? { type, id, order_index: orderIndex } : null;
+        })
+        .filter(Boolean);
+    const updates = orderedItems.filter((update) => {
+        if (update.type === "content") {
             const contentBlock = loadedContentBlocks.find((currentBlock) => currentBlock.id === update.id);
+
             return contentBlock && contentBlock.order_index !== update.order_index;
-        });
+        }
+
+        if (update.type === "question") {
+            const question = loadedQuestions.find((currentQuestion) => currentQuestion.id === update.id);
+
+            return question && question.order_index !== update.order_index;
+        }
+
+        return false;
+    });
 
     if (!updates.length) {
         return;
     }
 
-    setStatus("Saving lesson content order...");
+    setStatus("Saving lesson flow order...");
 
     const results = await Promise.all(
         updates.map((update) => {
+            const table = update.type === "question" ? "questions" : "lesson_content_blocks";
+
             return supabase
-                .from("lesson_content_blocks")
+                .from(table)
                 .update({ order_index: update.order_index })
                 .eq("id", update.id)
                 .eq("lesson_id", lessonId);
@@ -2317,17 +2568,24 @@ async function saveContentBlockOrder(list) {
     const failedUpdate = results.find((result) => result.error);
 
     if (failedUpdate) {
-        setStatus(failedUpdate.error.message || "The lesson content order could not be saved.", "error");
-        await loadContentBlocks();
+        setStatus(failedUpdate.error.message || "The lesson flow order could not be saved.", "error");
+        await Promise.all([loadContentBlocks({ render: false }), loadQuestions({ render: false })]);
+        renderActiveLessonPage();
         return;
     }
 
     loadedContentBlocks = loadedContentBlocks.map((contentBlock) => {
-        const orderIndex = orderedIds.indexOf(contentBlock.id);
-        return orderIndex === -1 ? contentBlock : { ...contentBlock, order_index: orderIndex };
+        const update = orderedItems.find((currentItem) => currentItem.type === "content" && currentItem.id === contentBlock.id);
+
+        return update ? { ...contentBlock, order_index: update.order_index } : contentBlock;
+    });
+    loadedQuestions = loadedQuestions.map((question) => {
+        const update = orderedItems.find((currentItem) => currentItem.type === "question" && currentItem.id === question.id);
+
+        return update ? { ...question, order_index: update.order_index } : question;
     });
     renderActiveLessonPage();
-    setStatus("Lesson content order saved.", "success");
+    setStatus("Lesson flow order saved.", "success");
 }
 
 function updateLessonVisibilityControls() {
@@ -2924,72 +3182,210 @@ function createSavedEmbedPreview(contentBlock, contentUrl) {
     return wrapper;
 }
 
-function renderContentBlocks(contentBlocks) {
-    if (!contentBlocks.length) {
+function createDiscussionBoardPreview(contentBlock) {
+    const wrapper = createElement("div", "lesson-discussion-board lesson-discussion-board--preview");
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    const copy = createElement("div", "lesson-discussion-copy");
+
+    details.className = "lesson-discussion-details";
+    summary.className = "lesson-discussion-summary";
+    summary.append(
+        createElement("span", "lesson-discussion-icon", "Discuss"),
+        createElement("span", "lesson-discussion-summary-title", contentBlock.title || "Discussion topic"),
+        createElement("span", "lesson-discussion-summary-meta", "Discussion board")
+    );
+    copy.append(createElement("p", "", contentBlock.body_text || "Add discussion details for students."));
+    details.append(
+        summary,
+        copy,
+        createElement("div", "lesson-discussion-composer lesson-discussion-composer--preview", "Students will open the board, post responses, and read class replies.")
+    );
+    wrapper.append(
+        details
+    );
+    return wrapper;
+}
+
+function attachLessonFlowDragHandlers(item, list, pageItemKey, setSavedDropOrder) {
+    item.draggable = true;
+    item.dataset.pageItemKey = pageItemKey;
+    item.addEventListener("dragstart", (event) => {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", pageItemKey);
+        setSavedDropOrder(false);
+        startReorderDrag({
+            list,
+            itemClass: "lesson-flow-card",
+            draggingClass: "lesson-flow-card--dragging",
+        });
+        item.classList.add("lesson-flow-card--dragging");
+    });
+    item.addEventListener("dragend", async () => {
+        stopReorderDrag();
+        item.classList.remove("lesson-flow-card--dragging");
+        if (!item.dataset.savedDropOrder) {
+            await saveContentBlockOrder(list);
+        }
+        delete item.dataset.savedDropOrder;
+    });
+}
+
+function createQuestionPreviewCard(question, list, pageItemKey, setSavedDropOrder) {
+    const card = createElement("li", "question-card lesson-flow-card");
+    const prompt = createElement("h4", "question-prompt", question.prompt);
+    const responseType = question.question_type || "short_response";
+    const typeLabel = createElement("span", "badge badge--quiet", questionTypeLabels[responseType] || "Question");
+    const requiredLabel = createElement("span", "badge badge--quiet", question.is_required ? "Required" : "Optional");
+    const cardHeader = createElement("div", "question-card-header");
+    const instructions = createElement(
+        "p",
+        "course-muted question-instructions",
+        question.student_instructions || "Answer in your own words."
+    );
+    const actions = createElement("div", "content-block-card-controls");
+    const dragHint = createElement("span", "content-block-drag-hint", "Drag to reorder");
+    const editButton = createBuilderIconButton("edit", "Edit question");
+    const deleteButton = createBuilderIconButton("trash", "Delete question", ["danger"]);
+
+    card.dataset.questionId = question.id;
+    attachLessonFlowDragHandlers(card, list, pageItemKey, setSavedDropOrder);
+    editButton.addEventListener("click", () => editQuestion(question));
+    deleteButton.addEventListener("click", () => deleteQuestion(question));
+    cardHeader.append(prompt, typeLabel);
+    actions.append(dragHint, editButton, deleteButton);
+    card.append(cardHeader, requiredLabel, instructions);
+
+    if (responseType === "multiple_choice" || responseType === "select_all_that_apply") {
+        const options = getQuestionOptions(question);
+        const fieldset = createElement("fieldset", "question-preview-options");
+        const legend = createElement("legend", "screen-reader-only", "Answer choices");
+
+        fieldset.append(legend);
+        if (!options.length) {
+            fieldset.append(createElement("p", "empty-state empty-state--compact", "Answer choices will appear here after options are added."));
+        }
+        options.forEach((option) => {
+            const label = createElement("label", "question-preview-option");
+            const input = document.createElement("input");
+
+            input.type = responseType === "multiple_choice" ? "radio" : "checkbox";
+            input.disabled = true;
+            label.append(input, createElement("span", "", option.option_text));
+            fieldset.append(label);
+        });
+        card.append(fieldset);
+    } else if (responseType === "true_false") {
+        const fieldset = createElement("fieldset", "question-preview-options");
+        const legend = createElement("legend", "screen-reader-only", "True or false answer choices");
+
+        fieldset.append(legend);
+        ["True", "False"].forEach((option) => {
+            const label = createElement("label", "question-preview-option");
+            const input = document.createElement("input");
+
+            input.type = "radio";
+            input.disabled = true;
+            label.append(input, createElement("span", "", option));
+            fieldset.append(label);
+        });
+        card.append(fieldset);
+    } else if (responseType === "code_space") {
+        card.append(createElement("div", "lesson-code-space-preview", "Code space"));
+    } else {
+        const response = responseType === "fill_in_the_blank"
+            ? document.createElement("input")
+            : createElement("textarea", "question-preview-response", "");
+
+        response.className = responseType === "fill_in_the_blank" ? "question-preview-blank" : "question-preview-response";
+        response.placeholder = question.hint ? `Hint: ${question.hint}` : "Student response";
+        response.disabled = true;
+        if (response.tagName === "TEXTAREA") {
+            response.rows = responseType === "long_response" ? 5 : 3;
+        }
+        card.append(response);
+    }
+
+    card.append(actions);
+    return card;
+}
+
+function renderContentBlocks(pageItems) {
+    if (!pageItems.length) {
         contentBlockList.replaceChildren(
-            createElement("p", "empty-state lesson-page-empty", "Start with a content block or insert item from the panel.")
+            createElement("p", "empty-state lesson-page-empty", "Start with a lesson insert or data collection tool from the panel.")
         );
         updateLessonVisibilityControls();
         return;
     }
 
-    const list = createElement("ol", "content-block-list");
+    const list = createElement("ol", "content-block-list lesson-flow-list");
+    let savedDropOrder = false;
+    const setSavedDropOrder = (value) => {
+        savedDropOrder = value;
+        list.querySelectorAll("[data-page-item-key]").forEach((item) => {
+            if (value) {
+                item.dataset.savedDropOrder = "true";
+            } else {
+                delete item.dataset.savedDropOrder;
+            }
+        });
+    };
 
     list.addEventListener("dragover", (event) => {
         event.preventDefault();
+        placeDraggingItemFromPointer(list, event.clientY, "lesson-flow-card", "lesson-flow-card--dragging");
+    });
 
-        const draggingItem = list.querySelector(".content-block-card--dragging");
+    list.addEventListener("drop", async (event) => {
+        event.preventDefault();
+        placeDraggingItemFromPointer(list, event.clientY, "lesson-flow-card", "lesson-flow-card--dragging");
+        stopReorderDrag();
+        setSavedDropOrder(true);
+        await saveContentBlockOrder(list);
+    });
 
-        if (!draggingItem) {
+    pageItems.forEach((pageItem) => {
+        if (pageItem.type === "question") {
+            list.append(createQuestionPreviewCard(pageItem.item, list, getPageItemKey(pageItem), setSavedDropOrder));
             return;
         }
 
-        const afterElement = getDragAfterElement(list, event.clientY, "content-block-card", "content-block-card--dragging");
-
-        if (afterElement) {
-            list.insertBefore(draggingItem, afterElement);
-        } else {
-            list.append(draggingItem);
-        }
-    });
-
-    contentBlocks.forEach((contentBlock, index) => {
-        const item = createElement("li", "content-block-card");
+        const contentBlock = pageItem.item;
+        const item = createElement("li", "content-block-card lesson-flow-card");
+        const header = createElement("div", "content-block-card-header");
+        const titleGroup = createElement("div", "content-block-title-group");
         const title = createElement("h3", "content-block-title", getDefaultContentBlockTitle(contentBlock));
-        const label = createElement("span", "badge badge--quiet", `${getContentBlockTypeLabel(contentBlock)} ${contentBlock.order_index + 1}`);
+        const label = createElement("span", "badge badge--quiet", `${getContentBlockTypeLabel(contentBlock)} ${pageItem.order_index + 1}`);
         const contentUrl = contentBlock.display_url || contentBlock.file_url || contentBlock.external_url || "";
         const isImageResource = isImageContentBlock(contentBlock);
         const isEmbedResource = ["youtube", "slides"].includes(contentBlock.block_type);
+        const isDiscussionBlock = isDiscussionContentBlock(contentBlock);
         const attachedResource = contentBlock.file_resource;
-        const contentPreview = isEmbedResource
+        const contentPreview = isEmbedResource || isDiscussionBlock
             ? createElement("div", "course-muted content-block-body")
             : ["file", "image", "link"].includes(contentBlock.block_type)
                 ? createElement("a", "course-muted content-block-body", contentUrl)
             : createElement("p", "course-muted content-block-body", contentBlock.body_text || "");
-        const moveUpButton = createElement("button", "secondary-button lesson-action", "Move up");
-        const moveDownButton = createElement("button", "secondary-button lesson-action", "Move down");
-        const editButton = createElement("button", "secondary-button lesson-action", "Edit content");
-        const removeFileButton = createElement("button", "secondary-button destructive-button lesson-action", "Remove file");
-        const deleteButton = createElement("button", "secondary-button destructive-button lesson-action", "Delete content");
-        const actions = createElement("div", "content-block-actions");
+        const actions = createElement("div", "content-block-card-controls");
         const dragHint = createElement("span", "content-block-drag-hint", "Drag to reorder");
+        const editButton = createBuilderIconButton("edit", "Edit content");
+        const removeFileButton = createBuilderIconButton("unlink", "Remove file", ["danger"]);
+        const deleteButton = createBuilderIconButton("trash", "Delete content", ["danger"]);
         const layout = contentBlock.layout;
 
-        item.draggable = true;
         item.dataset.contentBlockId = contentBlock.id;
+        item.dataset.pageItemKey = getPageItemKey(pageItem);
         if (isImageResource || layout || isEmbedResource) {
             item.classList.add("content-block-card--layout");
         }
-        item.addEventListener("dragstart", (event) => {
-            event.dataTransfer.effectAllowed = "move";
-            event.dataTransfer.setData("text/plain", contentBlock.id);
-            item.classList.add("content-block-card--dragging");
-        });
-        item.addEventListener("dragend", async () => {
-            item.classList.remove("content-block-card--dragging");
-            await saveContentBlockOrder(list);
-        });
-        if (layout) {
+        attachLessonFlowDragHandlers(item, list, getPageItemKey(pageItem), setSavedDropOrder);
+        if (isDiscussionBlock) {
+            contentPreview.replaceChildren(createDiscussionBoardPreview({
+                ...contentBlock,
+                body_text: getDiscussionDetails(contentBlock),
+            }));
+        } else if (layout) {
             contentPreview.replaceChildren(createSavedLayoutPreview(layout));
         } else if (isEmbedResource && contentUrl) {
             const embedPreview = createSavedEmbedPreview(contentBlock, contentUrl);
@@ -3029,13 +3425,6 @@ function renderContentBlocks(contentBlocks) {
             }
         }
 
-        moveUpButton.type = "button";
-        moveUpButton.disabled = index === 0;
-        moveUpButton.addEventListener("click", () => moveContentBlock(contentBlock, "up"));
-        moveDownButton.type = "button";
-        moveDownButton.disabled = index === contentBlocks.length - 1;
-        moveDownButton.addEventListener("click", () => moveContentBlock(contentBlock, "down"));
-        editButton.type = "button";
         editButton.addEventListener("click", () => {
             if (layout?.type === "flashcards") {
                 editFlashcardContentBlock(contentBlock);
@@ -3044,16 +3433,16 @@ function renderContentBlocks(contentBlocks) {
 
             editContentBlock(contentBlock);
         });
-        removeFileButton.type = "button";
         removeFileButton.addEventListener("click", () => removeFileFromContentBlock(contentBlock));
-        deleteButton.type = "button";
         deleteButton.addEventListener("click", () => deleteContentBlock(contentBlock));
-        actions.append(dragHint, moveUpButton, moveDownButton, editButton);
+        titleGroup.append(title, label);
+        actions.append(dragHint, editButton);
         if (contentBlock.block_type === "file" && contentUrl) {
             actions.append(removeFileButton);
         }
         actions.append(deleteButton);
-        item.append(title, label, contentPreview, actions);
+        header.append(titleGroup, actions);
+        item.append(header, contentPreview);
         list.append(item);
     });
 
@@ -3717,6 +4106,7 @@ async function initializePage() {
 
     currentLessonContext = context;
     const { lesson, module, course } = context;
+    const lessonMetadata = getLessonMetadata(lesson);
     lessonIsVisible = Boolean(lesson.is_visible);
 
     headingElement.textContent = lesson.title || "Untitled lesson";
@@ -3730,17 +4120,20 @@ async function initializePage() {
     if (canvasTitleElement) {
         canvasTitleElement.textContent = lesson.title || "Untitled lesson";
     }
-    if (canvasObjectiveElement) {
-        canvasObjectiveElement.textContent = lesson.objective || "Add an objective so students know what they are working toward.";
-    }
     if (canvasOverviewElement) {
-        canvasOverviewElement.textContent = lesson.summary || "Add a short overview for this lesson.";
+        canvasOverviewElement.textContent = lessonMetadata.overview || "Add a short overview for this lesson.";
+    }
+    if (canvasLearningTargetElement) {
+        canvasLearningTargetElement.textContent = lessonMetadata.learningTarget || "Add an I Can learning target.";
+    }
+    if (canvasStandardsElement) {
+        canvasStandardsElement.textContent = formatStandardsAlignment(lessonMetadata.standards) || "Add standards alignment.";
     }
     if (canvasDurationElement) {
         canvasDurationElement.textContent = lesson.estimated_time || "Not set";
     }
     const courseEditorHref = `../courses/editor.html?course=${encodeURIComponent(course.id)}&editor=20260709-tabs`;
-    const studentViewHref = `view.html?lesson=${encodeURIComponent(lesson.id)}&preview=teacher&course=${encodeURIComponent(course.id)}`;
+    const studentViewHref = `view.html?lesson=${encodeURIComponent(lesson.id)}&preview=teacher&course=${encodeURIComponent(course.id)}&flow=20260714-unified-preview-flow`;
     courseEditorLinks.forEach((link) => {
         link.href = courseEditorHref;
         link.textContent = "Back to course editor";
@@ -3781,6 +4174,9 @@ contentBlockForm.addEventListener("submit", async (event) => {
     const storedBlockType = getStoredBlockType(blockType);
     const title = String(formData.get("title") || "").trim();
     const bodyText = String(formData.get("body-text") || "").trim();
+    const storedBodyText = blockType === "discussion"
+        ? encodeLessonLayout({ type: "discussion", bodyText })
+        : bodyText;
     const contentUrl = String(formData.get("content-url") || "").trim();
     const uploadedResource = contentUploadInput.files?.[0];
     const selectedResourceId = String(formData.get("resource-library") || "").trim();
@@ -3795,7 +4191,12 @@ contentBlockForm.addEventListener("submit", async (event) => {
             : String(formData.get("file-type") || "pdf");
     const submitButton = contentBlockForm.querySelector("button[type='submit']");
 
-    if ((blockType === "text" && !bodyText) || (!["text", "file", "image", "audio"].includes(blockType) && !contentUrl)) {
+    if (blockType === "discussion" && (!title || !bodyText)) {
+        setStatus("Add a discussion topic and details before saving.", "error");
+        return;
+    }
+
+    if ((blockType === "text" && !bodyText) || (!["text", "discussion", "file", "image", "audio"].includes(blockType) && !contentUrl)) {
         setStatus(`Enter ${blockType === "text" ? "written content" : "a URL"} before saving.`, "error");
         return;
     }
@@ -3859,7 +4260,7 @@ contentBlockForm.addEventListener("submit", async (event) => {
             .update({
                 block_type: storedBlockType,
                 title: title || null,
-                body_text: bodyText || null,
+                body_text: storedBodyText || null,
                 external_url: ["link", "slides", "youtube"].includes(blockType) ? contentUrl : null,
                 file_url: ["file", "image", "audio"].includes(blockType) ? savedFileUrl : null,
                 file_type: blockType === "image" ? "image" : ["file", "audio"].includes(blockType) ? fileType : null,
@@ -3901,10 +4302,7 @@ contentBlockForm.addEventListener("submit", async (event) => {
         return;
     }
 
-    const nextOrder = getActiveContentBlocks().reduce(
-        (highest, contentBlock) => Math.max(highest, contentBlock.order_index),
-        -1
-    ) + 1;
+    const nextOrder = getNextContentOrderIndex();
     setStatus("Creating lesson content...");
     submitButton.disabled = true;
     let uploadedFileRecord = null;
@@ -3930,7 +4328,7 @@ contentBlockForm.addEventListener("submit", async (event) => {
         lesson_id: lessonId,
         block_type: storedBlockType,
         title: title || null,
-        body_text: bodyText || null,
+        body_text: storedBodyText || null,
         external_url: ["link", "slides", "youtube"].includes(blockType) ? contentUrl : null,
         file_url: ["file", "image", "audio"].includes(blockType) ? savedFileUrl : null,
         file_type: blockType === "image" ? "image" : ["file", "audio"].includes(blockType) ? fileType : null,
@@ -3986,7 +4384,16 @@ contentBlockTypeSelect.addEventListener("change", () => {
 
 contentToolButtons.forEach((button) => {
     button.addEventListener("click", () => {
-        createInlineDraftBlock(button);
+        const contentTool = button.dataset.contentTool || "text";
+
+        if (contentTool === "flashcards") {
+            openFlashcardModal();
+            setToolboxDrawerOpen(false, { returnFocus: false });
+            return;
+        }
+
+        openContentTool(contentTool);
+        setToolboxDrawerOpen(false, { returnFocus: false });
     });
     button.draggable = true;
     button.addEventListener("dragstart", (event) => {
@@ -4005,10 +4412,22 @@ toolTabButtons.forEach((button) => {
     });
 });
 
-textFormatButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-        insertTextFormatting(button.dataset.formatAction || "");
-    });
+toolboxOpenButton?.addEventListener("click", () => {
+    setToolboxDrawerOpen(true);
+});
+
+toolboxCloseButton?.addEventListener("click", () => {
+    setToolboxDrawerOpen(false);
+});
+
+toolboxBackdrop?.addEventListener("click", () => {
+    setToolboxDrawerOpen(false);
+});
+
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && toolboxElement?.classList.contains("is-open")) {
+        setToolboxDrawerOpen(false);
+    }
 });
 
 contentUploadInput.addEventListener("change", () => {
@@ -4152,10 +4571,7 @@ questionForm.addEventListener("submit", async (event) => {
         return;
     }
 
-    const nextOrder = getActiveQuestions().reduce(
-        (highest, question) => Math.max(highest, question.order_index),
-        -1
-    ) + 1;
+    const nextOrder = getNextContentOrderIndex();
     setStatus("Creating question block...");
     submitButton.disabled = true;
 
@@ -4230,6 +4646,7 @@ questionForm.elements["question-type"].addEventListener("change", (event) => {
 questionToolButtons.forEach((button) => {
     button.addEventListener("click", () => {
         openQuestionTool(button.dataset.questionTool || "short_response");
+        setToolboxDrawerOpen(false, { returnFocus: false });
     });
     button.draggable = true;
     button.addEventListener("dragstart", (event) => {

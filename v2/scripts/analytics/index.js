@@ -1,6 +1,15 @@
 import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import {
+    filterHallPassesByManagedStudents,
+    formatHallPassDateTime,
+    formatHallPassDuration,
+    getHallPassDestination,
+    getPassDurationSeconds,
+    readHallPassesForOwner,
+    summarizeHallPasses,
+} from "../utils/hall-pass-data.js";
 import { notifyStatus } from "../utils/ui-components.js";
 
 const statusElement = qs("[data-analytics-status]");
@@ -10,6 +19,7 @@ const filterForm = qs("[data-analytics-filter-form]");
 const courseFilter = qs("[data-analytics-filter-course]");
 const classroomFilter = qs("[data-analytics-filter-classroom]");
 const reviewLink = qs("[data-analytics-review-link]");
+const hallPassAnalyticsElement = qs("[data-hall-pass-analytics]");
 const courseAnalyticsElement = qs("[data-course-analytics]");
 const classroomAnalyticsElement = qs("[data-classroom-analytics]");
 const studentRiskElement = qs("[data-student-risk-analytics]");
@@ -502,6 +512,17 @@ function renderSummary(filters = getFilterValues()) {
     );
 }
 
+function getFilteredHallPasses(filters = getFilterValues()) {
+    const teacherPasses = readHallPassesForOwner(currentProfile?.id || "simulation");
+
+    if (!filters.courseId && !filters.classroomId) {
+        return teacherPasses;
+    }
+
+    const studentIds = [...new Set(getFilteredEnrollments(filters).map((enrollment) => enrollment.user_id).filter(Boolean))];
+    return filterHallPassesByManagedStudents(teacherPasses, studentIds);
+}
+
 function createAnalyticsTable(columns, rows, emptyMessage) {
     if (!rows.length) {
         return createElement("p", "empty-state", emptyMessage);
@@ -539,6 +560,63 @@ function createAnalyticsTable(columns, rows, emptyMessage) {
     table.append(thead, tbody);
     wrapper.append(table);
     return wrapper;
+}
+
+function createHallPassStatusBadge(pass) {
+    return pass.status === "active"
+        ? createElement("span", "badge", "Active")
+        : createElement("span", "badge badge--quiet", "Closed");
+}
+
+function renderHallPassAnalytics(filters = getFilterValues()) {
+    if (!hallPassAnalyticsElement) {
+        return;
+    }
+
+    const passes = getFilteredHallPasses(filters);
+    const summary = summarizeHallPasses(passes);
+    const activePasses = passes.filter((pass) => pass.status === "active");
+    const closedPasses = passes.filter((pass) => pass.status !== "active");
+    const summaryGrid = createElement("div", "hall-pass-report-grid");
+    const activeTable = createElement("div", "hall-pass-analytics-stack");
+    const historyTable = createElement("div", "hall-pass-analytics-stack");
+
+    summaryGrid.append(
+        createSummaryCard("Total passes", formatNumber(summary.totalPasses)),
+        createSummaryCard("Active now", formatNumber(summary.activePasses)),
+        createSummaryCard("Average time", formatHallPassDuration(summary.averageDurationSeconds)),
+        createSummaryCard("Closed by scan", formatNumber(summary.qrClosedCount))
+    );
+
+    activeTable.append(
+        createElement("h3", "hall-pass-analytics-heading", "Active hall passes"),
+        createAnalyticsTable([
+            { label: "Student", render: (pass) => pass.student_name || getStudentName(pass.student_id) },
+            { label: "Destination", render: getHallPassDestination },
+            { label: "Pass ID", key: "pass_code" },
+            { label: "Time out", render: (pass) => formatHallPassDateTime(pass.departure_time, "No time out") },
+            { label: "Elapsed", render: (pass) => formatHallPassDuration(getPassDurationSeconds(pass)) },
+            { label: "Status", render: createHallPassStatusBadge },
+        ], activePasses, "No active hall passes right now.")
+    );
+
+    historyTable.append(
+        createElement("h3", "hall-pass-analytics-heading", "Recent hall pass history"),
+        createAnalyticsTable([
+            { label: "Student", render: (pass) => pass.student_name || getStudentName(pass.student_id) },
+            { label: "Destination", render: getHallPassDestination },
+            { label: "Pass ID", key: "pass_code" },
+            { label: "Time out", render: (pass) => formatHallPassDateTime(pass.departure_time, "No time out") },
+            { label: "Returned", render: (pass) => formatHallPassDateTime(pass.return_time) },
+            { label: "Duration", render: (pass) => formatHallPassDuration(getPassDurationSeconds(pass)) },
+            {
+                label: "Closed by",
+                render: (pass) => pass.closed_by === "qr_scan" ? "QR scan" : pass.closed_by === "teacher" ? "Teacher" : "Unknown",
+            },
+        ], closedPasses.slice(0, 12), "No closed hall passes for this view yet.")
+    );
+
+    hallPassAnalyticsElement.replaceChildren(summaryGrid, activeTable, historyTable);
 }
 
 function createProgressCell(row) {
@@ -1004,6 +1082,7 @@ function renderAnalyticsView() {
     });
     window.history.replaceState({}, "", url);
     renderSummary(filters);
+    renderHallPassAnalytics(filters);
     renderCourseAnalytics(filters);
     renderClassroomAnalytics(filters);
     renderStudentRiskAnalytics(filters);
@@ -1027,6 +1106,9 @@ async function initializePage() {
         if (!loadedCourses.length) {
             showShell();
             renderSummary();
+            if (hallPassAnalyticsElement) {
+                renderHallPassAnalytics();
+            }
             courseAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Managed courses are required before teaching analytics are available."));
             classroomAnalyticsElement.replaceChildren(createElement("p", "empty-state", "Create a course and classroom before analytics are available."));
             studentRiskElement.replaceChildren(createElement("p", "empty-state", "Student progress will appear after students join a classroom."));

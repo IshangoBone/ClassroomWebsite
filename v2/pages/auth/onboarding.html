@@ -32,8 +32,9 @@
 
                 <label class="form-field">
                     <span>Username / screen name</span>
-                    <input type="text" name="username" autocomplete="username" minlength="3" maxlength="40" required />
-                    <small class="form-hint">This is the name other users may see later.</small>
+                    <input type="text" name="username" autocomplete="username" minlength="3" maxlength="40"
+                        pattern="[A-Za-z0-9]+" title="Use only letters and numbers." required />
+                    <small class="form-hint">Use 3–40 letters and numbers. Usernames must be unique.</small>
                 </label>
 
                 <label class="form-field">
@@ -70,7 +71,7 @@
         </section>
     </main>
 
-    <script type="module" src="../../scripts/auth/onboarding.js?v=20260607-confirm-login"></script>
+    <script type="module" src="../../scripts/auth/onboarding.js?v=20260723-quiet-username-filter"></script>
 </body>
 
 </html>

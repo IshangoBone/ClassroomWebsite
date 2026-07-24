@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BrainKernl | Attendance</title>
+    <link rel="stylesheet" href="../../../styles/main.css?v=20260722-attendance-ticket-no-win" />
+</head>
+
+<body>
+    <main class="dashboard-layout toolkit-app-page">
+        <header class="dashboard-header">
+            <div class="dashboard-profile-heading">
+                <div class="toolkit-app-mark" aria-hidden="true">A</div>
+                <div>
+                    <p class="eyebrow">Teacher Toolkit</p>
+                    <h1>Hall Pass</h1>
+                    <p class="intro">Create printable passes, keep active passes visible, and close them by simulated QR scan.</p>
+                </div>
+            </div>
+            <div class="dashboard-header-actions">
+                <a class="secondary-button" href="../index.html">Back to Toolkit</a>
+            </div>
+        </header>
+
+        <p class="auth-status dashboard-status" data-attendance-status aria-live="polite">Loading attendance app...</p>
+
+        <section class="dashboard-section dashboard-section--panel attendance-workspace" aria-label="Hall pass workspace">
+            <div class="attendance-top-grid">
+                <article class="attendance-panel" aria-labelledby="create-pass-heading">
+                    <div class="section-header">
+                        <div>
+                            <p class="eyebrow">Create Pass</p>
+                            <h2 id="create-pass-heading">Select Student -> Select Pass -> Print</h2>
+                            <p class="section-copy">This simulates the Epson ticket print and saves the pass as active.</p>
+                        </div>
+                    </div>
+                    <form class="attendance-form" data-pass-form>
+                        <label class="form-field">
+                            <span class="form-label">Student</span>
+                            <select name="studentId" data-student-select required>
+                                <option value="">Choose a student</option>
+                            </select>
+                        </label>
+                        <label class="form-field">
+                            <span class="form-label">Pass type or destination</span>
+                            <select name="passType" data-pass-type required>
+                                <option value="">Choose a pass type</option>
+                                <option value="Bathroom">Bathroom</option>
+                                <option value="Hall">Hall</option>
+                                <option value="Nurse">Nurse</option>
+                                <option value="Office">Office</option>
+                                <option value="Counselor">Counselor</option>
+                                <option value="Library">Library</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </label>
+                        <label class="form-field" data-other-destination-field hidden>
+                            <span class="form-label">Other destination</span>
+                            <input name="otherDestination" type="text" placeholder="Enter destination" />
+                        </label>
+                        <label class="attendance-checkbox">
+                            <input name="allowDuplicate" type="checkbox" />
+                            <span>Override if this student already has an active pass.</span>
+                        </label>
+                        <button class="primary-button" type="submit">Print pass</button>
+                    </form>
+                </article>
+
+                <article class="attendance-panel attendance-scanner-panel" aria-labelledby="scanner-heading">
+                    <div class="section-header">
+                        <div>
+                            <p class="eyebrow">Return Scanner</p>
+                            <h2 id="scanner-heading">Scan pass on return</h2>
+                            <p class="section-copy">The Zebra scanner will type the pass ID here and press Enter. For now, type or simulate a scan.</p>
+                        </div>
+                    </div>
+                    <form class="attendance-form" data-scanner-form>
+                        <label class="form-field">
+                            <span class="form-label">Scanned pass ID</span>
+                            <input data-scanner-input name="passCode" autocomplete="off" placeholder="HP-A8F391B2" />
+                        </label>
+                        <button class="primary-button" type="submit">Close scanned pass</button>
+                    </form>
+                    <p class="attendance-scan-result" data-scan-result aria-live="polite">Scanner simulation ready.</p>
+                </article>
+            </div>
+
+            <section class="attendance-dashboard-grid" aria-label="Hall pass lists">
+                <article class="attendance-panel">
+                    <div class="section-header">
+                        <div>
+                            <h2>Active passes</h2>
+                            <p class="section-copy">Students currently out of the room.</p>
+                        </div>
+                        <span class="badge" data-active-count>0 active</span>
+                    </div>
+                    <div class="attendance-active-list" data-active-pass-list></div>
+                </article>
+
+                <article class="attendance-panel">
+                    <div class="section-header">
+                        <div>
+                            <h2>Pass history</h2>
+                            <p class="section-copy">Closed passes stay available after refresh.</p>
+                        </div>
+                        <button class="secondary-button" type="button" data-clear-history>Clear history</button>
+                    </div>
+                    <div class="attendance-history-list" data-pass-history-list></div>
+                </article>
+            </section>
+        </section>
+
+        <section class="attendance-print-ticket" data-print-ticket aria-hidden="true"></section>
+    </main>
+
+    <script type="module" src="../../../scripts/tools/attendance/index.js?v=20260722-attendance-ticket-no-win"></script>
+</body>
+
+</html>

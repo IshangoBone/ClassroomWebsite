@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BrainKernl | Profile</title>
-    <link rel="stylesheet" href="../../styles/main.css?v=20260708-profile-hero-spacing" />
+    <link rel="stylesheet" href="../../styles/main.css?v=20260720-teacher-profile-analytics" />
 </head>
 
 <body>
@@ -51,47 +51,198 @@
             </article>
         </section>
 
-        <section class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="learning-heading">
-            <div class="section-header section-header--actions">
-                <div>
-                    <h2 id="learning-heading">My Learning</h2>
-                    <p class="section-copy">Courses and classrooms where you are enrolled as a student.</p>
-                </div>
-                <a class="secondary-button" href="../progress/index.html">Open progress</a>
-            </div>
-            <div class="profile-card-list" data-profile-learning-list>
-                <p class="empty-state">Loading enrolled courses...</p>
-            </div>
-        </section>
+        <nav class="profile-tabs" aria-label="Profile sections">
+            <button class="profile-tab is-active" type="button" data-profile-tab-button="learning">My Learning</button>
+            <button class="profile-tab" type="button" data-profile-tab-button="teaching" data-profile-teacher-tab hidden>Teaching</button>
+            <button class="profile-tab" type="button" data-profile-tab-button="analytics">Analytics</button>
+            <button class="profile-tab" type="button" data-profile-tab-button="submissions">Recent Submissions</button>
+            <button class="profile-tab" type="button" data-profile-tab-button="about">About</button>
+        </nav>
 
-        <section class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="activity-heading">
-            <div class="section-header section-header--actions">
-                <div>
-                    <h2 id="activity-heading">Recent submissions</h2>
-                    <p class="section-copy">Your latest drafts, submissions, and feedback-ready lessons.</p>
+        <div class="profile-tab-panel is-active" data-profile-tab-panel="learning">
+            <section class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="learning-heading">
+                <div class="section-header section-header--actions">
+                    <div>
+                        <h2 id="learning-heading">My Learning</h2>
+                        <p class="section-copy">Courses and classrooms where you are enrolled as a student.</p>
+                    </div>
+                    <a class="secondary-button" href="../progress/index.html">Open progress</a>
                 </div>
-                <a class="secondary-button" href="../submissions/index.html">Open submissions</a>
-            </div>
-            <div data-profile-activity-list>
-                <p class="empty-state">Loading recent submissions...</p>
-            </div>
-        </section>
+                <div class="profile-card-list" data-profile-learning-list>
+                    <p class="empty-state">Loading enrolled courses...</p>
+                </div>
+            </section>
 
-        <section class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="teaching-heading" data-profile-teaching-section>
-            <div class="section-header section-header--actions">
-                <div>
-                    <h2 id="teaching-heading">Teaching</h2>
-                    <p class="section-copy">Courses you own or help teach, plus managed classroom context.</p>
+        </div>
+
+        <div class="profile-tab-panel" data-profile-tab-panel="teaching" data-profile-teacher-panel hidden>
+            <section class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="teaching-heading" data-profile-teaching-section>
+                <div class="section-header section-header--actions">
+                    <div>
+                        <h2 id="teaching-heading">Teaching</h2>
+                        <p class="section-copy">Courses you own or help teach, plus managed classroom context.</p>
+                    </div>
+                    <a class="secondary-button" href="../dashboard/index.html">Open dashboard</a>
                 </div>
-                <a class="secondary-button" href="../dashboard/index.html">Open dashboard</a>
-            </div>
-            <div class="profile-card-list" data-profile-teaching-list>
-                <p class="empty-state">Loading teaching courses...</p>
-            </div>
-        </section>
+                <div class="profile-card-list" data-profile-teaching-list>
+                    <p class="empty-state">Loading teaching courses...</p>
+                </div>
+            </section>
+        </div>
+
+        <div class="profile-tab-panel" data-profile-tab-panel="analytics" hidden>
+            <section class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="hall-pass-heading" data-profile-hall-pass-section>
+                <div class="section-header section-header--actions">
+                    <div>
+                        <h2 id="hall-pass-heading">Hall pass report</h2>
+                        <p class="section-copy">Your active and past hallway passes from classroom tools.</p>
+                    </div>
+                </div>
+                <div class="hall-pass-report-grid" data-profile-hall-pass-summary>
+                    <p class="empty-state">Loading hall pass report...</p>
+                </div>
+                <div class="hall-pass-history-list" data-profile-hall-pass-list>
+                    <p class="empty-state">Loading hall pass history...</p>
+                </div>
+            </section>
+
+            <section class="dashboard-section dashboard-section--panel profile-panel profile-analytics-panel" aria-labelledby="teacher-analytics-heading" data-profile-analytics-section hidden>
+                <div class="section-header section-header--actions">
+                    <div>
+                        <p class="eyebrow">Teacher insights</p>
+                        <h2 id="teacher-analytics-heading">Analytics</h2>
+                        <p class="section-copy">
+                            Review teaching activity, managed classrooms, student progress, and hall pass patterns.
+                        </p>
+                    </div>
+                    <span class="badge badge--quiet">Teacher dashboard</span>
+                </div>
+                <div class="profile-analytics-grid" data-profile-analytics-summary>
+                    <p class="empty-state">Loading teacher analytics...</p>
+                </div>
+                <div class="profile-analytics-stack">
+                    <section class="profile-analytics-block" aria-labelledby="teacher-course-analytics-heading">
+                        <div class="section-header">
+                            <div>
+                                <h3 id="teacher-course-analytics-heading">Course analytics</h3>
+                                <p class="section-copy">Progress and missing work across courses you teach.</p>
+                            </div>
+                        </div>
+                        <div data-profile-teacher-course-analytics>
+                            <p class="empty-state">Loading course analytics...</p>
+                        </div>
+                    </section>
+                    <section class="profile-analytics-block" aria-labelledby="teacher-classroom-analytics-heading">
+                        <div class="section-header">
+                            <div>
+                                <h3 id="teacher-classroom-analytics-heading">Classroom analytics</h3>
+                                <p class="section-copy">Roster progress by managed classroom.</p>
+                            </div>
+                        </div>
+                        <div data-profile-teacher-classroom-analytics>
+                            <p class="empty-state">Loading classroom analytics...</p>
+                        </div>
+                    </section>
+                    <section class="profile-analytics-block" aria-labelledby="teacher-student-analytics-heading">
+                        <div class="section-header">
+                            <div>
+                                <h3 id="teacher-student-analytics-heading">Students needing attention</h3>
+                                <p class="section-copy">Students with the most missing work or low completion.</p>
+                            </div>
+                        </div>
+                        <div data-profile-teacher-student-analytics>
+                            <p class="empty-state">Loading student analytics...</p>
+                        </div>
+                    </section>
+                    <section class="profile-analytics-block" aria-labelledby="teacher-lesson-analytics-heading">
+                        <div class="section-header">
+                            <div>
+                                <h3 id="teacher-lesson-analytics-heading">Lesson completion</h3>
+                                <p class="section-copy">Lessons that may need reteaching, reminders, or review.</p>
+                            </div>
+                        </div>
+                        <div data-profile-teacher-lesson-analytics>
+                            <p class="empty-state">Loading lesson analytics...</p>
+                        </div>
+                    </section>
+                    <section class="profile-analytics-block" aria-labelledby="teacher-hall-pass-analytics-heading">
+                        <div class="section-header">
+                            <div>
+                                <h3 id="teacher-hall-pass-analytics-heading">Hall pass analytics</h3>
+                                <p class="section-copy">Current and recent hallway pass activity from your teacher tools.</p>
+                            </div>
+                        </div>
+                        <div data-profile-teacher-hall-pass-analytics>
+                            <p class="empty-state">Loading hall pass analytics...</p>
+                        </div>
+                    </section>
+                </div>
+                <div class="profile-toolkit-entry">
+                    <div class="profile-toolkit-icon profile-toolkit-icon--analytics" aria-hidden="true">A</div>
+                    <div>
+                        <h3>Open the full teacher analytics dashboard</h3>
+                        <p class="course-muted">
+                            Drill into course analytics, classroom trends, student progress, lesson completion, question trends, and hall pass history.
+                        </p>
+                    </div>
+                    <div class="course-actions">
+                        <a class="primary-button" href="../analytics/index.html">Open Analytics</a>
+                        <a class="secondary-button" href="../dashboard/index.html">Teacher Dashboard</a>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="profile-tab-panel" data-profile-tab-panel="submissions" hidden>
+            <section class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="activity-heading">
+                <div class="section-header section-header--actions">
+                    <div>
+                        <h2 id="activity-heading">Recent submissions</h2>
+                        <p class="section-copy">Your latest drafts, submissions, and feedback-ready lessons.</p>
+                    </div>
+                    <a class="secondary-button" href="../submissions/index.html">Open submissions</a>
+                </div>
+                <div data-profile-activity-list>
+                    <p class="empty-state">Loading recent submissions...</p>
+                </div>
+            </section>
+        </div>
+
+        <div class="profile-tab-panel" data-profile-tab-panel="about" hidden>
+            <section class="dashboard-section dashboard-section--panel profile-panel" aria-labelledby="about-heading">
+                <div class="section-header">
+                    <div>
+                        <h2 id="about-heading">About</h2>
+                        <p class="section-copy">General profile details for this BrainKernl account.</p>
+                    </div>
+                </div>
+                <dl class="profile-detail-list">
+                    <div class="profile-detail-row">
+                        <dt class="profile-detail-label">Display name</dt>
+                        <dd class="profile-detail-value" data-profile-about-name>Loading...</dd>
+                    </div>
+                    <div class="profile-detail-row">
+                        <dt class="profile-detail-label">Username</dt>
+                        <dd class="profile-detail-value" data-profile-about-username>Loading...</dd>
+                    </div>
+                    <div class="profile-detail-row">
+                        <dt class="profile-detail-label">Email</dt>
+                        <dd class="profile-detail-value" data-profile-about-email>Loading...</dd>
+                    </div>
+                    <div class="profile-detail-row">
+                        <dt class="profile-detail-label">Role</dt>
+                        <dd class="profile-detail-value" data-profile-about-role>Loading...</dd>
+                    </div>
+                    <div class="profile-detail-row">
+                        <dt class="profile-detail-label">Account status</dt>
+                        <dd class="profile-detail-value" data-profile-about-status>Loading...</dd>
+                    </div>
+                </dl>
+            </section>
+        </div>
     </main>
 
-    <script type="module" src="../../scripts/profile/index.js?v=20260709-editor-link-version"></script>
+    <script type="module" src="../../scripts/profile/index.js?v=20260720-teacher-profile-analytics"></script>
 </body>
 
 </html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BrainKernl | Slide Deck Generator</title>
+    <link rel="stylesheet" href="../../../styles/main.css?v=20260723-slide-generator-module" />
+</head>
+
+<body>
+    <main class="dashboard-layout toolkit-app-page">
+        <header class="dashboard-header">
+            <div class="dashboard-profile-heading">
+                <div class="toolkit-app-mark" aria-hidden="true">D</div>
+                <div>
+                    <p class="eyebrow">Teacher Toolkit</p>
+                    <h1>Slide Deck Generator</h1>
+                    <p class="intro">Build a downloadable classroom presentation from an existing lesson or a custom lesson brief.</p>
+                </div>
+            </div>
+            <div class="dashboard-header-actions">
+                <a class="secondary-button" href="../index.html">Back to Toolkit</a>
+            </div>
+        </header>
+
+        <p class="auth-status dashboard-status" data-sage-status aria-live="polite">Loading slide generator...</p>
+
+        <section class="dashboard-section dashboard-section--panel sage-slide-generator" data-sage-panel="slides" aria-labelledby="slide-generator-heading">
+            <div class="section-header section-header--actions">
+                <div>
+                    <p class="eyebrow">Presentation Builder</p>
+                    <h2 id="slide-generator-heading">Create a classroom slide deck</h2>
+                    <p class="section-copy">
+                        Start from a lesson already in BrainKernl or enter a custom topic, objective, overview, and duration.
+                    </p>
+                </div>
+                <span class="badge badge--quiet">PPTX workflow</span>
+            </div>
+
+            <div class="sage-generator-shell">
+                <form class="sage-slide-form" data-sage-slide-form>
+                    <fieldset class="form-field">
+                        <legend>Lesson source</legend>
+                        <div class="sage-source-toggle">
+                            <label>
+                                <input type="radio" name="sourceMode" value="lesson" checked />
+                                <span>Existing lesson</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="sourceMode" value="manual" />
+                                <span>Custom details</span>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <div data-sage-lesson-fields>
+                        <div class="sage-form-grid">
+                            <label class="form-field">
+                                <span>Course</span>
+                                <select name="courseId" data-sage-course-select>
+                                    <option value="">Loading courses...</option>
+                                </select>
+                            </label>
+                            <label class="form-field">
+                                <span>Module</span>
+                                <select name="moduleId" data-sage-module-select>
+                                    <option value="">Select a course first</option>
+                                </select>
+                            </label>
+                            <label class="form-field">
+                                <span>Lesson</span>
+                                <select name="lessonId" data-sage-lesson-select>
+                                    <option value="">Select a module first</option>
+                                </select>
+                            </label>
+                        </div>
+                        <article class="sage-selected-lesson" data-sage-selected-lesson>
+                            Select a lesson to preview the source details.
+                        </article>
+                    </div>
+
+                    <div class="sage-form-grid" data-sage-manual-fields hidden>
+                        <label class="form-field">
+                            <span>Lesson title</span>
+                            <input name="manualTitle" type="text" placeholder="Example: Introduction to Java variables" />
+                        </label>
+                        <label class="form-field">
+                            <span>Objective</span>
+                            <textarea name="manualObjective" rows="3" placeholder="What should students understand or be able to do?"></textarea>
+                        </label>
+                        <label class="form-field">
+                            <span>Lesson overview</span>
+                            <textarea name="manualOverview" rows="4" placeholder="Add the main concepts, examples, and activities."></textarea>
+                        </label>
+                        <label class="form-field">
+                            <span>Duration in minutes</span>
+                            <input name="manualDuration" type="number" min="1" max="240" value="50" />
+                        </label>
+                    </div>
+
+                    <div class="sage-form-grid sage-form-grid--three">
+                        <fieldset class="form-field sage-grade-field">
+                            <legend>Grade levels</legend>
+                            <div class="sage-grade-options">
+                                <label><input type="checkbox" name="gradeLevel" value="9th grade" /><span>9</span></label>
+                                <label><input type="checkbox" name="gradeLevel" value="10th grade" checked /><span>10</span></label>
+                                <label><input type="checkbox" name="gradeLevel" value="11th grade" checked /><span>11</span></label>
+                                <label><input type="checkbox" name="gradeLevel" value="12th grade" /><span>12</span></label>
+                            </div>
+                        </fieldset>
+                        <label class="form-field">
+                            <span>Slide count</span>
+                            <select name="slideCount">
+                                <option value="8">8 slides</option>
+                                <option value="10" selected>10 slides</option>
+                                <option value="12">12 slides</option>
+                                <option value="15">15 slides</option>
+                            </select>
+                        </label>
+                        <label class="form-field">
+                            <span>Presentation style</span>
+                            <select name="deckStyle">
+                                <option value="clear and teacher-led">Clear and teacher-led</option>
+                                <option value="visual and discussion based">Visual and discussion-based</option>
+                                <option value="student centered and interactive">Student-centered and interactive</option>
+                                <option value="concise review">Concise review</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <label class="form-field">
+                        <span>Teacher notes</span>
+                        <textarea name="teacherNotes" rows="3" placeholder="Optional instructions, examples, vocabulary, or emphasis for the deck."></textarea>
+                    </label>
+
+                    <div class="sage-generator-options" aria-label="Presentation options">
+                        <label class="sage-toggle-card">
+                            <input type="checkbox" name="speakerNotes" checked />
+                            <span><strong>Speaker notes</strong><small>Add guidance beneath presentation slides.</small></span>
+                        </label>
+                        <label class="sage-toggle-card">
+                            <input type="checkbox" name="quickChecks" checked />
+                            <span><strong>Quick checks</strong><small>Include questions that check student understanding.</small></span>
+                        </label>
+                        <label class="sage-toggle-card">
+                            <input type="checkbox" name="lessonBridge" checked />
+                            <span><strong>Lesson bridge</strong><small>Connect the presentation back to the BrainKernl lesson.</small></span>
+                        </label>
+                    </div>
+
+                    <div class="form-actions form-actions--left">
+                        <button class="primary-button" type="submit">Generate PPTX</button>
+                        <button class="secondary-button" type="button" data-sage-reset>Reset</button>
+                    </div>
+                </form>
+
+                <aside class="sage-slide-preview" data-sage-slide-preview aria-live="polite">
+                    <div class="sage-empty-state">
+                        <p class="eyebrow">Presentation Preview</p>
+                        <h3>Your slide deck will appear here</h3>
+                        <p>Select a lesson or enter custom details, then generate a downloadable PPTX.</p>
+                    </div>
+                </aside>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="../../../scripts/sage/index.js?v=20260723-slide-generator-module"></script>
+</body>
+
+</html>

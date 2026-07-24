@@ -2,7 +2,7 @@ import { supabase } from "../../services/supabase/client.js";
 import { isTeachingRole, loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
 import { createProfileAvatar } from "../utils/profile-images.js";
-import { notifyStatus } from "../utils/ui-components.js";
+import { createModalShell, notifyStatus } from "../utils/ui-components.js";
 
 const dashboardStatus = qs("[data-dashboard-status]");
 const greetingElement = qs("[data-dashboard-greeting]");
@@ -81,6 +81,19 @@ function formatStudentName(profile) {
     return fullName || profile.username || `Student ${formatShortId(profile.id)}`;
 }
 
+function getGreetingName(profile) {
+    const firstName = String(profile?.legal_first_name || "").trim();
+    if (firstName) {
+        return firstName;
+    }
+
+    const usernameFirstPart = String(profile?.username || "")
+        .replace(/^@/, "")
+        .split(/[\s._-]+/)[0]
+        .trim();
+    return usernameFirstPart || "there";
+}
+
 function getStudentName(studentId) {
     return dashboardStudentNames.get(studentId) || `Student ${formatShortId(studentId)}`;
 }
@@ -138,6 +151,58 @@ function getJoinPreviewLabel(preview) {
     return preview.classroom_name
         ? `${preview.course_title} / ${preview.classroom_name}`
         : preview.course_title;
+}
+
+function confirmJoin({ title = "Join classroom?", heading, message, confirmLabel = "Join" } = {}) {
+    return new Promise((resolve) => {
+        const previousFocus = document.activeElement;
+        const body = createElement("div", "join-confirm-body");
+        const titleElement = createElement("strong", "", heading || title);
+        const messageElement = createElement("p", "", message || "You can start learning as soon as you join.");
+        const cancelButton = createElement("button", "secondary-button", "Cancel");
+        const confirmButton = createElement("button", "primary-button", confirmLabel);
+        let overlay = null;
+        let settled = false;
+
+        function close(value) {
+            if (settled) {
+                return;
+            }
+
+            settled = true;
+            document.removeEventListener("keydown", handleKeydown);
+            overlay?.remove();
+            previousFocus?.focus?.();
+            resolve(value);
+        }
+
+        function handleKeydown(event) {
+            if (event.key === "Escape") {
+                close(false);
+            }
+        }
+
+        cancelButton.type = "button";
+        confirmButton.type = "button";
+        cancelButton.addEventListener("click", () => close(false));
+        confirmButton.addEventListener("click", () => close(true));
+        body.append(titleElement, messageElement);
+
+        overlay = createModalShell({
+            title,
+            body,
+            actions: [cancelButton, confirmButton],
+        });
+        overlay.addEventListener("click", (event) => {
+            if (event.target === overlay) {
+                close(false);
+            }
+        });
+
+        document.body.append(overlay);
+        document.addEventListener("keydown", handleKeydown);
+        confirmButton.focus();
+    });
 }
 
 async function handleStudentJoinSubmit(event) {
@@ -206,7 +271,14 @@ async function joinClassroomFromAccess(options) {
         return;
     }
 
-    const confirmed = window.confirm(`Join ${getJoinPreviewLabel(preview)}?`);
+    const confirmed = await confirmJoin({
+        title: joinRpc === "join_public_course" ? "Join course?" : "Join classroom?",
+        heading: getJoinPreviewLabel(preview),
+        message: joinRpc === "join_public_course"
+            ? "This will add the course to your learning dashboard."
+            : "This will add the classroom to your learning dashboard.",
+        confirmLabel: joinRpc === "join_public_course" ? "Join course" : "Join class",
+    });
 
     if (!confirmed) {
         setStatus("Join canceled.");
@@ -1190,7 +1262,7 @@ async function refreshDashboard() {
         }
 
         if (isStudentOnly) {
-            greetingElement.textContent = `Welcome, ${currentProfile.username || "there"}. Check recent activity, upcoming lessons, and your courses.`;
+            greetingElement.textContent = `Welcome, ${getGreetingName(currentProfile)}. Check recent activity, upcoming lessons, and your courses.`;
             coursesSummaryLabel.textContent = "My courses";
             classroomsSummaryLabel.textContent = "Active classrooms";
             submissionsSummaryLabel.textContent = "Course progress";
@@ -1212,7 +1284,7 @@ async function refreshDashboard() {
                 renderEmpty(enrolledCourseList, "Join a course or classroom to see your courses here.");
             }
         } else {
-            greetingElement.textContent = `Welcome, ${currentProfile.username || "there"}. Start with the courses and classes you teach.`;
+            greetingElement.textContent = `Welcome, ${getGreetingName(currentProfile)}. Start with the courses and classes you teach.`;
             coursesSummaryLabel.textContent = "My courses";
             classroomsSummaryLabel.textContent = "Active classes";
             submissionsSummaryLabel.textContent = "Student submissions";
@@ -1257,7 +1329,7 @@ async function initializeDashboard() {
 
     currentProfile = profile;
     renderDashboardAvatar(profile);
-    greetingElement.textContent = `Welcome, ${profile.username || "there"}. Manage teaching work and continue saved lessons.`;
+    greetingElement.textContent = `Welcome, ${getGreetingName(profile)}. Manage teaching work and continue saved lessons.`;
     courseFormToggle.disabled = false;
     await refreshDashboard();
     await handleClassroomInvite(dashboardParams.get("classroomInvite"));

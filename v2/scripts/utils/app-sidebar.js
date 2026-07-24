@@ -85,7 +85,7 @@ function getNavItems(hasTeachingAccess) {
         return [
             { label: "Home", path: "dashboard/index.html", icon: "H" },
             { label: "My Courses", path: "courses/index.html", icon: "C" },
-            { label: "SAGE AI", path: "sage/index.html", icon: "S" },
+            { label: "Teacher Tools", path: "tools/index.html", icon: "T" },
             { label: "Profile", path: "profile/index.html", icon: "P" },
         ];
     }
@@ -102,6 +102,10 @@ function isCurrentNavItem(item, currentPath) {
     const itemPath = item.path.replace(/^\/+/, "");
     const [pagePath, hash = ""] = itemPath.split("#");
     const currentHash = window.location.hash.replace(/^#/, "");
+
+    if (!hash && pagePath === "tools/index.html" && currentPath.startsWith("tools/")) {
+        return true;
+    }
 
     return currentPath === pagePath && (hash ? currentHash === hash : !currentHash);
 }

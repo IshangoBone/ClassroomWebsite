@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+  <title id="title">Casting and numeric range</title>
+  <desc id="desc">A classroom diagram showing widening, narrowing, truncation, and overflow risk.</desc>
+  <rect width="960" height="540" fill="#f8fbff"/>
+  <text x="70" y="78" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#17375e">Casting and Range of Variables</text>
+  <text x="70" y="116" font-family="Arial, sans-serif" font-size="18" fill="#4f6683">Conversions can be safe, but narrowing may lose information or create unexpected values.</text>
+  <g font-family="Arial, sans-serif">
+    <rect x="95" y="190" width="270" height="150" rx="22" fill="#ffffff" stroke="#d6e2f2" stroke-width="3"/>
+    <text x="130" y="240" font-size="26" font-weight="700" fill="#17375e">Widening</text>
+    <text x="130" y="280" font-size="18" fill="#526b8a">int → double</text>
+    <text x="130" y="312" font-size="18" fill="#526b8a">Usually keeps the value.</text>
+    <rect x="405" y="190" width="270" height="150" rx="22" fill="#ffffff" stroke="#d6e2f2" stroke-width="3"/>
+    <text x="440" y="240" font-size="26" font-weight="700" fill="#17375e">Narrowing</text>
+    <text x="440" y="280" font-size="18" fill="#526b8a">double → int</text>
+    <text x="440" y="312" font-size="18" fill="#526b8a">May truncate decimals.</text>
+    <rect x="715" y="190" width="150" height="150" rx="22" fill="#fff7ed" stroke="#f2c98b" stroke-width="3"/>
+    <text x="790" y="246" font-size="26" font-weight="700" fill="#17375e" text-anchor="middle">Overflow</text>
+    <text x="790" y="290" font-size="17" fill="#7a5a23" text-anchor="middle">Too large</text>
+    <text x="790" y="318" font-size="17" fill="#7a5a23" text-anchor="middle">for the type</text>
+  </g>
+  <text x="105" y="420" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#17375e">Example: (int) 7.9 evaluates to 7, not 8.</text>
+</svg>

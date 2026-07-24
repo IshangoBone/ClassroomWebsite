@@ -1,6 +1,7 @@
 import { supabase } from "../../services/supabase/client.js";
 import { loadProtectedProfile } from "../utils/auth-guard.js";
 import { createElement, qs } from "../utils/dom.js";
+import { formatStandardsAlignment, getLessonMetadata, getLessonOverview } from "../utils/lesson-metadata.js";
 import { notifyStatus } from "../utils/ui-components.js";
 
 const params = new URLSearchParams(window.location.search);
@@ -17,8 +18,9 @@ const shellElement = qs("[data-lesson-shell]");
 const objectiveElement = qs("[data-lesson-objective]");
 const canvasContextElement = qs("[data-canvas-context]");
 const canvasTitleElement = qs("[data-canvas-title]");
-const canvasObjectiveElement = qs("[data-canvas-objective]");
 const canvasOverviewElement = qs("[data-canvas-overview]");
+const canvasLearningTargetElement = qs("[data-canvas-learning-target]");
+const canvasStandardsElement = qs("[data-canvas-standards]");
 const canvasDurationElement = qs("[data-canvas-duration]");
 const studentPageControls = qs("[data-student-page-controls]");
 const pageCounterElement = qs("[data-page-counter]");
@@ -117,11 +119,16 @@ const codeSpaceJavaTypes = new Set([
 ]);
 const lessonLayoutMarker = "__ctc_lesson_layout_v1__";
 let currentProfileId = "";
+let currentProfile = null;
 let currentLessonContext = null;
 let currentSubmission = null;
 let loadedLessonPages = [];
 let loadedContentBlocks = [];
 let loadedQuestions = [];
+let discussionPostsByBlock = new Map();
+let discussionProfilesById = new Map();
+let discussionPostsUnavailable = false;
+const openDiscussionBlockIds = new Set();
 let questionOptionsByQuestion = new Map();
 let answerState = {};
 let autoSaveTimer = null;
@@ -242,6 +249,24 @@ function formatSavedTime(date) {
         hour: "numeric",
         minute: "2-digit",
     });
+}
+
+function formatProfileName(profile, fallback = "Student") {
+    const fullName = [profile?.legal_first_name, profile?.legal_last_name].filter(Boolean).join(" ").trim();
+
+    return fullName || profile?.username || profile?.email || fallback;
+}
+
+function getProfileInitials(profile, fallback = "S") {
+    const name = formatProfileName(profile, fallback);
+    const initials = name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase())
+        .join("");
+
+    return initials || fallback;
 }
 
 function setSavedStatus(message = "Draft saved.") {
@@ -443,6 +468,28 @@ function getActiveQuestions() {
         .sort((first, second) => first.order_index - second.order_index);
 }
 
+function getActivePageItems() {
+    const contentItems = getActiveContentBlocks().map((contentBlock) => ({
+        type: "content",
+        order_index: Number(contentBlock.order_index || 0),
+        item: contentBlock,
+    }));
+    const questionItems = getActiveQuestions().map((question) => ({
+        type: "question",
+        order_index: Number(question.order_index || 0),
+        item: question,
+    }));
+    const typePriority = { question: 0, content: 1 };
+
+    return [...contentItems, ...questionItems].sort((first, second) => {
+        if (first.order_index !== second.order_index) {
+            return first.order_index - second.order_index;
+        }
+
+        return typePriority[first.type] - typePriority[second.type];
+    });
+}
+
 async function renderActiveLessonPage() {
     const pages = getSortedLessonPages();
     const activePage = getActiveLessonPage();
@@ -469,8 +516,10 @@ async function renderActiveLessonPage() {
         canvasTitleElement.textContent = currentLessonContext?.lesson?.title || "Untitled lesson";
     }
 
-    await renderContentBlocks(getActiveContentBlocks());
-    renderQuestionFlow(getActiveQuestions());
+    await renderLessonFlow(getActivePageItems());
+    if (questionFlow) {
+        questionFlow.hidden = true;
+    }
     updateSubmitPanelState();
 }
 
@@ -519,7 +568,7 @@ function getMissingRequiredQuestions() {
 }
 
 function setQuestionInputsDisabled(disabled) {
-    questionFlow.querySelectorAll("input, textarea, select, button").forEach((input) => {
+    contentRenderer.querySelectorAll("input, textarea, select, button").forEach((input) => {
         input.disabled = disabled;
     });
 }
@@ -530,10 +579,10 @@ function setDraftControlsDisabled(disabled) {
 }
 
 function clearQuestionHighlights() {
-    questionFlow.querySelectorAll(".lesson-flow-question--missing").forEach((item) => {
+    contentRenderer.querySelectorAll(".lesson-flow-question--missing").forEach((item) => {
         item.classList.remove("lesson-flow-question--missing");
     });
-    questionFlow.querySelectorAll("[data-required-warning]").forEach((warning) => {
+    contentRenderer.querySelectorAll("[data-required-warning]").forEach((warning) => {
         warning.remove();
     });
 }
@@ -541,7 +590,7 @@ function clearQuestionHighlights() {
 function highlightMissingQuestions(missingQuestions) {
     clearQuestionHighlights();
     missingQuestions.forEach((question) => {
-        const item = qs(`[data-question-id="${question.id}"]`, questionFlow);
+        const item = qs(`[data-question-id="${question.id}"]`, contentRenderer);
 
         if (!item) {
             return;
@@ -654,6 +703,12 @@ function getDefaultContentBlockTitle(contentBlock) {
     }
 
     if (contentBlock.block_type === "text") {
+        const layout = decodeLessonLayout(contentBlock.body_text || "");
+
+        if (layout?.type === "discussion") {
+            return "Discussion board";
+        }
+
         return "Text content";
     }
 
@@ -669,6 +724,10 @@ function getDefaultContentBlockTitle(contentBlock) {
         return "External link";
     }
 
+    if (contentBlock.block_type === "discussion") {
+        return "Discussion board";
+    }
+
     if (contentBlock.file_type === "image") {
         return "Image resource";
     }
@@ -678,6 +737,20 @@ function getDefaultContentBlockTitle(contentBlock) {
     }
 
     return "File resource";
+}
+
+function isDiscussionContentBlock(contentBlock) {
+    return contentBlock.block_type === "discussion" || decodeLessonLayout(contentBlock.body_text || "")?.type === "discussion";
+}
+
+function getDiscussionDetails(contentBlock) {
+    const layout = decodeLessonLayout(contentBlock.body_text || "");
+
+    if (layout?.type === "discussion") {
+        return layout.bodyText || layout.body || "";
+    }
+
+    return contentBlock.body_text || "";
 }
 
 function appendInlineFormattedText(parent, text) {
@@ -1023,12 +1096,216 @@ async function createLessonLayoutContent(layout) {
     return createElement("p", "lesson-render-text", "");
 }
 
+async function submitDiscussionResponse(contentBlock, bodyText, { parentPostId = "", button = null } = {}) {
+    const payload = {
+        lesson_id: lessonId,
+        content_block_id: contentBlock.id,
+        parent_post_id: parentPostId || null,
+        author_user_id: currentProfileId,
+        body_text: bodyText,
+    };
+
+    if (button) {
+        button.disabled = true;
+    }
+
+    setStatus(parentPostId ? "Posting discussion reply..." : "Posting discussion response...");
+    const { error } = await supabase.from("lesson_discussion_posts").insert(payload);
+
+    if (button) {
+        button.disabled = false;
+    }
+
+    if (error) {
+        setStatus(error.message || "Discussion response could not be posted.", "error");
+        return false;
+    }
+
+    openDiscussionBlockIds.add(contentBlock.id);
+    await loadDiscussionPosts(loadedContentBlocks);
+    await renderActiveLessonPage();
+    setStatus(parentPostId ? "Discussion reply posted." : "Discussion response posted.", "success");
+    return true;
+}
+
+function createDiscussionReplyComposer(contentBlock, parentPostId) {
+    const form = createElement("form", "lesson-discussion-reply-composer");
+    const textarea = document.createElement("textarea");
+    const actions = createElement("div", "lesson-discussion-reply-actions");
+    const cancelButton = createElement("button", "secondary-button", "Cancel");
+    const submitButton = createElement("button", "primary-button", "Post reply");
+
+    textarea.name = "discussion-reply";
+    textarea.rows = 2;
+    textarea.maxLength = 2500;
+    textarea.placeholder = "Reply to this post";
+    cancelButton.type = "button";
+    submitButton.type = "submit";
+    cancelButton.addEventListener("click", () => {
+        form.hidden = true;
+        textarea.value = "";
+    });
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const bodyText = textarea.value.trim();
+
+        if (!bodyText) {
+            setStatus("Write a reply before posting.", "error");
+            return;
+        }
+
+        await submitDiscussionResponse(contentBlock, bodyText, { parentPostId, button: submitButton });
+    });
+
+    actions.append(cancelButton, submitButton);
+    form.append(textarea, actions);
+    form.hidden = true;
+    return form;
+}
+
+function createDiscussionPost(post, replies = [], contentBlock, depth = 0) {
+    const profile = discussionProfilesById.get(post.author_user_id) || (post.author_user_id === currentProfileId ? currentProfile : null);
+    const item = createElement("article", "lesson-discussion-post");
+    const avatar = createElement("span", "lesson-discussion-avatar", getProfileInitials(profile, "S"));
+    const body = createElement("div", "lesson-discussion-post-body");
+    const meta = createElement("div", "lesson-discussion-post-meta");
+    const author = createElement("strong", "", formatProfileName(profile, "Student"));
+    const time = createElement("span", "", `Posted ${formatSavedTime(new Date(post.created_at))}`);
+    const replyList = createElement("div", "lesson-discussion-reply-list");
+
+    meta.append(author, time);
+    body.append(meta, createElement("p", "", post.body_text || ""));
+
+    if (depth === 0 && !isTeacherPreview && !discussionPostsUnavailable) {
+        const actions = createElement("div", "lesson-discussion-post-actions");
+        const replyButton = createElement("button", "secondary-button lesson-discussion-reply-button", "Reply");
+        const replyComposer = createDiscussionReplyComposer(contentBlock, post.id);
+
+        replyButton.type = "button";
+        replyButton.addEventListener("click", () => {
+            replyComposer.hidden = !replyComposer.hidden;
+            if (!replyComposer.hidden) {
+                replyComposer.querySelector("textarea")?.focus();
+            }
+        });
+        actions.append(replyButton);
+        body.append(actions, replyComposer);
+    }
+
+    replies.forEach((reply) => replyList.append(createDiscussionPost(reply, [], contentBlock, depth + 1)));
+    if (replies.length) {
+        body.append(replyList);
+    }
+    item.append(avatar, body);
+    return item;
+}
+
+function createDiscussionBoard(contentBlock) {
+    const wrapper = createElement("div", "lesson-discussion-board");
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    const panel = createElement("div", "lesson-discussion-panel");
+    const prompt = createElement("div", "lesson-discussion-prompt");
+    const posts = discussionPostsByBlock.get(contentBlock.id) || [];
+    const composer = createElement("form", "lesson-discussion-composer");
+    const textarea = document.createElement("textarea");
+    const button = createElement("button", "primary-button", "Post reply");
+    const responseList = createElement("div", "lesson-discussion-post-list");
+    const responseCount = posts.length === 1 ? "1 reply" : `${posts.length} replies`;
+
+    details.className = "lesson-discussion-details";
+    details.open = openDiscussionBlockIds.has(contentBlock.id);
+    details.addEventListener("toggle", () => {
+        if (details.open) {
+            openDiscussionBlockIds.add(contentBlock.id);
+        } else {
+            openDiscussionBlockIds.delete(contentBlock.id);
+        }
+    });
+    summary.className = "lesson-discussion-summary";
+    textarea.name = "discussion-response";
+    textarea.rows = 3;
+    textarea.maxLength = 2500;
+    textarea.placeholder = "Type your reply";
+    button.type = "submit";
+    summary.append(
+        createElement("span", "lesson-discussion-icon", "Discuss"),
+        createElement("span", "lesson-discussion-summary-title", contentBlock.title || "Discussion board"),
+        createElement("span", "lesson-discussion-summary-meta", responseCount)
+    );
+    prompt.append(
+        createElement("span", "lesson-discussion-kicker", "Discussion directions"),
+        createFormattedTextContent(contentBlock.body_text || "")
+    );
+
+    if (isTeacherPreview) {
+        textarea.disabled = true;
+        button.disabled = true;
+        textarea.placeholder = "Student responses are disabled in teacher preview.";
+    } else if (discussionPostsUnavailable) {
+        textarea.disabled = true;
+        button.disabled = true;
+        textarea.placeholder = "Discussion responses need the latest database migration before posting.";
+    }
+
+    composer.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const bodyText = textarea.value.trim();
+
+        if (!bodyText) {
+            setStatus("Write a response before posting to the discussion.", "error");
+            return;
+        }
+
+        const posted = await submitDiscussionResponse(contentBlock, bodyText, { button });
+
+        if (posted) {
+            textarea.value = "";
+        }
+    });
+
+    composer.append(textarea, button);
+    if (discussionPostsUnavailable) {
+        responseList.append(createElement("p", "empty-state empty-state--compact", "Discussion responses need the latest database migration before they can load."));
+    } else if (!posts.length) {
+        responseList.append(createElement("p", "empty-state empty-state--compact", "No responses have been posted yet."));
+    } else {
+        const repliesByParent = new Map();
+        const rootPosts = [];
+
+        posts.forEach((post) => {
+            if (post.parent_post_id) {
+                const replies = repliesByParent.get(post.parent_post_id) || [];
+                replies.push(post);
+                repliesByParent.set(post.parent_post_id, replies);
+            } else {
+                rootPosts.push(post);
+            }
+        });
+
+        rootPosts.forEach((post) => responseList.append(createDiscussionPost(post, repliesByParent.get(post.id) || [], contentBlock)));
+    }
+    panel.append(prompt, composer, responseList);
+    details.append(summary, panel);
+    wrapper.append(details);
+    return wrapper;
+}
+
 async function createContentBlock(contentBlock) {
     const article = createElement("article", `lesson-render-block lesson-render-block--${contentBlock.block_type}`);
     const title = createElement("h3", "", getDefaultContentBlockTitle(contentBlock));
     const label = createElement("span", "badge badge--quiet", `Block ${contentBlock.order_index + 1}`);
     const url = await getDisplayResourceUrl(contentBlock);
     const layout = decodeLessonLayout(contentBlock.body_text || "");
+
+    if (isDiscussionContentBlock(contentBlock)) {
+        article.classList.add("lesson-render-block--discussion");
+        article.append(createDiscussionBoard({
+            ...contentBlock,
+            body_text: getDiscussionDetails(contentBlock),
+        }));
+        return article;
+    }
 
     if (layout) {
         article.classList.add("lesson-render-block--layout");
@@ -1122,6 +1399,50 @@ async function renderContentBlocks(contentBlocks) {
     contentRenderer.replaceChildren(...renderedBlocks);
 }
 
+function createQuestionFlowSection(question) {
+    const section = createElement("section", "lesson-flow-card");
+    const statusClass = question.is_required ? "required" : "optional";
+    const item = createElement("li", `question-card question-card--${statusClass}`);
+    const prompt = createElement("strong", "", question.prompt);
+    const instructions = createElement(
+        "p",
+        "",
+        question.student_instructions || (question.is_required ? "Required checkpoint" : "Optional checkpoint")
+    );
+    const badge = createElement(
+        "span",
+        `question-status-badge question-status-badge--${statusClass}`,
+        question.is_required ? "Required" : "Optional"
+    );
+    const list = createElement("ol", "lesson-flow-question-list");
+
+    badge.setAttribute("aria-label", question.is_required ? "Required question" : "Optional question");
+    item.dataset.questionId = question.id;
+    item.append(prompt, badge, instructions, createQuestionAnswerControl(question));
+    list.append(item);
+    section.append(list);
+    return section;
+}
+
+async function renderLessonFlow(pageItems) {
+    if (!pageItems.length) {
+        contentRenderer.replaceChildren(createElement("p", "empty-state", "No visible lesson content is available yet."));
+        setQuestionInputsDisabled(isSubmitted || isTeacherPreview);
+        return;
+    }
+
+    const renderedItems = await Promise.all(pageItems.map((pageItem) => {
+        if (pageItem.type === "question") {
+            return createQuestionFlowSection(pageItem.item);
+        }
+
+        return createContentBlock(pageItem.item);
+    }));
+
+    contentRenderer.replaceChildren(...renderedItems);
+    setQuestionInputsDisabled(isSubmitted || isTeacherPreview);
+}
+
 function createQuestionOptionControl(question, option, type) {
     const label = createElement("label", "question-preview-option");
     const input = document.createElement("input");
@@ -1134,7 +1455,7 @@ function createQuestionOptionControl(question, option, type) {
     input.checked = Array.isArray(answer) ? answer.includes(optionValue) : answer === optionValue;
     input.addEventListener("change", () => {
         if (type === "checkbox") {
-            const selectedValues = Array.from(questionFlow.querySelectorAll(`input[name="question-${question.id}"]:checked`))
+            const selectedValues = Array.from(contentRenderer.querySelectorAll(`input[name="question-${question.id}"]:checked`))
                 .map((selectedInput) => selectedInput.value);
 
             setAnswer(question.id, selectedValues);
@@ -1987,42 +2308,10 @@ function createQuestionAnswerControl(question) {
 }
 
 function renderQuestionFlow(questions) {
-    const sortedQuestions = [...questions].sort((first, second) => first.order_index - second.order_index);
-    const cards = sortedQuestions.map((question) => {
-        const section = createElement("section", "lesson-flow-card");
-        const statusClass = question.is_required ? "required" : "optional";
-        const item = createElement("li", `question-card question-card--${statusClass}`);
-        const prompt = createElement("strong", "", question.prompt);
-        const instructions = createElement(
-            "p",
-            "",
-            question.student_instructions || (question.is_required ? "Required checkpoint" : "Optional checkpoint")
-        );
-        const badge = createElement(
-            "span",
-            `question-status-badge question-status-badge--${statusClass}`,
-            question.is_required ? "Required" : "Optional"
-        );
-        const list = createElement("ol", "lesson-flow-question-list");
-
-        badge.setAttribute("aria-label", question.is_required ? "Required question" : "Optional question");
-        item.dataset.questionId = question.id;
-        item.append(prompt, badge, instructions, createQuestionAnswerControl(question));
-        list.append(item);
-        section.append(list);
-        return section;
-    });
-
-    questionFlow.hidden = !cards.length;
-    questionFlow.replaceChildren(
-        ...(cards.length
-            ? [
-                createElement("h3", "", "Student response"),
-                createElement("p", "section-copy", "Answer the questions your teacher added for this lesson."),
-                ...cards,
-            ]
-            : [])
-    );
+    if (questionFlow) {
+        questionFlow.hidden = true;
+        questionFlow.replaceChildren();
+    }
     setQuestionInputsDisabled(isSubmitted || isTeacherPreview);
 }
 
@@ -2189,7 +2478,7 @@ async function loadStudentLessonAvailability(context) {
     return true;
 }
 
-async function loadContentBlocks() {
+async function loadContentBlocks({ render = true } = {}) {
     let { data, error } = await supabase
         .from("lesson_content_blocks")
         .select("id, lesson_page_id, block_type, title, body_text, external_url, file_url, file_type, order_index")
@@ -2212,13 +2501,72 @@ async function loadContentBlocks() {
     }
 
     if (error) {
-        contentRenderer.replaceChildren(createElement("p", "empty-state", "Lesson content could not be loaded."));
+        if (render) {
+            contentRenderer.replaceChildren(createElement("p", "empty-state", "Lesson content could not be loaded."));
+        }
         setStatus("Lesson content could not be loaded.", "error");
         return false;
     }
 
     loadedContentBlocks = data || [];
-    await renderActiveLessonPage();
+    await loadDiscussionPosts(loadedContentBlocks);
+    if (render) {
+        await renderActiveLessonPage();
+    }
+    return true;
+}
+
+async function loadDiscussionPosts(contentBlocks) {
+    const discussionBlockIds = contentBlocks
+        .filter((contentBlock) => isDiscussionContentBlock(contentBlock))
+        .map((contentBlock) => contentBlock.id);
+
+    discussionPostsByBlock = new Map();
+    discussionProfilesById = new Map();
+    discussionPostsUnavailable = false;
+
+    if (!discussionBlockIds.length) {
+        return true;
+    }
+
+    const { data, error } = await supabase
+        .from("lesson_discussion_posts")
+        .select("id, content_block_id, parent_post_id, author_user_id, body_text, created_at, updated_at")
+        .eq("lesson_id", lessonId)
+        .in("content_block_id", discussionBlockIds)
+        .is("archived_at", null)
+        .order("created_at", { ascending: true });
+
+    if (error) {
+        discussionPostsUnavailable = true;
+        console.warn("Discussion posts could not be loaded", error);
+        return false;
+    }
+
+    (data || []).forEach((post) => {
+        const list = discussionPostsByBlock.get(post.content_block_id) || [];
+
+        list.push(post);
+        discussionPostsByBlock.set(post.content_block_id, list);
+    });
+
+    const authorIds = [...new Set((data || []).map((post) => post.author_user_id).filter(Boolean))];
+
+    if (!authorIds.length) {
+        return true;
+    }
+
+    const { data: profiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, username, legal_first_name, legal_last_name, email")
+        .in("id", authorIds);
+
+    if (profileError) {
+        console.warn("Discussion author profiles could not be loaded", profileError);
+        return true;
+    }
+
+    discussionProfilesById = new Map((profiles || []).map((profile) => [profile.id, profile]));
     return true;
 }
 
@@ -2291,7 +2639,7 @@ async function loadQuestionOptions(questions) {
     return true;
 }
 
-async function loadQuestionFlow() {
+async function loadQuestionFlow({ render = true } = {}) {
     let { data, error } = await supabase
         .from("student_visible_questions")
         .select("id, lesson_page_id, phase, question_type, prompt, student_instructions, hint, points, is_required, order_index")
@@ -2326,7 +2674,9 @@ async function loadQuestionFlow() {
 
     if (error) {
         loadedQuestions = [];
-        renderQuestionFlow([]);
+        if (render) {
+            renderQuestionFlow([]);
+        }
         setSubmitStatus("Lesson questions could not be loaded. If you are testing as a student, apply the latest Supabase migration first.", "error");
         return false;
     }
@@ -2334,11 +2684,15 @@ async function loadQuestionFlow() {
     loadedQuestions = data;
     if (!(await loadQuestionOptions(loadedQuestions))) {
         loadedQuestions = [];
-        renderQuestionFlow([]);
+        if (render) {
+            renderQuestionFlow([]);
+        }
         return false;
     }
 
-    await renderActiveLessonPage();
+    if (render) {
+        await renderActiveLessonPage();
+    }
     return true;
 }
 
@@ -2609,6 +2963,7 @@ async function initializePage() {
     }
 
     currentProfileId = profile.id;
+    currentProfile = profile;
     const context = await loadLessonContext();
 
     if (!context) {
@@ -2616,6 +2971,7 @@ async function initializePage() {
     }
 
     const { lesson, module, course } = context;
+    const lessonMetadata = getLessonMetadata(lesson);
 
     currentLessonContext = context;
     if (isTeacherPreview) {
@@ -2633,7 +2989,7 @@ async function initializePage() {
         ? `Teacher preview / ${course.title || "Untitled course"} / ${module.title || "Untitled module"}`
         : `${course.title || "Untitled course"} / ${module.title || "Untitled module"}`;
     if (objectiveElement) {
-        objectiveElement.textContent = lesson.objective || lesson.summary || "No objective has been added for this lesson yet.";
+        objectiveElement.textContent = lesson.objective || getLessonOverview(lesson) || "No objective has been added for this lesson yet.";
     }
     if (canvasContextElement) {
         canvasContextElement.textContent = contextElement.textContent;
@@ -2641,11 +2997,14 @@ async function initializePage() {
     if (canvasTitleElement) {
         canvasTitleElement.textContent = lesson.title || "Untitled lesson";
     }
-    if (canvasObjectiveElement) {
-        canvasObjectiveElement.textContent = lesson.objective || "No objective has been added for this lesson yet.";
-    }
     if (canvasOverviewElement) {
-        canvasOverviewElement.textContent = lesson.summary || "No overview has been added for this lesson yet.";
+        canvasOverviewElement.textContent = lessonMetadata.overview || "No overview has been added for this lesson yet.";
+    }
+    if (canvasLearningTargetElement) {
+        canvasLearningTargetElement.textContent = lessonMetadata.learningTarget || "No learning target has been added yet.";
+    }
+    if (canvasStandardsElement) {
+        canvasStandardsElement.textContent = formatStandardsAlignment(lessonMetadata.standards) || "No standards alignment has been added yet.";
     }
     if (canvasDurationElement) {
         canvasDurationElement.textContent = lesson.estimated_time || "Not set";
@@ -2655,23 +3014,31 @@ async function initializePage() {
     await loadLessonPages();
 
     if (isTeacherPreview) {
-        await loadQuestionFlow();
+        const [questionsLoaded, contentLoaded] = await Promise.all([
+            loadQuestionFlow({ render: false }),
+            loadContentBlocks({ render: false }),
+        ]);
+        await renderActiveLessonPage();
         showTeacherPreviewState();
-        if (await loadContentBlocks()) {
+        if (questionsLoaded && contentLoaded) {
             setStatus("");
         }
         return;
     }
 
     await loadSubmissionDraft();
-    await loadQuestionFlow();
+    const [questionsLoaded, contentLoaded] = await Promise.all([
+        loadQuestionFlow({ render: false }),
+        loadContentBlocks({ render: false }),
+    ]);
+    await renderActiveLessonPage();
 
     if (isSubmitted) {
         showCompletionState(submittedAt || new Date());
         await loadNextLesson();
     }
 
-    if (await loadContentBlocks()) {
+    if (questionsLoaded && contentLoaded) {
         setStatus("");
     }
 }
